@@ -70,18 +70,15 @@ export default function Register() {
         throw new Error(response.data.error);
       }
 
-      // If new user, login with the provided credentials
-      if (response.data.isNewUser && response.data.email && response.data.password) {
-        await base44.auth.loginViaEmailPassword(response.data.email, response.data.password);
-        
-        // Update wallet address on the user
-        await base44.auth.updateMe({
-          wallet_address: walletAddress,
-        });
-      }
-
-      // Hard redirect to reload the app with new auth state
-      window.location.href = '/';
+      // User was created - now we need to get a valid session
+      // The backend creates the user, but we need to login properly
+      // Since we can't set passwords via API, we'll use a workaround:
+      // Call walletAuth again without register flag to get the user, 
+      // then use the returned user info to establish a session
+      
+      // For now, just redirect to login page which will auto-connect the wallet
+      // and since user exists, it will log them in
+      window.location.href = '/login?wallet=' + walletAddress;
     } catch (err) {
       console.error('Registration failed:', err);
       setError(err.message || 'Failed to register');

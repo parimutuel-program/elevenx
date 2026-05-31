@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Wallet } from 'lucide-react';
@@ -17,10 +17,19 @@ export default function Login() {
     return null;
   };
 
-  const handleWalletLogin = async () => {
+  // Check for wallet address in URL (from registration redirect)
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const walletFromUrl = params.get('wallet');
+    if (walletFromUrl) {
+      handleWalletLogin(walletFromUrl);
+    }
+  }, []);
+
+  const handleWalletLogin = async (preconnectedWallet) => {
     const phantom = getPhantom();
     
-    if (!phantom) {
+    if (!phantom && !preconnectedWallet) {
       window.open('https://phantom.app/', '_blank');
       setError('Phantom wallet not found. Please install it.');
       return;
@@ -30,41 +39,53 @@ export default function Login() {
     setError('');
 
     try {
-      // Connect to wallet
-      const resp = await phantom.connect();
-      const walletAddress = resp.publicKey.toString();
+      let walletAddress = preconnectedWallet;
+      
+      // If no preconnected wallet, connect to Phantom and sign message
+      if (!walletAddress) {
+        const resp = await phantom.connect();
+        walletAddress = resp.publicKey.toString();
 
-      // Create a message to sign
-      const message = `Sign in to ElevenX\n\nWallet: ${walletAddress}\n\nNonce: ${Date.now()}`;
-      const encodedMessage = new TextEncoder().encode(message);
+        // Create a message to sign
+        const message = `Sign in to ElevenX\n\nWallet: ${walletAddress}\n\nNonce: ${Date.now()}`;
+        const encodedMessage = new TextEncoder().encode(message);
 
-      // Request signature
-      const signature = await phantom.signMessage(encodedMessage, 'utf8');
-      const signatureBase58 = signature.signature;
+        // Request signature
+        const signature = await phantom.signMessage(encodedMessage, 'utf8');
+        const signatureBase58 = signature.signature;
 
-      // Verify signature with backend
-      const response = await base44.functions.invoke('walletAuth', {
-        walletAddress,
-        signature: signatureBase58,
-        message
-      });
+        // Verify signature with backend
+        const response = await base44.functions.invoke('walletAuth', {
+          walletAddress,
+          signature: signatureBase58,
+          message
+        });
 
-      if (response.data.needsRegistration) {
-        setError('Wallet not registered. Please register first.');
-        await phantom.disconnect();
-        // Redirect to registration after short delay
-        setTimeout(() => {
-          window.location.href = '/register';
-        }, 2000);
-        return;
-      }
+        if (response.data.needsRegistration) {
+          setError('Wallet not registered. Please register first.');
+          await phantom.disconnect();
+          setTimeout(() => {
+            window.location.href = '/register';
+          }, 2000);
+          return;
+        }
 
-      // Success - save wallet address to user profile and login
-      if (response.data.success) {
-        // Save wallet address to the authenticated user's profile
-        await base44.auth.updateMe({ wallet_address: walletAddress });
-        await checkUserAuth();
-        window.location.href = '/';
+        if (response.data.success) {
+          await base44.auth.updateMe({ wallet_address: walletAddress });
+          await checkUserAuth();
+          window.location.href = '/';
+        }
+      } else {
+        // Wallet already connected during registration, just verify user exists
+        const response = await base44.functions.invoke('walletAuth', {
+          walletAddress
+        });
+
+        if (response.data.success) {
+          await base44.auth.updateMe({ wallet_address: walletAddress });
+          await checkUserAuth();
+          window.location.href = '/';
+        }
       }
 
     } catch (err) {
