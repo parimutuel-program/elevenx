@@ -129,20 +129,25 @@ export const AuthProvider = ({ children }) => {
           };
           setUser(userData);
           setIsAuthenticated(true);
+          setIsLoadingAuth(false);
+          setAuthChecked(true);
+          return;
         } else {
           // Wallet not registered
           console.log('❌ Wallet auth failed, needs registration');
           localStorage.removeItem('elevenx_wallet_session');
           localStorage.removeItem('elevenx_authenticated');
           setIsAuthenticated(false);
+          setIsLoadingAuth(false);
+          setAuthChecked(true);
+          return;
         }
-      } else {
-        // Try platform token auth
-        const currentUser = await base44.auth.me();
-        setUser(currentUser);
-        setIsAuthenticated(true);
       }
       
+      // No wallet session - try platform token auth
+      const currentUser = await base44.auth.me();
+      setUser(currentUser);
+      setIsAuthenticated(true);
       setIsLoadingAuth(false);
       setAuthChecked(true);
     } catch (error) {
