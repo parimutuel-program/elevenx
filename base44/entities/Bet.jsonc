@@ -12,11 +12,11 @@
     },
     "outcome_a": {
       "type": "string",
-      "description": "Label for outcome A (e.g. team name)"
+      "description": "Label for outcome A (team name)"
     },
     "outcome_b": {
       "type": "string",
-      "description": "Label for outcome B"
+      "description": "Label for outcome B (team name)"
     },
     "open_until": {
       "type": "string",
@@ -43,20 +43,30 @@
       "default": "",
       "description": "Which outcome won after settlement"
     },
-    "total_a": {
+    "lp_amount_a": {
       "type": "number",
       "default": 0,
-      "description": "Total staked on outcome A"
+      "description": "Total liquidity provided backing outcome A (LP side)"
     },
-    "total_b": {
+    "lp_amount_b": {
       "type": "number",
       "default": 0,
-      "description": "Total staked on outcome B"
+      "description": "Total liquidity provided backing outcome B (LP side)"
+    },
+    "backed_amount_a": {
+      "type": "number",
+      "default": 0,
+      "description": "Total bettor money placed ON outcome A"
+    },
+    "backed_amount_b": {
+      "type": "number",
+      "default": 0,
+      "description": "Total bettor money placed ON outcome B"
     },
     "total_pool": {
       "type": "number",
       "default": 0,
-      "description": "Total pool (A + B)"
+      "description": "Total pool (all LP + bettors)"
     },
     "fee_percent": {
       "type": "number",
@@ -71,7 +81,6 @@
   "required": [
     "match_id",
     "outcome_a",
-    "outcome_b",
-    "open_until"
+    "outcome_b"
   ]
 }

@@ -20,6 +20,7 @@ import BetDetail from '@/pages/BetDetail';
 import MyBets from '@/pages/MyBets';
 import Profile from '@/pages/Profile';
 import Admin from '@/pages/Admin';
+import MatchDetail from '@/pages/MatchDetail';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -56,6 +57,7 @@ const AuthenticatedApp = () => {
           <Route path="/" element={<Home />} />
           <Route path="/matches" element={<Matches />} />
           <Route path="/bet/:betId" element={<BetDetail />} />
+          <Route path="/match/:matchId" element={<MatchDetail />} />
           <Route path="/my-bets" element={<MyBets />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/admin" element={<Admin />} />

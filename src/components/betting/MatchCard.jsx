@@ -22,7 +22,7 @@ export default function MatchCard({ match, bet, index = 0 }) {
       transition={{ delay: index * 0.05, duration: 0.4 }}
     >
       <Link
-        to={bet ? `/bet/${bet.id}` : `/matches`}
+        to={`/match/${match.id}`}
         className="group block"
       >
         <div className="relative bg-card border border-border/50 rounded-2xl p-5 hover:border-primary/30 transition-all duration-300 hover:shadow-[0_0_30px_-10px_hsl(45,100%,51%,0.15)]">
@@ -71,17 +71,40 @@ export default function MatchCard({ match, bet, index = 0 }) {
 
           {/* Bet info */}
           {bet && (
-            <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between">
-              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <div className="mt-4 pt-3 border-t border-border/50">
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                {(() => {
+                  const lpA = bet.lp_amount_a || 0;
+                  const lpB = bet.lp_amount_b || 0;
+                  const oddsA = lpB > 0 ? (lpA / lpB) : 1;
+                  const oddsB = lpA > 0 ? (lpB / lpA) : 1;
+                  return (
+                    <>
+                      <div className="bg-primary/10 rounded-lg px-2 py-1.5 text-center">
+                        <p className="text-[10px] text-muted-foreground">Win odds</p>
+                        <p className="font-heading font-bold text-xs text-primary">{oddsA.toFixed(2)}x</p>
+                      </div>
+                      <div className="bg-accent/10 rounded-lg px-2 py-1.5 text-center">
+                        <p className="text-[10px] text-muted-foreground">Win odds</p>
+                        <p className="font-heading font-bold text-xs text-accent">{oddsB.toFixed(2)}x</p>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Users className="w-3 h-3" />
-                  {bet.total_bettors || 0} bettors
+                  {bet.total_bettors || 0} bettors · Pool ${(bet.total_pool || 0).toLocaleString()}
                 </span>
-                <span className="font-medium text-foreground">
-                  Pool: ${(bet.total_pool || 0).toLocaleString()}
-                </span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            </div>
+          )}
+          {!bet && (
+            <div className="mt-3 pt-3 border-t border-border/30 flex items-center justify-between text-xs text-muted-foreground">
+              <span>No pool yet</span>
+              <ChevronRight className="w-4 h-4 group-hover:text-primary transition-colors" />
             </div>
           )}
 
