@@ -258,36 +258,60 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── WORLD CUP PHOTO GRID ── */}
+      {/* ── HOW IT WORKS ── */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
       >
         <div className="flex items-center gap-2 mb-4">
-          <Globe className="w-4 h-4 text-accent" />
-          <h2 className="font-heading font-bold text-lg">World Cup 2026</h2>
-          <span className="text-xs text-muted-foreground ml-1">USA · Canada · Mexico</span>
+          <Zap className="w-4 h-4 text-primary" />
+          <h2 className="font-heading font-bold text-lg">How It Works</h2>
+          <span className="text-xs text-muted-foreground ml-1">P2P · No house edge</span>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {[
-            { src: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=600&q=80', label: 'Group Stage' },
-            { src: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=600&q=80', label: 'Best Moments' },
-            { src: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&q=80', label: 'Quarter Finals' },
-            { src: 'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?w=600&q=80', label: 'The Final' },
-          ].map((photo, i) => (
+            {
+              step: '01',
+              icon: '🏦',
+              title: 'Open an Offer',
+              desc: 'Pick an outcome and put up funds. You\'re the "house" — others bet against you. You keep their stake if you\'re right.',
+              color: 'primary',
+            },
+            {
+              step: '02',
+              icon: '🎯',
+              title: 'Match a Bet',
+              desc: 'Browse open offers, pick your outcome, and stake against another bettor. Odds are set by the liquidity ratio — not us.',
+              color: 'accent',
+            },
+            {
+              step: '03',
+              icon: '💸',
+              title: 'Win & Claim',
+              desc: 'After the match settles, winners claim their payout instantly. Only a 2% fee on winnings — no hidden costs, ever.',
+              color: 'yellow',
+            },
+          ].map((item, i) => (
             <motion.div
               key={i}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.35 + i * 0.07 }}
-              className="relative rounded-2xl overflow-hidden aspect-square group cursor-pointer"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 + i * 0.08 }}
+              className={`relative rounded-2xl p-5 border overflow-hidden ${
+                item.color === 'primary' ? 'bg-primary/5 border-primary/20' :
+                item.color === 'accent' ? 'bg-accent/5 border-accent/20' :
+                'bg-yellow-500/5 border-yellow-500/20'
+              }`}
             >
-              <img src={photo.src} alt={photo.label} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-              <div className="absolute bottom-2 left-2 right-2">
-                <p className="text-white font-heading font-bold text-xs">{photo.label}</p>
-              </div>
+              <div className="absolute top-4 right-4 font-heading font-black text-4xl opacity-10 text-foreground">{item.step}</div>
+              <div className="text-3xl mb-3">{item.icon}</div>
+              <h3 className={`font-heading font-bold text-base mb-2 ${
+                item.color === 'primary' ? 'text-primary' :
+                item.color === 'accent' ? 'text-accent' :
+                'text-yellow-400'
+              }`}>{item.title}</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
             </motion.div>
           ))}
         </div>
