@@ -26,7 +26,7 @@ export default function Register() {
     
     if (!phantom) {
       window.open('https://phantom.app/', '_blank');
-      setError('Phantom wallet not found. Please install it.');
+      setError('Phantom wallet not found. Please install it from phantom.app');
       return;
     }
 
@@ -36,11 +36,12 @@ export default function Register() {
     try {
       const resp = await phantom.connect();
       const address = resp.publicKey.toString();
+      console.log('Wallet connected:', address);
       setWalletAddress(address);
       setStep('details');
     } catch (err) {
       console.error('Wallet connect failed:', err);
-      setError(err.message || 'Failed to connect wallet');
+      setError(err.message || 'Failed to connect wallet. Please try again.');
     } finally {
       setIsConnecting(false);
     }

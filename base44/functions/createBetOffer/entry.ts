@@ -8,7 +8,13 @@ const SOLANA_RPC_URL = 'https://api.devnet.solana.com'; // Using devnet for test
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    
+    let user;
+    try {
+      user = await base44.auth.me();
+    } catch (err) {
+      return Response.json({ error: 'Please login first: Connect your wallet and register/login to place bets' }, { status: 401 });
+    }
 
     if (!user) {
       return Response.json({ error: 'Please login first: Connect your wallet and register/login to place bets' }, { status: 401 });
