@@ -72,13 +72,9 @@ export default function Register() {
 
       // User was created successfully - response includes user info
       if (response.data.success && response.data.user) {
-        // Update current user's wallet address
-        await base44.auth.updateMe({
-          wallet_address: walletAddress,
-        });
-        
-        // Hard redirect to reload the app with new auth state
-        window.location.href = '/';
+        // Wallet address already saved during user creation via service role
+        // Just redirect to login page to establish session
+        window.location.href = '/login';
       } else if (response.data.needsRegistration) {
         throw new Error('User already exists, please login instead');
       } else {
