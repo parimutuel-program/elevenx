@@ -47,48 +47,24 @@ Deno.serve(async (req) => {
       user = null;
     }
 
-    // If registering, create user
-    if (register && username) {
-      console.log('Registering user - username:', username);
-      
-      // Check if username is already taken
-      let usernameTaken = false;
-      try {
-        const existingUsers = await serviceRole.entities.User.filter({ username: username });
-        if (existingUsers && existingUsers.length > 0) {
-          usernameTaken = true;
-          console.log('Username already taken:', username);
-        }
-      } catch (err) {
-        console.log('Username check failed:', err.message);
-      }
-      
-      if (usernameTaken) {
-        return Response.json({ 
-          error: 'Username already taken. Please choose another.',
-          needsRegistration: false
-        }, { status: 409 });
-      }
+    // If registering, auto-create user with wallet address as identifier
+    if (register) {
+      console.log('Registering user - wallet:', walletAddress);
       
       try {
-        console.log('Creating user with username:', username);
-        // Create user with username, wallet address, and placeholder email (platform requires email)
+        // Create user with wallet address and placeholder email (platform requires email)
         const newUser = await serviceRole.entities.User.create({
           email: `${walletAddress.slice(0, 8)}@elevenx.bet`,
-          full_name: username,
-          username: username,
           wallet_address: walletAddress,
           role: 'user',
         });
         
-        console.log('✓ User created - id:', newUser.id, 'username:', newUser.full_name);
+        console.log('✓ User created - id:', newUser.id, 'wallet:', walletAddress);
         
         return Response.json({
           success: true,
           needsRegistration: false,
           userId: newUser.id,
-          full_name: newUser.full_name,
-          username: newUser.username,
           walletAddress: newUser.wallet_address,
           role: newUser.role,
           email: newUser.email,
@@ -106,7 +82,7 @@ Deno.serve(async (req) => {
       return Response.json({ 
         needsRegistration: true,
         walletAddress 
-      }, { status: 404 });
+      });
     }
 
     // User exists - return user info (handle both root-level and data.* fields)

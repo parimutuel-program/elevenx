@@ -66,22 +66,14 @@ export default function Login() {
         walletAddress = resp.publicKey.toString();
       }
 
-      // Verify user exists with backend
+      // Verify user exists with backend (auto-register if needed)
       const response = await base44.functions.invoke('walletAuth', {
-        walletAddress
+        walletAddress,
+        register: true
       });
 
-      if (response.data.needsRegistration) {
-        setError('Wallet not registered. Please register first.');
-        if (phantom) await phantom.disconnect();
-        setTimeout(() => {
-          window.location.href = '/register';
-        }, 2000);
-        return;
-      }
-
       if (response.data.success) {
-        console.log('✓ Login successful, user verified:', response.data.username, response.data.full_name);
+        console.log('✓ Login successful, wallet:', walletAddress);
         // Set wallet session marker for AuthContext to recognize (JSON format)
         localStorage.setItem('elevenx_wallet_session', JSON.stringify({ address: walletAddress, connectedAt: Date.now() }));
         localStorage.setItem('elevenx_authenticated', 'true');
@@ -140,13 +132,9 @@ export default function Login() {
           </div>
         </div>
 
-        <div className="text-center space-y-2">
+        <div className="text-center">
           <p className="text-xs text-muted-foreground">
             By connecting your wallet, you agree to our Terms of Service
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Don't have an account?{' '}
-            <a href="/register" className="text-primary hover:underline">Register here</a>
           </p>
         </div>
       </div>
