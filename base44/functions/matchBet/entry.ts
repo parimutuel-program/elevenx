@@ -13,7 +13,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!user.wallet_address) {
+    const walletAddress = user.wallet_address || user.data?.wallet_address;
+    if (!walletAddress) {
       return Response.json({ error: 'Wallet not connected' }, { status: 400 });
     }
 
@@ -76,7 +77,7 @@ Deno.serve(async (req) => {
 
     // Prepare Solana instruction
     const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
-    const matcherPubkey = new PublicKey(user.wallet_address);
+    const matcherPubkey = new PublicKey(walletAddress);
     const programId = new PublicKey(SOLANA_PROGRAM_ID);
     
     const [betPoolPda] = PublicKey.findProgramAddressSync(
