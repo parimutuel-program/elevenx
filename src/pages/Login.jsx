@@ -27,11 +27,19 @@ export default function Login() {
       // Set wallet session
       localStorage.setItem('elevenx_wallet_session', JSON.stringify({ address: walletFromUrl, connectedAt: Date.now() }));
       localStorage.setItem('elevenx_authenticated', 'true');
-      // Force reload after a brief delay to ensure localStorage is written
-      setTimeout(() => {
-        console.log('Redirecting to home...');
-        window.location.href = '/';
-      }, 100);
+      // Verify with backend and redirect
+      base44.functions.invoke('walletAuth', { walletAddress: walletFromUrl })
+        .then((response) => {
+          if (response.data.success) {
+            console.log('✓ Auto-login successful:', response.data.full_name || response.data.username);
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 100);
+          }
+        })
+        .catch((err) => {
+          console.error('Auto-login verification failed:', err);
+        });
     }
   }, []);
 
@@ -71,9 +79,9 @@ export default function Login() {
       }
 
       if (response.data.success) {
-        console.log('✓ Login successful, user verified:', response.data.username);
-        // Set wallet session marker for AuthContext to recognize
-        localStorage.setItem('elevenx_wallet_session', walletAddress);
+        console.log('✓ Login successful, user verified:', response.data.username, response.data.full_name);
+        // Set wallet session marker for AuthContext to recognize (JSON format)
+        localStorage.setItem('elevenx_wallet_session', JSON.stringify({ address: walletAddress, connectedAt: Date.now() }));
         localStorage.setItem('elevenx_authenticated', 'true');
         
         // Hard redirect to reload app with auth state
