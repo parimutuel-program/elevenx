@@ -1,125 +1,146 @@
-# ElevenX - Smart Contract Integration Checklist
+# ElevenX Integration Checklist
 
-## ✅ Completed
+## ✅ Phase 1: Smart Contract Deployment (IN PROGRESS)
 
-### Smart Contracts
-- [x] BetPool program structure defined
-- [x] UserPosition accounts implemented
-- [x] CreateBetOffer instruction
-- [x] MatchBet instruction
-- [x] SettleBet instruction (admin-only)
-- [x] ClaimWinnings instruction
-- [x] PDA derivation for all accounts
-- [x] SOL transfer logic
-- [x] Odds calculation function
-- [x] Error codes defined
+### 1.1 Environment Setup
+- [ ] Install Rust (latest stable)
+- [ ] Install Node.js (v18+)
+- [ ] Install Solana CLI (v1.17+)
+- [ ] Install Anchor CLI (v0.30.1)
+- [ ] Install Phantom wallet browser extension
 
-### Backend Functions
-- [x] `createBetOffer.js` - Updated with Solana integration
-- [x] `matchBet.js` - Updated with Solana integration
-- [x] `claimWinnings.js` - Ready for on-chain integration
-- [x] `settleBetWithOracle.js` - Admin settlement ready
-- [x] `walletAuth.js` - Wallet authentication working
+### 1.2 Build & Test Locally
+- [x] Smart contract code complete (`lib.rs`)
+- [x] Test suite created (`tests/elevenx-betting.ts`)
+- [x] Deployment script created (`deploy.sh`)
+- [x] Deployment guide created (`DEPLOYMENT_GUIDE.md`)
+- [ ] Run `anchor build` successfully
+- [ ] Run `anchor test` - all tests passing
+- [ ] Verify 0% fee configuration in contract
 
-### Frontend Components
-- [x] WalletConnectGuard - Protects routes
-- [x] SolanaTransactionSigner - Transaction signing UI
-- [x] Profile page - Shows wallet address
-- [x] All currency symbols updated to ◎ (SOL)
+### 1.3 Deploy to Devnet
+- [ ] Generate new program keypair
+- [ ] Update `lib.rs` with program ID
+- [ ] Update `Anchor.toml` for devnet
+- [ ] Fund wallet with devnet SOL (2+ SOL)
+- [ ] Run `anchor deploy --provider.cluster devnet`
+- [ ] Verify deployment: `solana program show <PROGRAM_ID> --url devnet`
+- [ ] Run integration tests on devnet
 
-### Documentation
-- [x] SMART_CONTRACT_INTEGRATION_GUIDE.md
-- [x] DEPLOYMENT_STEPS.md
-- [x] INTEGRATION_CHECKLIST.md (this file)
-- [x] Test scripts for Anchor
+### 1.4 Update Backend Functions
+- [ ] Update `functions/createBetOffer.js` with devnet program ID
+- [ ] Update `functions/matchBet.js` with devnet program ID
+- [ ] Update `functions/claimWinnings.js` with devnet program ID
+- [ ] Update `functions/settleBetWithOracle.js` with program ID
+- [ ] Set RPC URL to `https://api.devnet.solana.com`
 
-## 🔄 In Progress
-
-### Testing
-- [ ] Unit tests for all instructions
-- [ ] Integration tests with frontend
-- [ ] Devnet deployment test
-- [ ] Load testing
-
-### Frontend Integration
-- [ ] Connect transaction signer to betting flows
-- [ ] Add transaction status polling
-- [ ] Show on-chain confirmations
-- [ ] Handle transaction failures gracefully
-
-## 📋 TODO
-
-### Oracle Integration
-- [ ] Integrate Pyth Network price feeds
-- [ ] Set up automatic settlement triggers
-- [ ] Create oracle verification function
-- [ ] Test with real sports data
-
-### Security
-- [ ] Smart contract audit (OtterSec/Neodyme)
-- [ ] Multi-sig wallet setup for admin
-- [ ] Emergency pause mechanism
-- [ ] Rate limiting on backend
-
-### Production Readiness
-- [ ] Mainnet deployment
-- [ ] Monitoring dashboard (Dune Analytics)
-- [ ] Alert system for large transactions
-- [ ] User documentation
-- [ ] Admin dashboard
-
-## 🎯 Immediate Next Steps
-
-1. **Deploy to Devnet**
-   ```bash
-   cd solana-programs/elevenx-betting
-   anchor build
-   anchor deploy --provider.cluster devnet
-   ```
-
-2. **Update Program ID**
-   - Copy deployed program ID
-   - Update in all backend functions
-   - Update in frontend components
-
-3. **Test End-to-End**
-   - Create bet offer → Sign transaction → Verify on-chain
-   - Match bet → Sign transaction → Verify on-chain
-   - Settle bet → Claim winnings → Verify payout
-
-4. **Frontend Updates**
-   - Integrate SolanaTransactionSigner into MatchDetail page
-   - Add transaction status indicators
-   - Show PDA addresses for transparency
-
-## 📊 Current Architecture
-
-```
-User (Phantom Wallet)
-    ↓
-Frontend (React)
-    ↓
-Backend Functions (Base44)
-    ↓
-Solana Smart Contract (On-Chain)
-    ↓
-Oracle (Pyth Network) - For settlements
-```
-
-**Hybrid Approach**: Currently operating in hybrid mode where:
-- Database records are created immediately
-- Solana transactions are prepared and signed on frontend
-- Both database and on-chain states are maintained
-- Gradual transition to fully on-chain
-
-## 🔗 Useful Links
-
-- Solana Explorer: https://solscan.io/
-- Anchor Documentation: https://www.anchor-lang.com/
-- Pyth Network: https://pyth.network/
-- Phantom Wallet: https://phantom.app/
+### 1.5 Frontend Integration
+- [ ] Test wallet connection (Phantom)
+- [ ] Test create bet offer flow
+- [ ] Test match bet flow
+- [ ] Test settlement flow
+- [ ] Test claim winnings flow
+- [ ] Verify transaction confirmations
+- [ ] Handle errors gracefully
 
 ---
 
-**Last Updated**: 2026-05-31
-**Status**: Ready for Devnet Deployment
+## 🔮 Phase 2: Oracle Integration (NEXT)
+
+### 2.1 Oracle Provider Setup
+- [ ] Choose oracle provider (Pyth or Switchboard)
+- [ ] Create oracle provider account
+- [ ] Identify match result data feeds
+- [ ] Get oracle account credentials
+
+### 2.2 Oracle Integration Development
+- [ ] Update `functions/settleBetWithOracle.js`
+- [ ] Implement oracle data fetching
+- [ ] Add signature verification
+- [ ] Handle oracle failures gracefully
+- [ ] Add manual override for admin
+
+### 2.3 Oracle Testing
+- [ ] Test oracle data retrieval
+- [ ] Verify match result accuracy
+- [ ] Test automated settlement trigger
+- [ ] Test fallback mechanisms
+- [ ] Monitor oracle latency
+
+---
+
+## 🔐 Phase 3: Security & Production Readiness
+
+### 3.1 Security Hardening
+- [ ] Input validation on all endpoints
+- [ ] Rate limiting implementation
+- [ ] Wallet signature verification
+- [ ] Replay attack prevention
+- [ ] SQL injection prevention (if applicable)
+
+### 3.2 Multi-Sig Setup
+- [ ] Set up multi-sig wallet for admin functions
+- [ ] Configure threshold (e.g., 2-of-3)
+- [ ] Test multi-sig transactions
+- [ ] Document multi-sig procedures
+
+### 3.3 Monitoring & Alerting
+- [ ] Set up transaction monitoring
+- [ ] Configure error alerts
+- [ ] Monitor SOL balance for gas
+- [ ] Track failed transactions
+- [ ] Set up uptime monitoring
+
+### 3.4 Documentation
+- [ ] API documentation
+- [ ] User guides
+- [ ] Admin documentation
+- [ ] Emergency procedures
+- [ ] Incident response plan
+
+---
+
+## 🚀 Phase 4: Mainnet Deployment
+
+### 4.1 Pre-Launch Checklist
+- [ ] All devnet tests passing
+- [ ] Security audit completed
+- [ ] Oracle integration tested
+- [ ] Multi-sig configured
+- [ ] Monitoring in place
+- [ ] Documentation complete
+- [ ] Team trained on procedures
+
+### 4.2 Mainnet Deployment
+- [ ] Generate mainnet program keypair
+- [ ] Fund wallet with 5+ SOL
+- [ ] Deploy to mainnet
+- [ ] Verify mainnet deployment
+- [ ] Update backend to mainnet RPC
+- [ ] Update frontend to mainnet
+
+### 4.3 Post-Launch
+- [ ] Monitor first 100 transactions
+- [ ] Track user feedback
+- [ ] Monitor oracle performance
+- [ ] Review security logs
+- [ ] Prepare for scaling
+
+---
+
+## 📊 Current Status
+
+**Smart Contract:** ✅ Complete (0% fee configured)
+**Tests:** ✅ Written, pending execution
+**Deployment Guide:** ✅ Complete
+**Backend Functions:** ⚠️ Need program ID update
+**Frontend:** ⚠️ Needs transaction flow completion
+**Oracle:** ❌ Not started
+**Security:** ❌ Not started
+
+**Next Action:** Deploy to devnet and test end-to-end flow
+
+---
+
+**Last Updated:** 2026-05-31
+**Version:** 1.0.0

@@ -17,7 +17,7 @@ pub mod elevenx_betting {
         bet_pool.lp_amount_draw = 0;
         bet_pool.status = BetStatus::Open;
         bet_pool.winning_outcome = None;
-        bet_pool.fee_percent = 200; // 2%
+        bet_pool.fee_percent = 0; // 0% fee - fully decentralized, can be updated later
         bet_pool.bump = ctx.bumps.bet_pool;
         Ok(())
     }

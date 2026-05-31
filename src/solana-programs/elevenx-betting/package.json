@@ -1,0 +1,34 @@
+{
+  "name": "elevenx-betting",
+  "version": "1.0.0",
+  "description": "ElevenX decentralized P2P betting smart contracts",
+  "scripts": {
+    "build": "anchor build",
+    "test": "anchor test",
+    "test:devnet": "anchor test --provider.cluster devnet",
+    "deploy:localnet": "anchor deploy",
+    "deploy:devnet": "anchor deploy --provider.cluster devnet",
+    "deploy:mainnet": "anchor deploy --provider.cluster mainnet",
+    "lint": "anchor lint",
+    "fmt": "cargo fmt",
+    "verify": "solana program show"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.30.1",
+    "@solana/web3.js": "^1.95.3"
+  },
+  "devDependencies": {
+    "@types/bn.js": "^5.1.0",
+    "@types/chai": "^4.3.0",
+    "@types/mocha": "^9.0.0",
+    "@types/node": "^20.0.0",
+    "chai": "^4.3.4",
+    "mocha": "^9.0.3",
+    "ts-mocha": "^10.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}
