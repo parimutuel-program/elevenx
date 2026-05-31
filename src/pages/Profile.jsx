@@ -152,7 +152,13 @@ export default function Profile() {
         <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
           <User className="w-8 h-8 text-primary" />
         </div>
-        <h1 className="font-heading font-bold text-xl">{currentUser?.full_name || currentUser?.username || walletAddress.slice(0, 8)}</h1>
+        <h1 className="font-heading font-bold text-xl">
+          {(() => {
+            const displayName = currentUser?.full_name || currentUser?.username;
+            console.log('📄 Profile displayName:', displayName, 'full_name:', currentUser?.full_name, 'username:', currentUser?.username);
+            return displayName || walletAddress?.slice(0, 8);
+          })()}
+        </h1>
         {currentUser?.email && <p className="text-sm text-muted-foreground">{currentUser.email}</p>}
         <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 bg-secondary/50 rounded-lg border border-border/30">
           <Wallet className="w-3 h-3 text-primary" />

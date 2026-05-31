@@ -118,7 +118,7 @@ export const AuthProvider = ({ children }) => {
         });
         
         if (response.data.success) {
-          // Build user object from response (fields are at root level, not under 'user')
+          // Build user object from response (handle both direct fields and nested user.*)
           const userData = {
             id: response.data.userId || response.data.user?.id,
             full_name: response.data.full_name || response.data.user?.full_name,
@@ -127,13 +127,15 @@ export const AuthProvider = ({ children }) => {
             role: response.data.role || response.data.user?.role,
             email: response.data.email || response.data.user?.email
           };
-          console.log('Wallet auth response data:', response.data);
-          console.log('Built userData:', userData);
+          console.log('🔐 Wallet auth response:', response.data);
+          console.log('🔐 Built userData:', userData);
+          console.log('🔐 Display name (full_name):', userData.full_name);
+          console.log('🔐 Display name (username):', userData.username);
           setUser(userData);
           setIsAuthenticated(true);
-          console.log('✓ Wallet auth successful, username:', userData.username);
         } else {
           // Wallet not registered
+          console.log('❌ Wallet auth failed, needs registration');
           localStorage.removeItem('elevenx_wallet_session');
           localStorage.removeItem('elevenx_authenticated');
           setIsAuthenticated(false);

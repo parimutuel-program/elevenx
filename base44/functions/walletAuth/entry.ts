@@ -111,15 +111,16 @@ Deno.serve(async (req) => {
       }, { status: 404 });
     }
 
-    // User exists - return user info
+    // User exists - return user info (handle both root-level and data.* fields)
     console.log('✓ User authenticated:', user.full_name, user.id);
     return Response.json({
       success: true,
       userId: user.id,
-      walletAddress: user.wallet_address,
-      role: user.role,
-      full_name: user.full_name,
-      username: user.username
+      walletAddress: user.wallet_address || user.data?.wallet_address,
+      role: user.role || user.data?.role,
+      full_name: user.full_name || user.data?.full_name,
+      username: user.username || user.data?.username,
+      email: user.email
     });
 
   } catch (error) {
