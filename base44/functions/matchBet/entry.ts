@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
 
     if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Please login first: Connect your wallet and register/login to place bets' }, { status: 401 });
     }
 
     const walletAddress = user.wallet_address || user.data?.wallet_address;
