@@ -62,13 +62,46 @@ Deno.serve(async (req) => {
       }
     }
 
-    // In production: Call oracle to verify result
-    // const oracleResult = await fetchOracleResult(matchId);
-    // Then call smart contract to distribute winnings automatically
+    // Determine winning outcome code
+    let winningOutcome = '';
+    if (result === 'team_a') winningOutcome = 'a';
+    else if (result === 'team_b') winningOutcome = 'b';
+    else winningOutcome = 'draw';
+
+    // Settle all bets for this match
+    for (const bet of bets) {
+      await base44.entities.Bet.update(bet.id, {
+        status: 'settled',
+        winning_outcome: winningOutcome,
+      });
+
+      // Update user bets
+      const userBets = await base44.entities.UserBet.filter({ bet_id: bet.id });
+      for (const ub of userBets) {
+        if (ub.status !== 'active') continue;
+
+        if (ub.outcome === winningOutcome) {
+          await base44.entities.UserBet.update(ub.id, {
+            status: 'won',
+            actual_payout: ub.potential_payout,
+          });
+        } else {
+          await base44.entities.UserBet.update(ub.id, {
+            status: 'lost',
+            actual_payout: 0,
+          });
+        }
+      }
+    }
+
+    // TODO: In production, integrate with oracle provider
+    // const oracleResult = await base44.functions.invoke('oracleService', { matchId, provider: 'pyth' });
+    // Verify oracle signature and auto-settle
 
     return Response.json({
       success: true,
-      message: `Bet settled successfully. Winner: ${result}`
+      message: `Bet settled successfully. Winner: ${result}`,
+      oracleReady: false, // Set to true when oracle integration is complete
     });
 
   } catch (error) {

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Trophy, Settings, Gavel, RefreshCw, Shield } from 'lucide-react';
+import { Plus, Trophy, Settings, Gavel, RefreshCw, Shield, Radio, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
@@ -26,6 +26,19 @@ export default function Admin() {
     queryFn: () => base44.entities.Bet.list('-created_date', 100),
   });
 
+  const { data: oracleStatus } = useQuery({
+    queryKey: ['oracleStatus'],
+    queryFn: async () => {
+      try {
+        const res = await base44.functions.invoke('oracleService', { matchId: 'test', provider: 'manual' });
+        return res.data.oracleResult || {};
+      } catch {
+        return { provider: 'manual', verified: false };
+      }
+    },
+    refetchInterval: 30000,
+  });
+
   if (user?.role !== 'admin') {
     return (
       <div className="text-center py-20">
@@ -37,6 +50,20 @@ export default function Admin() {
 
   return (
     <div className="space-y-8">
+      {/* Oracle Status Banner */}
+      <div className="bg-card border border-border/50 rounded-xl p-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className={`w-2 h-2 rounded-full ${oracleStatus?.provider === 'manual' ? 'bg-yellow-400' : 'bg-green-500'} animate-pulse`} />
+          <div>
+            <p className="text-sm font-bold text-foreground">Oracle Status: {oracleStatus?.provider === 'manual' ? 'Manual Verification' : 'Auto Settlement'}</p>
+            <p className="text-xs text-muted-foreground">
+              {oracleStatus?.verified ? 'Oracle verified' : oracleStatus?.message || 'Admin verification required'}
+            </p>
+          </div>
+        </div>
+        <Radio className={`w-5 h-5 ${oracleStatus?.provider === 'manual' ? 'text-yellow-400' : 'text-green-500'}`} />
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-heading font-black text-2xl">Admin Panel</h1>
