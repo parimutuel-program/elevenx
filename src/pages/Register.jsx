@@ -57,24 +57,16 @@ export default function Register() {
     setError('');
 
     try {
-      // Create user with wallet-based email (no OTP required)
-      const walletEmail = `${walletAddress.slice(0, 8)}@elevenx.bet`;
-      const randomPassword = Math.random().toString(36).slice(-10);
-      
-      // Register the user
-      const registerResponse = await base44.auth.register({
-        email: walletEmail,
-        password: randomPassword,
+      // Use walletAuth backend function to create user via service role
+      const response = await base44.functions.invoke('walletAuth', {
+        walletAddress,
+        fullName,
+        register: true,
       });
-      
-      // Login immediately with the credentials
-      const loginResponse = await base44.auth.loginViaEmailPassword(walletEmail, randomPassword);
-      
-      // Update user with wallet address and name
-      await base44.auth.updateMe({
-        wallet_address: walletAddress,
-        full_name: fullName,
-      });
+
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
 
       // Hard redirect to reload the app with new auth state
       window.location.href = '/';
