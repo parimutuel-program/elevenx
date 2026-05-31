@@ -83,16 +83,16 @@ export default function Register() {
         register: true,
       });
 
-      console.log('walletAuth response:', response.data);
+      console.log('walletAuth response - success:', response.data.success, 'username:', response.data.username, 'full_name:', response.data.full_name);
 
       if (response.data.error) {
         throw new Error(response.data.error);
       }
 
       // User was created successfully - redirect to login for auto-auth
-      if (response.data.success && response.data.user) {
-        console.log('✓ User created, redirecting to login...');
-        // Redirect to login with wallet - it will auto-connect and authenticate
+      if (response.data.success) {
+        console.log('✓ User created successfully, username:', response.data.full_name || response.data.username);
+        // Redirect to login with wallet address only (string, not object)
         window.location.href = `/login?wallet=${walletAddress}&registered=true`;
         return;
       } else if (response.data.needsRegistration) {
