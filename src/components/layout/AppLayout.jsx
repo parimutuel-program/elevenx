@@ -1,7 +1,8 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, Trophy, BarChart3, User, Plus, Shield } from 'lucide-react';
+import { Home, Trophy, BarChart3, User, Shield } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
+import WalletButton from '@/components/wallet/WalletButton';
 
 const navItems = [
   { path: '/', icon: Home, label: 'Home' },
@@ -68,6 +69,7 @@ export default function AppLayout() {
               <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
               <span className="text-xs text-muted-foreground font-medium">Solana</span>
             </div>
+            <WalletButton />
           </div>
         </div>
       </header>

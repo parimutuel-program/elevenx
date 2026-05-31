@@ -3,7 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { ArrowLeft, Clock, CheckCircle2, XCircle, Trophy } from 'lucide-react';
+import { useWallet } from '@/lib/WalletContext';
+import { ArrowLeft, Clock, CheckCircle2, XCircle, Trophy, Wallet } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
@@ -14,6 +15,7 @@ import BetSlip from '@/components/betting/BetSlip';
 export default function BetDetail() {
   const { betId } = useParams();
   const { user } = useAuth();
+  const { isConnected, connect, shortAddress } = useWallet();
   const queryClient = useQueryClient();
   const [selectedOutcome, setSelectedOutcome] = useState(null);
 
@@ -89,7 +91,8 @@ export default function BetDetail() {
     );
   }
 
-  const isOpen = bet.status === 'open' && new Date(bet.open_until) > new Date();
+  // Bet is open if status is 'open' (ignore open_until if not set — admin controls status)
+  const isOpen = bet.status === 'open' && (!bet.open_until || new Date(bet.open_until) > new Date());
   const isSettled = bet.status === 'settled';
 
   return (
@@ -160,7 +163,7 @@ export default function BetDetail() {
           labelA={bet.outcome_a}
           labelB={bet.outcome_b}
           selected={selectedOutcome}
-          onSelect={isOpen && !myBet ? setSelectedOutcome : () => {}}
+          onSelect={(isOpen && !myBet && isConnected) ? setSelectedOutcome : () => {}}
         />
       </motion.div>
 
@@ -222,14 +225,54 @@ export default function BetDetail() {
         </motion.div>
       )}
 
-      {/* Bet Slip */}
-      {isOpen && !myBet && selectedOutcome && (
+      {/* Wallet gate — shown when bet is open but wallet not connected */}
+      {isOpen && !myBet && !isConnected && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="rounded-2xl border border-primary/20 p-7 text-center"
+          style={{ background: 'linear-gradient(145deg, #1a1040 0%, #0f0a1e 100%)' }}
+        >
+          <div className="w-14 h-14 rounded-2xl bg-primary/20 border border-primary/30 flex items-center justify-center mx-auto mb-4">
+            <Wallet className="w-7 h-7 text-primary" />
+          </div>
+          <h3 className="font-heading font-black text-xl text-white mb-2">Connect to Bet</h3>
+          <p className="text-white/50 text-sm mb-5 max-w-xs mx-auto">
+            Connect your Phantom wallet to place a bet on this match. Sessions are stored in your browser.
+          </p>
+          <Button
+            onClick={connect}
+            className="font-heading font-bold px-8 h-11 rounded-xl text-sm"
+            style={{ background: 'linear-gradient(135deg, #a69cf2, #8b84e8)', boxShadow: '0 0 24px rgba(166,156,242,0.3)' }}
+          >
+            <Wallet className="w-4 h-4 mr-2" />
+            Connect Phantom Wallet
+          </Button>
+        </motion.div>
+      )}
+
+      {/* Bet Slip — shown when outcome selected and wallet connected */}
+      {isOpen && !myBet && isConnected && selectedOutcome && (
         <BetSlip
           bet={bet}
           selectedOutcome={selectedOutcome}
           onPlaceBet={(amount) => placeBetMutation.mutate(amount)}
           isPlacing={placeBetMutation.isPending}
         />
+      )}
+
+      {/* Prompt to pick an outcome */}
+      {isOpen && !myBet && isConnected && !selectedOutcome && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="text-center py-6 bg-card border border-border/50 rounded-2xl"
+        >
+          <p className="text-muted-foreground text-sm">👆 Pick an outcome above to place your bet</p>
+          <p className="text-xs text-primary/70 mt-1 font-medium">{shortAddress}</p>
+        </motion.div>
       )}
 
       {!isOpen && !myBet && (
