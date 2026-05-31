@@ -849,7 +849,7 @@ export default function MatchDetail() {
         </motion.div>
       )}
 
-      {hasBet && !isOpen && isAdmin && !isSettled && (
+      {hasBet && isAdmin && !isSettled && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           className="bg-card border border-accent/20 rounded-2xl p-5 space-y-4">
           <div className="text-center">
