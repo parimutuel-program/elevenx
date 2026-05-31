@@ -128,13 +128,14 @@ export default function MatchDetail() {
 
   const matchOfferMutation = useMutation({
     mutationFn: async ({ offer, matchAmount }) => {
+      console.log('Calling matchBet function', { offer_id: offer.id, bet_id: bet.id, match_id: matchId, amount: matchAmount });
       const response = await base44.functions.invoke('matchBet', {
         offer_id: offer.id,
         bet_id: bet.id,
         match_id: matchId,
         amount: matchAmount,
       });
-
+      console.log('matchBet response:', response);
       return { 
         response, 
         offer, 
@@ -143,6 +144,7 @@ export default function MatchDetail() {
       };
     },
     onSuccess: async (result) => {
+      console.log('onSuccess called', result);
       if (result.response.data.solana_instruction) {
         setPendingTransaction({
           instruction: result.response.data.solana_instruction,
@@ -156,6 +158,10 @@ export default function MatchDetail() {
         queryClient.invalidateQueries({ queryKey: ['allUserBetsForBet', bet?.id] });
         resetForm();
       }
+    },
+    onError: (error) => {
+      console.error('matchOfferMutation error:', error);
+      alert('Failed to place bet: ' + (error.message || 'Unknown error'));
     },
   });
 
