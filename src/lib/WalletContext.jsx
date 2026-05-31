@@ -44,10 +44,13 @@ export const WalletProvider = ({ children }) => {
       setIsConnected(true);
       localStorage.setItem(WALLET_SESSION_KEY, JSON.stringify({ address, connectedAt: Date.now() }));
       
-      // Save to backend user profile
+      // Save to backend user profile only if user is authenticated
       try {
         const { base44 } = await import('@/api/base44Client');
-        await base44.functions.invoke('saveWalletAddress', { walletAddress: address });
+        const isAuthenticated = await base44.auth.isAuthenticated();
+        if (isAuthenticated) {
+          await base44.functions.invoke('saveWalletAddress', { walletAddress: address });
+        }
       } catch (err) {
         console.error('Failed to save wallet to profile:', err);
       }
