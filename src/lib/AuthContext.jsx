@@ -127,8 +127,6 @@ export const AuthProvider = ({ children }) => {
             role: response.data.role || response.data.user?.role,
             email: response.data.email || response.data.user?.email
           };
-          console.log('🔐 walletAuth response - full_name:', response.data.full_name, 'username:', response.data.username);
-          console.log('🔐 Built userData - full_name:', userData.full_name, 'username:', userData.username);
           setUser(userData);
           setIsAuthenticated(true);
         } else {
@@ -208,7 +206,6 @@ export const AuthProvider = ({ children }) => {
             role: response.data.role || response.data.user?.role,
             email: response.data.email || response.data.user?.email
           };
-          console.log('refreshUser - username:', userData.username, 'full_name:', userData.full_name);
           setUser(userData);
         }
       } else {
