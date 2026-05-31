@@ -92,37 +92,47 @@ export default function MatchDetail() {
 
   const openOfferMutation = useMutation({
     mutationFn: async ({ outcome, offerOutcomeLabel, offerAmount }) => {
-      await base44.entities.BetOffer.create({
-        bet_id: bet.id,
-        match_id: matchId,
-        outcome,
-        outcome_label: offerOutcomeLabel,
-        amount_offered: offerAmount,
-        amount_matched: 0,
-        amount_unmatched: offerAmount,
-        status: 'open',
-      });
-      const lpField = outcome === 'a' ? 'lp_amount_a' : outcome === 'b' ? 'lp_amount_b' : 'lp_amount_draw';
-      await base44.entities.Bet.update(bet.id, {
-        [lpField]: (bet[lpField] || 0) + offerAmount,
-      });
-      await base44.entities.UserBet.create({
+      const payload = {
         bet_id: bet.id,
         match_id: matchId,
         outcome,
         amount: offerAmount,
-        role: 'lp',
-        status: 'pending',
-        outcome_label: offerOutcomeLabel,
-        match_title: `${match.team_a} vs ${match.team_b}`,
-        potential_payout: 0,
-      });
+      };
+      
+      const response = await base44.functions.invoke('createBetOffer', payload);
+      
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
+      
+      if (!response.data.offer) {
+        throw new Error('No offer returned');
+      }
+      
+      return { 
+        response, 
+        amount: offerAmount,
+        userBetId: response.data.offer.id 
+      };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['offersForBet', bet?.id] });
-      queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
-      queryClient.invalidateQueries({ queryKey: ['myUserBets', matchId, user?.id] });
-      resetForm();
+    onSuccess: async (result) => {
+      if (result.response.data.solana_instruction) {
+        setPendingTransaction({
+          instruction: result.response.data.solana_instruction,
+          amount: result.amount,
+          userBetId: result.userBetId,
+          isOffer: true,
+        });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['offersForBet', bet?.id] });
+        queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
+        queryClient.invalidateQueries({ queryKey: ['myUserBets', matchId, user?.id] });
+        resetForm();
+      }
+    },
+    onError: (error) => {
+      console.error('openOfferMutation error:', error);
+      alert('Failed to create offer: ' + (error.message || 'Unknown error'));
     },
   });
 
@@ -218,7 +228,16 @@ export default function MatchDetail() {
 
   const handleTransactionSuccess = async () => {
     if (pendingTransaction?.userBetId) {
-      await base44.entities.UserBet.update(pendingTransaction.userBetId, { status: 'active' });
+      if (pendingTransaction.isOffer) {
+        // Update the UserBet created by createBetOffer
+        const lpBets = await base44.entities.UserBet.filter({ offer_id: pendingTransaction.userBetId, role: 'lp' });
+        if (lpBets.length > 0) {
+          await base44.entities.UserBet.update(lpBets[0].id, { status: 'active' });
+        }
+      } else {
+        // Update the UserBet created by matchBet
+        await base44.entities.UserBet.update(pendingTransaction.userBetId, { status: 'active' });
+      }
     }
     queryClient.invalidateQueries({ queryKey: ['offersForBet', bet?.id] });
     queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
