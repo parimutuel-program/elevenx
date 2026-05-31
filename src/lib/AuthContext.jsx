@@ -117,10 +117,19 @@ export const AuthProvider = ({ children }) => {
           walletAddress: address
         });
         
-        if (response.data.success && response.data.user) {
-          setUser(response.data.user);
+        if (response.data.success) {
+          // Build user object from response (fields are at root level, not under 'user')
+          const userData = {
+            id: response.data.userId || response.data.user?.id,
+            full_name: response.data.full_name || response.data.user?.full_name,
+            username: response.data.username || response.data.user?.username,
+            wallet_address: response.data.walletAddress || response.data.user?.wallet_address,
+            role: response.data.role || response.data.user?.role,
+            email: response.data.email || response.data.user?.email
+          };
+          setUser(userData);
           setIsAuthenticated(true);
-          console.log('✓ Wallet auth successful:', response.data.user.username);
+          console.log('✓ Wallet auth successful:', userData.username);
         } else {
           // Wallet not registered
           localStorage.removeItem('elevenx_wallet_session');
