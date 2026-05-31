@@ -38,7 +38,8 @@ export default function Home() {
 
   const openBets = bets.filter(b => b.status === 'open');
   const liveMatches = matches.filter(m => m.status === 'live');
-  const upcomingMatches = matches.filter(m => m.status === 'upcoming');
+  const upcomingMatches = matches.filter(m => m.status === 'upcoming')
+    .sort((a, b) => new Date(a.match_time) - new Date(b.match_time));
 
   const betByMatch = {};
   bets.forEach(b => { betByMatch[b.match_id] = b; });
