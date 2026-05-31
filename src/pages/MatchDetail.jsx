@@ -92,12 +92,32 @@ export default function MatchDetail() {
 
   const openOfferMutation = useMutation({
     mutationFn: async ({ outcome, offerOutcomeLabel, offerAmount }) => {
+      // Get wallet address from multiple sources for reliability
+      const walletSession = localStorage.getItem('elevenx_wallet_session');
+      let walletAddress = user?.wallet_address || user?.data?.wallet_address;
+      
+      // Fallback to localStorage if user object doesn't have it
+      if (!walletAddress && walletSession) {
+        try {
+          const parsed = JSON.parse(walletSession);
+          walletAddress = parsed.address || walletSession;
+        } catch {
+          walletAddress = walletSession;
+        }
+      }
+      
+      console.log('🎯 createBetOffer - walletAddress:', walletAddress, 'user:', user);
+      
+      if (!walletAddress) {
+        throw new Error('Wallet not connected. Please connect your wallet first.');
+      }
+      
       const payload = {
         bet_id: bet.id,
         match_id: matchId,
         outcome,
         amount: offerAmount,
-        walletAddress: user.wallet_address || user.data?.wallet_address,
+        walletAddress,
       };
       
       const response = await base44.functions.invoke('createBetOffer', payload);
@@ -141,12 +161,32 @@ export default function MatchDetail() {
 
   const matchOfferMutation = useMutation({
     mutationFn: async ({ offer, matchAmount }) => {
+      // Get wallet address from multiple sources for reliability
+      const walletSession = localStorage.getItem('elevenx_wallet_session');
+      let walletAddress = user?.wallet_address || user?.data?.wallet_address;
+      
+      // Fallback to localStorage if user object doesn't have it
+      if (!walletAddress && walletSession) {
+        try {
+          const parsed = JSON.parse(walletSession);
+          walletAddress = parsed.address || walletSession;
+        } catch {
+          walletAddress = walletSession;
+        }
+      }
+      
+      console.log('🎯 matchBet - walletAddress:', walletAddress, 'user:', user);
+      
+      if (!walletAddress) {
+        throw new Error('Wallet not connected. Please connect your wallet first.');
+      }
+      
       const payload = {
         offer_id: offer.id,
         bet_id: bet.id,
         match_id: matchId,
         amount: matchAmount,
-        walletAddress: user.wallet_address || user.data?.wallet_address,
+        walletAddress,
       };
       
       const response = await base44.functions.invoke('matchBet', payload);
