@@ -16,7 +16,7 @@ const WC_PHOTOS = [
 
 const FEATURED_MATCHES = [
   { flag_a: '🇲🇽', flag_b: '🇿🇦', team_a: 'Mexico', team_b: 'South Africa', group: 'Group A', date: 'Jun 11', matchId: '6a1bb650d531dec9f2da81ba', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/a1d1835b2_image.png' },
-  { flag_a: '🇺🇸', flag_b: '🇵🇾', team_a: 'USA', team_b: 'Paraguay', group: 'Group D', date: 'Jun 12', matchId: '6a1bb650d531dec9f2da81bd' },
+  { flag_a: '🇺🇸', flag_b: '🇵🇾', team_a: 'USA', team_b: 'Paraguay', group: 'Group D', date: 'Jun 12', matchId: '6a1bb650d531dec9f2da81bd', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/cf05870f3_image.png' },
   { flag_a: '🇧🇷', flag_b: '🇲🇦', team_a: 'Brazil', team_b: 'Morocco', group: 'Group C', date: 'Jun 13', matchId: '6a1bb650d531dec9f2da81bf' },
 ];
 
