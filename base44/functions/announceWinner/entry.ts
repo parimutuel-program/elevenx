@@ -107,6 +107,14 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('announceWinner error:', error);
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error('Stack trace:', error.stack);
+    console.error('Request details:', {
+      hasAuth: !!req.headers.get('Authorization'),
+      userId: await base44.auth.me().then(u => u?.id).catch(() => null),
+    });
+    return Response.json({ 
+      error: error.message,
+      details: error.toString(),
+    }, { status: 500 });
   }
 });
