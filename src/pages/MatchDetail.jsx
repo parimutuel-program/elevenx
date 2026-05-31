@@ -3,12 +3,14 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { ArrowLeft, Clock, Trophy, TrendingUp, Users, Zap, CheckCircle2, XCircle, Plus, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Clock, Trophy, TrendingUp, Users, Zap, CheckCircle2, XCircle, Plus, Info, ChevronDown, ChevronUp, Wallet } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
+import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
+import { useWallet } from '@/lib/WalletContext';
 
 function totalAvailable(offers, outcome) {
   return offers
@@ -36,6 +38,8 @@ export default function MatchDetail() {
   const [amount, setAmount] = useState('');
   const [matchingOffer, setMatchingOffer] = useState(null);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [pendingTransaction, setPendingTransaction] = useState(null);
+  const { isConnected } = useWallet();
 
   const { data: match } = useQuery({
     queryKey: ['match', matchId],
@@ -144,14 +148,15 @@ export default function MatchDetail() {
         status: newStatus,
       });
 
-      await base44.entities.UserBet.create({
+      const match = await base44.entities.Match.list().then(ms => ms.find(m => m.id === matchId));
+      const userBet = await base44.entities.UserBet.create({
         bet_id: bet.id,
         match_id: matchId,
         offer_id: offer.id,
         outcome: matcherOutcome,
         amount: matchAmount,
         role: 'matcher',
-        status: 'active',
+        status: 'pending',
         outcome_label: matcherLabel,
         match_title: `${match.team_a} vs ${match.team_b}`,
         potential_payout: potentialPayout,
@@ -174,13 +179,30 @@ export default function MatchDetail() {
         total_pool: (bet.total_pool || 0) + matchAmount,
         total_bettors: (bet.total_bettors || 0) + 1,
       });
+
+      return { userBet, offer, amount: matchAmount };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['offersForBet', bet?.id] });
-      queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
-      queryClient.invalidateQueries({ queryKey: ['myUserBets', matchId, user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['allUserBetsForBet', bet?.id] });
-      resetForm();
+    onSuccess: async (result) => {
+      const response = await base44.functions.invoke('matchBet', {
+        offer_id: result.offer.id,
+        bet_id: bet.id,
+        match_id: matchId,
+        amount: result.amount,
+      });
+
+      if (response.data.solana_instruction) {
+        setPendingTransaction({
+          instruction: response.data.solana_instruction,
+          amount: result.amount,
+          userBetId: result.userBet.id,
+        });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['offersForBet', bet?.id] });
+        queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
+        queryClient.invalidateQueries({ queryKey: ['myUserBets', matchId, user?.id] });
+        queryClient.invalidateQueries({ queryKey: ['allUserBetsForBet', bet?.id] });
+        resetForm();
+      }
     },
   });
 
@@ -215,7 +237,27 @@ export default function MatchDetail() {
 
   function resetForm() {
     setMode(null); setSelectedOutcome(null); setAmount(''); setMatchingOffer(null);
+    setPendingTransaction(null);
   }
+
+  const handleTransactionSuccess = async () => {
+    if (pendingTransaction?.userBetId) {
+      await base44.entities.UserBet.update(pendingTransaction.userBetId, { status: 'active' });
+    }
+    queryClient.invalidateQueries({ queryKey: ['offersForBet', bet?.id] });
+    queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
+    queryClient.invalidateQueries({ queryKey: ['myUserBets', matchId, user?.id] });
+    queryClient.invalidateQueries({ queryKey: ['allUserBetsForBet', bet?.id] });
+    resetForm();
+  };
+
+  const handleTransactionError = (err) => {
+    console.error('Transaction failed:', err);
+    if (pendingTransaction?.userBetId) {
+      base44.entities.UserBet.update(pendingTransaction.userBetId, { status: 'refunded' });
+    }
+    setPendingTransaction(null);
+  };
 
   function getOutcomeLabel(o) {
     if (!match || !bet) return o;
@@ -633,21 +675,41 @@ export default function MatchDetail() {
                       </div>
                     )}
 
-                    <Button
-                      onClick={() => {
-                        const offerToMatch = matchingOffer || offers.find(o =>
-                          (o.status === 'open' || o.status === 'partially_matched') &&
-                          o.outcome !== selectedOutcome &&
-                          o.amount_unmatched >= stakeNum
-                        );
-                        if (offerToMatch) matchOfferMutation.mutate({ offer: offerToMatch, matchAmount: stakeNum });
-                      }}
-                      disabled={stakeNum <= 0 || stakeNum > matchMax || matchOfferMutation.isPending}
-                      className="w-full h-12 font-heading font-bold text-sm bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl">
-                      {matchOfferMutation.isPending
-                        ? <div className="w-5 h-5 border-2 border-accent-foreground/30 border-t-accent-foreground rounded-full animate-spin" />
-                        : `Bet ◎${stakeNum > 0 ? stakeNum.toFixed(2) : '0.00'} on ${getOutcomeLabel(selectedOutcome)}`}
-                    </Button>
+                    {!isConnected ? (
+                      <Button
+                        onClick={async () => {
+                          await base44.auth.redirectToLogin();
+                        }}
+                        className="w-full h-12 font-heading font-bold text-sm bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl"
+                      >
+                        <Wallet className="w-4 h-4 mr-2" />
+                        Connect Wallet to Bet
+                      </Button>
+                    ) : pendingTransaction ? (
+                      <SolanaTransactionSigner
+                        instruction={pendingTransaction.instruction}
+                        amount={pendingTransaction.amount}
+                        onSuccess={handleTransactionSuccess}
+                        onError={handleTransactionError}
+                      />
+                    ) : (
+                      <Button
+                        onClick={() => {
+                          const offerToMatch = matchingOffer || offers.find(o =>
+                            (o.status === 'open' || o.status === 'partially_matched') &&
+                            o.outcome !== selectedOutcome &&
+                            o.amount_unmatched >= stakeNum
+                          );
+                          if (offerToMatch) matchOfferMutation.mutate({ offer: offerToMatch, matchAmount: stakeNum });
+                        }}
+                        disabled={stakeNum <= 0 || stakeNum > matchMax || matchOfferMutation.isPending}
+                        className="w-full h-12 font-heading font-bold text-sm bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl"
+                      >
+                        {matchOfferMutation.isPending
+                          ? <div className="w-5 h-5 border-2 border-accent-foreground/30 border-t-accent-foreground rounded-full animate-spin" />
+                          : `Bet ◎${stakeNum > 0 ? stakeNum.toFixed(2) : '0.00'} on ${getOutcomeLabel(selectedOutcome)}`}
+                      </Button>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
