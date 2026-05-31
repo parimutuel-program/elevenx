@@ -68,6 +68,16 @@ export default function Register() {
         throw new Error(response.data.error);
       }
 
+      // If new user, login with the provided credentials
+      if (response.data.isNewUser && response.data.email && response.data.password) {
+        await base44.auth.loginViaEmailPassword(response.data.email, response.data.password);
+        
+        // Update wallet address on the user
+        await base44.auth.updateMe({
+          wallet_address: walletAddress,
+        });
+      }
+
       // Hard redirect to reload the app with new auth state
       window.location.href = '/';
     } catch (err) {

@@ -32,6 +32,7 @@ Deno.serve(async (req) => {
     // If registering and user doesn't exist, create user with service role
     if (register && !user && fullName) {
       const walletEmail = `${walletAddress.slice(0, 8)}@elevenx.bet`;
+      const tempPassword = Math.random().toString(36).slice(-10);
       
       // Create user using service role (bypasses email/password auth requirement)
       const newUser = await base44.asServiceRole.entities.User.create({
@@ -41,6 +42,7 @@ Deno.serve(async (req) => {
         role: 'user',
       });
       
+      // Return credentials for frontend to login
       return Response.json({
         success: true,
         needsRegistration: false,
@@ -52,7 +54,9 @@ Deno.serve(async (req) => {
           role: newUser.role
         },
         walletAddress,
-        isNewUser: true
+        isNewUser: true,
+        email: walletEmail,
+        password: tempPassword
       });
     }
 
