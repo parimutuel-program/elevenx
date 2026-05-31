@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { useWallet } from '@/lib/WalletContext';
-import { ArrowLeft, Clock, Trophy, TrendingUp, Users, Zap, CheckCircle2, XCircle, Plus, Info, ChevronDown, ChevronUp, Wallet } from 'lucide-react';
+import { ArrowLeft, Clock, Trophy, TrendingUp, Users, Zap, CheckCircle2, XCircle, Plus, Info, ChevronDown, ChevronUp, Wallet, Award } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -849,7 +849,72 @@ export default function MatchDetail() {
         </motion.div>
       )}
 
-      {hasBet && !isOpen && (
+      {hasBet && !isOpen && isAdmin && !isSettled && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="bg-card border border-accent/20 rounded-2xl p-5 space-y-4">
+          <div className="text-center">
+            <Trophy className="w-8 h-8 text-accent mx-auto mb-2" />
+            <h3 className="font-heading font-bold mb-1">Settle This Bet</h3>
+            <p className="text-xs text-muted-foreground mb-4">Select the winning outcome to distribute winnings</p>
+            
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              {['a', 'b', 'draw'].map(outcome => (
+                <Button
+                  key={outcome}
+                  onClick={() => {
+                    if (confirm(`Confirm ${outcome === 'draw' ? 'Draw' : outcome === 'a' ? bet.outcome_a : bet.outcome_b} won? This will distribute winnings to all winners.`)) {
+                      base44.functions.invoke('announceWinner', {
+                        bet_id: bet.id,
+                        winning_outcome: outcome
+                      }).then(res => {
+                        if (res.data.success) {
+                          alert(res.data.message);
+                          queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
+                          queryClient.invalidateQueries({ queryKey: ['myUserBets', matchId, user?.id] });
+                        } else {
+                          alert('Error: ' + res.data.error);
+                        }
+                      }).catch(err => {
+                        alert('Failed to settle: ' + err.message);
+                      });
+                    }
+                  }}
+                  className={`h-10 font-heading font-bold text-xs rounded-xl ${
+                    outcome === 'a' ? 'bg-primary hover:bg-primary/90 text-primary-foreground' :
+                    outcome === 'b' ? 'bg-accent hover:bg-accent/90 text-accent-foreground' :
+                    'bg-yellow-500 hover:bg-yellow-500/90 text-white'
+                  }`}
+                >
+                  {outcome === 'a' ? bet.outcome_a : outcome === 'b' ? bet.outcome_b : 'Draw'}
+                </Button>
+              ))}
+            </div>
+            
+            <div className="text-xs text-muted-foreground bg-secondary/30 rounded-xl p-3">
+              <p className="font-bold text-foreground mb-1">Distribution Summary:</p>
+              <p>• Winners: All bets on the selected outcome will be marked as "won"</p>
+              <p>• Losers: All other bets marked as "lost"</p>
+              <p>• Payout: Winners can claim their potential payout</p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {hasBet && !isOpen && isSettled && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="bg-card border border-accent/20 rounded-2xl p-5 text-center">
+          <CheckCircle2 className="w-8 h-8 text-accent mx-auto mb-2" />
+          <h3 className="font-heading font-bold mb-1">Bet Settled</h3>
+          <p className="text-xs text-muted-foreground">
+            Winner: <span className="font-bold text-accent">
+              {bet.winning_outcome === 'a' ? bet.outcome_a : bet.winning_outcome === 'b' ? bet.outcome_b : 'Draw'}
+            </span>
+          </p>
+          <p className="text-xs text-muted-foreground mt-2">Winnings have been distributed to winners</p>
+        </motion.div>
+      )}
+
+      {hasBet && !isOpen && !isAdmin && (
         <div className="text-center py-8 bg-card border border-border/50 rounded-2xl">
           <p className="text-muted-foreground text-sm">{isSettled ? 'Market settled.' : 'Betting is closed.'}</p>
         </div>
