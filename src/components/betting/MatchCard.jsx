@@ -19,10 +19,11 @@ export default function MatchCard({ match, bet, index = 0 }) {
   const lpB = bet?.lp_amount_b || 0;
   const lpDraw = bet?.lp_amount_draw || 0;
   const totalLP = lpA + lpB + lpDraw;
-  const oddsA = lpA > 0 ? (lpB + lpDraw) / lpA : null;
-  const oddsB = lpB > 0 ? (lpA + lpDraw) / lpB : null;
-  const oddsDraw = lpDraw > 0 ? (lpA + lpB) / lpDraw : null;
-  const hasOdds = totalLP > 0;
+  // Odds require liquidity on opposing sides to be meaningful
+  const oddsA = (lpA > 0 && (lpB + lpDraw) > 0) ? (lpB + lpDraw) / lpA : null;
+  const oddsB = (lpB > 0 && (lpA + lpDraw) > 0) ? (lpA + lpDraw) / lpB : null;
+  const oddsDraw = (lpDraw > 0 && (lpA + lpB) > 0) ? (lpA + lpB) / lpDraw : null;
+  const hasOdds = oddsA !== null || oddsB !== null || oddsDraw !== null;
 
   return (
     <motion.div
@@ -76,24 +77,30 @@ export default function MatchCard({ match, bet, index = 0 }) {
           {/* Bet info */}
           {bet && (
             <div className="mt-4 pt-3 border-t border-border/50">
-              {hasOdds && (
-                <div className={`grid gap-2 mb-2 ${oddsDraw !== null ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                  {oddsA !== null && (
+              {totalLP > 0 && (
+                <div className={`grid gap-2 mb-2 ${lpDraw > 0 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                  {lpA > 0 && (
                     <div className="bg-primary/10 rounded-lg px-2 py-1.5 text-center">
                       <p className="text-[10px] text-muted-foreground truncate">{match.team_a}</p>
-                      <p className="font-heading font-bold text-xs text-primary">{oddsA.toFixed(2)}x</p>
+                      <p className="font-heading font-bold text-xs text-primary">
+                        {oddsA !== null ? `${oddsA.toFixed(2)}x` : `$${lpA.toFixed(0)}`}
+                      </p>
                     </div>
                   )}
-                  {oddsDraw !== null && (
+                  {lpDraw > 0 && (
                     <div className="bg-yellow-500/10 rounded-lg px-2 py-1.5 text-center">
                       <p className="text-[10px] text-muted-foreground">Draw</p>
-                      <p className="font-heading font-bold text-xs text-yellow-400">{oddsDraw.toFixed(2)}x</p>
+                      <p className="font-heading font-bold text-xs text-yellow-400">
+                        {oddsDraw !== null ? `${oddsDraw.toFixed(2)}x` : `$${lpDraw.toFixed(0)}`}
+                      </p>
                     </div>
                   )}
-                  {oddsB !== null && (
+                  {lpB > 0 && (
                     <div className="bg-accent/10 rounded-lg px-2 py-1.5 text-center">
                       <p className="text-[10px] text-muted-foreground truncate">{match.team_b}</p>
-                      <p className="font-heading font-bold text-xs text-accent">{oddsB.toFixed(2)}x</p>
+                      <p className="font-heading font-bold text-xs text-accent">
+                        {oddsB !== null ? `${oddsB.toFixed(2)}x` : `$${lpB.toFixed(0)}`}
+                      </p>
                     </div>
                   )}
                 </div>
