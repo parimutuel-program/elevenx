@@ -88,6 +88,7 @@ export default function Register() {
 
   return (
     <AuthLayout
+      icon={Wallet}
       title="Create Account"
       subtitle="Register with your Solana wallet"
     >
