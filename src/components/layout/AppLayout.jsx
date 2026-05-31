@@ -33,8 +33,8 @@ export default function AppLayout() {
       {/* Top Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5">
-            <span className="font-heading font-bold text-lg text-white tracking-tight">ElevenX</span>
+          <Link to="/" className="flex items-center gap-2.5 ml-8">
+            <span className="font-heading font-bold text-xl text-white tracking-tight" style={{ textShadow: '0 0 20px rgba(166,156,242,0.5)' }}>ElevenX</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
