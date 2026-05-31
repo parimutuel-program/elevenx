@@ -334,55 +334,6 @@ export default function MatchDetail() {
         </div>
       )}
 
-      {/* ── My Positions ── */}
-      {myActiveBets.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="bg-card border border-primary/20 rounded-2xl p-5 space-y-3">
-          <h3 className="font-heading font-bold text-sm flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-primary" /> My Positions
-          </h3>
-          {myActiveBets.map(ub => (
-            <div key={ub.id} className="bg-secondary/30 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm">{ub.outcome_label}</span>
-                  <Badge className={`text-[9px] py-0 ${
-                    ub.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                    ub.status === 'active' ? 'bg-accent/20 text-accent' :
-                    ub.status === 'won' ? 'bg-accent/30 text-accent' :
-                    ub.status === 'lost' ? 'bg-destructive/20 text-destructive' :
-                    'bg-secondary text-secondary-foreground'
-                  }`}>
-                    {ub.status === 'pending' && ub.role === 'lp' ? 'Waiting for match' : ub.status}
-                  </Badge>
-                  {ub.role === 'lp' && <span className="text-[10px] text-muted-foreground">LP offer</span>}
-                </div>
-                <span className="font-bold">${ub.amount?.toFixed(2)}</span>
-              </div>
-              {ub.potential_payout > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Potential payout if you win: <span className="text-accent font-bold">${ub.potential_payout?.toFixed(2)}</span>
-                </p>
-              )}
-              {ub.status === 'won' && (
-                <Button onClick={() => claimMutation.mutate(ub.id)} size="sm"
-                  className="w-full mt-2 h-8 text-xs bg-accent hover:bg-accent/90 text-accent-foreground font-bold rounded-lg">
-                  Claim ${ub.actual_payout?.toFixed(2) || ub.potential_payout?.toFixed(2)}
-                </Button>
-              )}
-              {ub.status === 'pending' && ub.role === 'lp' && (
-                <Button onClick={() => cancelOfferMutation.mutate(ub)} size="sm"
-                  disabled={cancelOfferMutation.isPending}
-                  variant="outline"
-                  className="w-full mt-2 h-8 text-xs border-destructive/40 text-destructive hover:bg-destructive/10 rounded-lg">
-                  Cancel & Refund
-                </Button>
-              )}
-            </div>
-          ))}
-        </motion.div>
-      )}
-
       {/* ── Market Odds ── */}
       {hasBet && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
@@ -430,7 +381,7 @@ export default function MatchDetail() {
         </motion.div>
       )}
 
-      {/* ── How It Works (collapsible) ── */}
+      {/* ── How It Works (collapsible) — shown right after odds ── */}
       {hasBet && isOpen && (
         <div className="bg-card border border-border/50 rounded-2xl overflow-hidden">
           <button
@@ -754,6 +705,55 @@ export default function MatchDetail() {
               </div>
             );
           })}
+        </motion.div>
+      )}
+
+      {/* ── My Positions ── */}
+      {myActiveBets.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="bg-card border border-primary/20 rounded-2xl p-5 space-y-3">
+          <h3 className="font-heading font-bold text-sm flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-primary" /> My Positions
+          </h3>
+          {myActiveBets.map(ub => (
+            <div key={ub.id} className="bg-secondary/30 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sm">{ub.outcome_label}</span>
+                  <Badge className={`text-[9px] py-0 ${
+                    ub.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                    ub.status === 'active' ? 'bg-accent/20 text-accent' :
+                    ub.status === 'won' ? 'bg-accent/30 text-accent' :
+                    ub.status === 'lost' ? 'bg-destructive/20 text-destructive' :
+                    'bg-secondary text-secondary-foreground'
+                  }`}>
+                    {ub.status === 'pending' && ub.role === 'lp' ? 'Waiting for match' : ub.status}
+                  </Badge>
+                  {ub.role === 'lp' && <span className="text-[10px] text-muted-foreground">LP offer</span>}
+                </div>
+                <span className="font-bold">${ub.amount?.toFixed(2)}</span>
+              </div>
+              {ub.potential_payout > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Potential payout if you win: <span className="text-accent font-bold">${ub.potential_payout?.toFixed(2)}</span>
+                </p>
+              )}
+              {ub.status === 'won' && (
+                <Button onClick={() => claimMutation.mutate(ub.id)} size="sm"
+                  className="w-full mt-2 h-8 text-xs bg-accent hover:bg-accent/90 text-accent-foreground font-bold rounded-lg">
+                  Claim ${ub.actual_payout?.toFixed(2) || ub.potential_payout?.toFixed(2)}
+                </Button>
+              )}
+              {ub.status === 'pending' && ub.role === 'lp' && (
+                <Button onClick={() => cancelOfferMutation.mutate(ub)} size="sm"
+                  disabled={cancelOfferMutation.isPending}
+                  variant="outline"
+                  className="w-full mt-2 h-8 text-xs border-destructive/40 text-destructive hover:bg-destructive/10 rounded-lg">
+                  Cancel & Refund
+                </Button>
+              )}
+            </div>
+          ))}
         </motion.div>
       )}
 
