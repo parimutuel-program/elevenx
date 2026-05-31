@@ -623,22 +623,12 @@ export default function MatchDetail() {
 
                     {!isConnected ? (
                       <Button
-                        onClick={() => window.location.href = '/register'}
+                        onClick={() => window.location.href = '/login'}
                         className="w-full h-12 font-heading font-bold text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
                       >
                         <Wallet className="w-4 h-4 mr-2" />
-                        Register to Bet
+                        Connect Wallet to Bet
                       </Button>
-                    ) : !user?.full_name ? (
-                      <div className="space-y-3">
-                        <Button
-                          onClick={() => window.location.href = '/register'}
-                          className="w-full h-12 font-heading font-bold text-sm bg-yellow-500 hover:bg-yellow-500/90 text-yellow-50 rounded-xl"
-                        >
-                          Complete Registration First
-                        </Button>
-                        <p className="text-xs text-center text-muted-foreground">Enter your name to start betting</p>
-                      </div>
                     ) : pendingTransaction ? (
                       <SolanaTransactionSigner
                         instruction={pendingTransaction.instruction}
@@ -764,22 +754,12 @@ export default function MatchDetail() {
 
                     {!isConnected ? (
                       <Button
-                        onClick={() => window.location.href = '/register'}
+                        onClick={() => window.location.href = '/login'}
                         className="w-full h-12 font-heading font-bold text-sm bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl"
                       >
                         <Wallet className="w-4 h-4 mr-2" />
-                        Register to Bet
+                        Connect Wallet to Bet
                       </Button>
-                    ) : !user?.full_name ? (
-                      <div className="space-y-3">
-                        <Button
-                          onClick={() => window.location.href = '/register'}
-                          className="w-full h-12 font-heading font-bold text-sm bg-yellow-500 hover:bg-yellow-500/90 text-yellow-50 rounded-xl"
-                        >
-                          Complete Registration First
-                        </Button>
-                        <p className="text-xs text-center text-muted-foreground">Enter your name to start betting</p>
-                      </div>
                     ) : pendingTransaction ? (
                       <SolanaTransactionSigner
                         instruction={pendingTransaction.instruction}
