@@ -76,8 +76,7 @@ export default function Login() {
         }
 
         if (response.data.success) {
-          await base44.auth.updateMe({ wallet_address: walletAddress });
-          await checkUserAuth();
+          // Wallet address already saved during registration, just redirect
           window.location.href = '/';
         }
       } else {
@@ -93,8 +92,7 @@ export default function Login() {
         }
 
         if (response.data.success) {
-          await base44.auth.updateMe({ wallet_address: walletAddress });
-          await checkUserAuth();
+          // Wallet address already saved during registration, just redirect
           window.location.href = '/';
         }
       }
