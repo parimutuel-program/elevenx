@@ -42,9 +42,11 @@ export default function Register() {
     } catch (err) {
       console.error('Wallet connect failed:', err);
       setError(err.message || 'Failed to connect wallet. Please try again.');
-    } finally {
       setIsConnecting(false);
+      return;
     }
+    
+    setIsConnecting(false);
   };
 
   const handleRegister = async () => {
