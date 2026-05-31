@@ -35,12 +35,12 @@ Deno.serve(async (req) => {
     // Check if user exists by wallet address
     let user = null;
     try {
-      console.log('Looking up user by wallet address...');
+      console.log('Looking up user by wallet:', walletAddress?.slice(0, 8));
       const users = await serviceRole.entities.User.filter({ wallet_address: walletAddress });
-      console.log('User lookup - found:', users?.length || 0);
-      user = users[0] || null;
-      if (user) {
-        console.log('Found existing user - username:', user.full_name || user.username, 'id:', user.id);
+      console.log('User lookup - found:', users?.length || 0, 'users');
+      if (users && users.length > 0) {
+        user = users[0];
+        console.log('✓ Found user - full_name:', user.full_name, 'username:', user.username);
       }
     } catch (err) {
       console.log('User lookup failed:', err.message);
@@ -86,14 +86,12 @@ Deno.serve(async (req) => {
         return Response.json({
           success: true,
           needsRegistration: false,
-          user: {
-            id: newUser.id,
-            full_name: newUser.full_name,
-            username: newUser.username,
-            wallet_address: newUser.wallet_address,
-            role: newUser.role
-          },
-          walletAddress,
+          userId: newUser.id,
+          full_name: newUser.full_name,
+          username: newUser.username,
+          walletAddress: newUser.wallet_address,
+          role: newUser.role,
+          email: newUser.email,
           isNewUser: true
         });
       } catch (createErr) {
