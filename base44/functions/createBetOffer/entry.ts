@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
     });
 
     const match = await base44.entities.Match.list().then(ms => ms.find(m => m.id === match_id));
-    await base44.entities.UserBet.create({
+    const userBet = await base44.entities.UserBet.create({
       bet_id,
       match_id,
       offer_id: offer.id,
@@ -113,6 +113,7 @@ Deno.serve(async (req) => {
     return Response.json({
       success: true,
       offer,
+      userBetId: userBet.id,
       solana_instruction: {
         programId: programId.toBase58(),
         keys,

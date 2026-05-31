@@ -112,7 +112,7 @@ export default function MatchDetail() {
       return { 
         response, 
         amount: offerAmount,
-        userBetId: response.data.offer.id 
+        userBetId: response.data.userBetId 
       };
     },
     onSuccess: async (result) => {
