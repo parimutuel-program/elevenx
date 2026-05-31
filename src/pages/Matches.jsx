@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Trophy, Search } from 'lucide-react';
+import { Trophy, Search, Calendar } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { format } from 'date-fns';
 import MatchCard from '@/components/betting/MatchCard';
 
 export default function Matches() {
@@ -32,6 +33,19 @@ export default function Matches() {
     return true;
   });
 
+  // Group by date then by group_stage
+  const groupedByDate = {};
+  filtered.forEach(m => {
+    const dateKey = m.match_time ? format(new Date(m.match_time), 'yyyy-MM-dd') : 'TBD';
+    const dateLabel = m.match_time ? format(new Date(m.match_time), 'EEEE, MMM d · yyyy') : 'TBD';
+    if (!groupedByDate[dateKey]) groupedByDate[dateKey] = { label: dateLabel, groups: {} };
+    const gs = m.group_stage || 'Other';
+    if (!groupedByDate[dateKey].groups[gs]) groupedByDate[dateKey].groups[gs] = [];
+    groupedByDate[dateKey].groups[gs].push(m);
+  });
+
+  const sortedDates = Object.keys(groupedByDate).sort();
+
   return (
     <div className="space-y-6">
       <div>
@@ -43,7 +57,7 @@ export default function Matches() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search teams..."
+            placeholder="Search teams or groups..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-10 bg-secondary/50 border-border/50 h-10 rounded-xl"
@@ -60,10 +74,40 @@ export default function Matches() {
       </div>
 
       {filtered.length > 0 ? (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((m, i) => (
-            <MatchCard key={m.id} match={m} bet={betByMatch[m.id]} index={i} />
-          ))}
+        <div className="space-y-8">
+          {sortedDates.map(dateKey => {
+            const { label, groups } = groupedByDate[dateKey];
+            const sortedGroups = Object.keys(groups).sort();
+            return (
+              <div key={dateKey}>
+                {/* Date header */}
+                <div className="flex items-center gap-3 mb-4 sticky top-0 z-10 bg-background py-2">
+                  <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-xl px-3 py-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-primary" />
+                    <span className="font-heading font-bold text-sm text-primary">{label}</span>
+                  </div>
+                  <div className="flex-1 h-px bg-border/50" />
+                </div>
+
+                {/* Groups within this date */}
+                <div className="space-y-5">
+                  {sortedGroups.map(gs => (
+                    <div key={gs}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">{gs}</span>
+                        <div className="flex-1 h-px bg-border/30" />
+                      </div>
+                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {groups[gs].map((m, i) => (
+                          <MatchCard key={m.id} match={m} bet={betByMatch[m.id]} index={i} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-20">
