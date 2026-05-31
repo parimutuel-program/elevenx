@@ -9,7 +9,7 @@ import AuthLayout from '@/components/AuthLayout';
 export default function Register() {
   const [step, setStep] = useState('wallet'); // 'wallet' | 'details'
   const [walletAddress, setWalletAddress] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState('');
@@ -50,8 +50,8 @@ export default function Register() {
   };
 
   const handleRegister = async () => {
-    if (!fullName) {
-      setError('Please enter your name');
+    if (!username || username.length < 3) {
+      setError('Username must be at least 3 characters');
       return;
     }
 
@@ -62,7 +62,7 @@ export default function Register() {
       // Use walletAuth backend function to create user via service role
       const response = await base44.functions.invoke('walletAuth', {
         walletAddress,
-        fullName,
+        username,
         register: true,
       });
 
@@ -72,10 +72,8 @@ export default function Register() {
         throw new Error(response.data.error);
       }
 
-      // User was created successfully - response includes user info
-      if (response.data.success && (response.data.user || response.data.userId)) {
-        // Wallet address already saved during user creation via service role
-        // Redirect to login with success message and wallet address for auto-login
+      // User was created successfully
+      if (response.data.success && response.data.user) {
         window.location.href = `/login?wallet=${walletAddress}&registered=true`;
       } else if (response.data.needsRegistration) {
         throw new Error('User already exists, please login instead');
@@ -141,22 +139,23 @@ export default function Register() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="fullName" className="text-sm font-medium">Full Name</Label>
+              <Label htmlFor="username" className="text-sm font-medium">Username</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  id="fullName"
-                  placeholder="John Doe"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  id="username"
+                  placeholder="Choose a username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="pl-10 h-11 rounded-xl"
                 />
               </div>
+              <p className="text-xs text-muted-foreground">This will be your unique display name</p>
             </div>
 
             <Button
               onClick={handleRegister}
-              disabled={isRegistering || !fullName}
+              disabled={isRegistering || !username}
               className="w-full h-12 font-heading font-bold rounded-xl text-sm"
               style={{ background: 'linear-gradient(135deg, #a69cf2, #8b84e8)', boxShadow: '0 0 16px rgba(166,156,242,0.25)' }}
             >

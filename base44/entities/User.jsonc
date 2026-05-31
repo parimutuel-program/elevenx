@@ -6,6 +6,10 @@
       "type": "string",
       "description": "Solana wallet address for authentication and payouts"
     },
+    "username": {
+      "type": "string",
+      "description": "Unique username chosen by the user"
+    },
     "total_bets": {
       "type": "number",
       "default": 0,
@@ -21,5 +25,9 @@
       "default": 0,
       "description": "Total amount staked in SOL"
     }
-  }
+  },
+  "required": [
+    "wallet_address",
+    "username"
+  ]
 }

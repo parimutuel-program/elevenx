@@ -8,7 +8,7 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const serviceRole = base44.asServiceRole;
     
-    const { walletAddress, signature, message, fullName, register } = await req.json();
+    const { walletAddress, signature, message, username, register } = await req.json();
 
     if (!walletAddress) {
       return Response.json({ error: 'Missing wallet address' }, { status: 400 });
@@ -27,11 +27,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check if user exists by wallet address - wrap in try/catch for auth errors
+    // Check if user exists by wallet address
     let user = null;
     if (!register) {
-      // Only try to lookup existing users if NOT registering
-      // During registration, we skip lookup and go straight to create
       try {
         const users = await serviceRole.entities.User.filter({ wallet_address: walletAddress });
         user = users[0] || null;
@@ -42,14 +40,28 @@ Deno.serve(async (req) => {
     }
 
     // If registering, create user with service role
-    if (register && fullName) {
+    if (register && username) {
+      // Check if username is already taken
+      try {
+        const existingUsers = await serviceRole.entities.User.filter({ username: username });
+        if (existingUsers && existingUsers.length > 0) {
+          return Response.json({ 
+            error: 'Username already taken. Please choose another.',
+            needsRegistration: false
+          }, { status: 409 });
+        }
+      } catch (err) {
+        console.log('Username check failed:', err.message);
+      }
+      
       const walletEmail = `${walletAddress.slice(0, 8)}@elevenx.bet`;
       
       try {
-        // Create user using service role (bypasses email/password auth requirement)
+        // Create user using service role
         const newUser = await serviceRole.entities.User.create({
           email: walletEmail,
-          full_name: fullName,
+          full_name: username,
+          username: username,
           wallet_address: walletAddress,
           role: 'user',
         });
@@ -62,6 +74,7 @@ Deno.serve(async (req) => {
             id: newUser.id,
             email: newUser.email,
             full_name: newUser.full_name,
+            username: newUser.username,
             wallet_address: newUser.wallet_address,
             role: newUser.role
           },
@@ -88,7 +101,8 @@ Deno.serve(async (req) => {
       userId: user.id,
       walletAddress: user.wallet_address,
       role: user.role,
-      full_name: user.full_name
+      full_name: user.full_name,
+      username: user.username
     });
 
   } catch (error) {
