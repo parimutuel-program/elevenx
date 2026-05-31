@@ -126,16 +126,18 @@ export default function Profile() {
       <Button
         variant="outline"
         onClick={async () => {
-          // Disconnect wallet first
+          // Disconnect wallet and logout
           await disconnect();
-          // Then logout from Base44 and redirect
           await logout();
+          // Clear wallet session from localStorage
+          localStorage.removeItem('elevenx_wallet_session');
+          // Hard redirect to reload app state
           window.location.href = '/';
         }}
         className="w-full border-border/50 text-muted-foreground hover:text-destructive hover:border-destructive/30 h-11 rounded-xl"
       >
         <LogOut className="w-4 h-4 mr-2" />
-        Sign Out
+        Sign Out & Disconnect Wallet
       </Button>
     </div>
   );
