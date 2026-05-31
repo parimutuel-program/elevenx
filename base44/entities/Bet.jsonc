@@ -18,6 +18,11 @@
       "type": "string",
       "description": "Label for outcome B (team name)"
     },
+    "outcome_draw": {
+      "type": "string",
+      "default": "Draw",
+      "description": "Label for the draw outcome"
+    },
     "open_until": {
       "type": "string",
       "format": "date-time",
@@ -38,6 +43,7 @@
       "enum": [
         "a",
         "b",
+        "draw",
         ""
       ],
       "default": "",
@@ -46,27 +52,37 @@
     "lp_amount_a": {
       "type": "number",
       "default": 0,
-      "description": "Total liquidity provided backing outcome A (LP side)"
+      "description": "Total LP liquidity offered on outcome A"
     },
     "lp_amount_b": {
       "type": "number",
       "default": 0,
-      "description": "Total liquidity provided backing outcome B (LP side)"
+      "description": "Total LP liquidity offered on outcome B"
+    },
+    "lp_amount_draw": {
+      "type": "number",
+      "default": 0,
+      "description": "Total LP liquidity offered on draw"
     },
     "backed_amount_a": {
       "type": "number",
       "default": 0,
-      "description": "Total bettor money placed ON outcome A"
+      "description": "Total matched/backed amount on outcome A"
     },
     "backed_amount_b": {
       "type": "number",
       "default": 0,
-      "description": "Total bettor money placed ON outcome B"
+      "description": "Total matched/backed amount on outcome B"
+    },
+    "backed_amount_draw": {
+      "type": "number",
+      "default": 0,
+      "description": "Total matched/backed amount on draw"
     },
     "total_pool": {
       "type": "number",
       "default": 0,
-      "description": "Total pool (all LP + bettors)"
+      "description": "Total matched pool (all locked funds)"
     },
     "fee_percent": {
       "type": "number",

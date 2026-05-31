@@ -3,44 +3,42 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { useWallet } from '@/lib/WalletContext';
-import { ArrowLeft, Clock, Trophy, Wallet, TrendingUp, Users, Zap, CheckCircle2, XCircle } from 'lucide-react';
+import { ArrowLeft, Clock, Trophy, TrendingUp, Users, Zap, CheckCircle2, XCircle, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
+import OfferBook from '@/components/betting/OfferBook';
 
-// ── Odds helpers ──────────────────────────────────────────────────────────────
-// For a bettor picking side X:
-//   available coverage = LP on the OTHER side − already backed on X
-//   their max bet = that coverage
-//   if they put $S on X, they can win $S * (lpOther / backedX_new)
-// We use a simple fixed-odds model per LP ratio:
-//   odds for A = (lp_b) / (lp_a)  → if lp_a=100, lp_b=100 → 1:1 (win same)
-//   bettor on A can win: stake * (lp_b / lp_a)  (from LP-B pool)
-//   max stake on A = lp_b − backed_a  (can't exceed coverage)
-
-function calcOdds(lpA, lpB) {
-  if (!lpA || !lpA > 0) return { oddsA: null, oddsB: null };
-  const oddsA = lpA > 0 && lpB > 0 ? (lpA / lpB) : 1; // bettor A wins oddsA * stake from LP-B side
-  const oddsB = lpA > 0 && lpB > 0 ? (lpB / lpA) : 1;
-  return { oddsA, oddsB };
+// ── Odds calculation from live offer pools ────────────────────────────────────
+function calcImpliedOdds(lpA, lpB, lpDraw) {
+  const total = lpA + lpB + lpDraw;
+  if (total === 0) return { oddsA: 1, oddsB: 1, oddsDraw: 1 };
+  const oddsA = lpA > 0 ? (lpB + lpDraw) / lpA : 0;
+  const oddsB = lpB > 0 ? (lpA + lpDraw) / lpB : 0;
+  const oddsDraw = lpDraw > 0 ? (lpA + lpB) / lpDraw : 0;
+  return { oddsA, oddsB, oddsDraw };
 }
 
-function maxBet(lpOtherSide, backedThisSide) {
-  return Math.max(0, (lpOtherSide || 0) - (backedThisSide || 0));
+function totalAvailable(offers, outcome) {
+  return offers
+    .filter(o => o.outcome === outcome && (o.status === 'open' || o.status === 'partially_matched'))
+    .reduce((s, o) => s + (o.amount_unmatched || 0), 0);
 }
+
+const QUICK_AMOUNTS = [10, 25, 50, 100, 250];
+const FEE_BPS = 200;
 
 export default function MatchDetail() {
   const { matchId } = useParams();
   const { user } = useAuth();
-  const { isConnected: _isConnected, connect, shortAddress } = useWallet();
-  const isConnected = true; // TESTING: bypass wallet gate
   const queryClient = useQueryClient();
-  const [selectedOutcome, setSelectedOutcome] = useState(null); // 'a' | 'b'
+
+  const [mode, setMode] = useState(null);
+  const [selectedOutcome, setSelectedOutcome] = useState(null);
   const [amount, setAmount] = useState('');
-  const quickAmounts = [10, 25, 50, 100, 250];
+  const [matchingOffer, setMatchingOffer] = useState(null);
 
   const { data: match } = useQuery({
     queryKey: ['match', matchId],
@@ -55,12 +53,19 @@ export default function MatchDetail() {
   });
   const bet = bets[0] || null;
 
-  const { data: myBets = [] } = useQuery({
-    queryKey: ['myBetsForMatch', matchId],
+  const { data: offers = [] } = useQuery({
+    queryKey: ['offersForBet', bet?.id],
+    queryFn: () => base44.entities.BetOffer.filter({ bet_id: bet.id }),
+    enabled: !!bet?.id,
+    refetchInterval: 10000,
+  });
+
+  const { data: myUserBets = [] } = useQuery({
+    queryKey: ['myUserBets', matchId, user?.id],
     queryFn: () => base44.entities.UserBet.filter({ match_id: matchId }),
     enabled: !!matchId && !!user,
   });
-  const myBet = myBets.find(ub => ub.created_by_id === user?.id);
+  const myActiveBets = myUserBets.filter(ub => ub.created_by_id === user?.id);
 
   const { data: allUserBets = [] } = useQuery({
     queryKey: ['allUserBetsForBet', bet?.id],
@@ -68,78 +73,138 @@ export default function MatchDetail() {
     enabled: !!bet?.id,
   });
 
-  // ── LP Seed Mutation (admin only — auto-creates bet with LP) ────────────────
-  const seedMutation = useMutation({
-    mutationFn: async ({ lpA, lpB }) => {
+  const createMarketMutation = useMutation({
+    mutationFn: async () => {
       await base44.entities.Bet.create({
         match_id: matchId,
         outcome_a: match.team_a,
         outcome_b: match.team_b,
+        outcome_draw: 'Draw',
         status: 'open',
-        lp_amount_a: lpA,
-        lp_amount_b: lpB,
-        backed_amount_a: 0,
-        backed_amount_b: 0,
-        total_pool: lpA + lpB,
-        total_bettors: 0,
-        fee_percent: 200,
+        lp_amount_a: 0, lp_amount_b: 0, lp_amount_draw: 0,
+        backed_amount_a: 0, backed_amount_b: 0, backed_amount_draw: 0,
+        total_pool: 0, total_bettors: 0, fee_percent: FEE_BPS,
+      });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] }),
+  });
+
+  const openOfferMutation = useMutation({
+    mutationFn: async ({ outcome, offerOutcomeLabel, offerAmount }) => {
+      await base44.entities.BetOffer.create({
+        bet_id: bet.id,
+        match_id: matchId,
+        outcome,
+        outcome_label: offerOutcomeLabel,
+        amount_offered: offerAmount,
+        amount_matched: 0,
+        amount_unmatched: offerAmount,
+        status: 'open',
+      });
+      const lpField = outcome === 'a' ? 'lp_amount_a' : outcome === 'b' ? 'lp_amount_b' : 'lp_amount_draw';
+      await base44.entities.Bet.update(bet.id, {
+        [lpField]: (bet[lpField] || 0) + offerAmount,
+      });
+      await base44.entities.UserBet.create({
+        bet_id: bet.id,
+        match_id: matchId,
+        outcome,
+        amount: offerAmount,
+        role: 'lp',
+        status: 'pending',
+        outcome_label: offerOutcomeLabel,
+        match_title: `${match.team_a} vs ${match.team_b}`,
+        potential_payout: 0,
       });
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['offersForBet', bet?.id] });
       queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
+      queryClient.invalidateQueries({ queryKey: ['myUserBets', matchId, user?.id] });
+      resetForm();
     },
   });
 
-  // ── Place Bet Mutation ──────────────────────────────────────────────────────
-  const placeBetMutation = useMutation({
-    mutationFn: async (stakeAmount) => {
-      if (!bet) return;
-      const isA = selectedOutcome === 'a';
-      const lpCoverage = isA ? bet.lp_amount_b : bet.lp_amount_a;
-      const alreadyBacked = isA ? (bet.backed_amount_a || 0) : (bet.backed_amount_b || 0);
-      const available = lpCoverage - alreadyBacked;
-      if (stakeAmount > available) throw new Error('Exceeds available coverage');
+  const matchOfferMutation = useMutation({
+    mutationFn: async ({ offer, matchAmount }) => {
+      const matcherOutcome = selectedOutcome;
+      const matcherLabel = getOutcomeLabel(matcherOutcome);
+      const { oddsA, oddsB, oddsDraw } = calcImpliedOdds(
+        totalAvailable(offers, 'a'),
+        totalAvailable(offers, 'b'),
+        totalAvailable(offers, 'draw')
+      );
+      const currentOdds = matcherOutcome === 'a' ? oddsA : matcherOutcome === 'b' ? oddsB : oddsDraw;
+      const winnings = matchAmount * currentOdds;
+      const fee = winnings * FEE_BPS / 10000;
+      const potentialPayout = matchAmount + winnings - fee;
 
-      const winAmount = isA
-        ? stakeAmount * ((bet.lp_amount_a || 0) / (bet.lp_amount_b || 1))
-        : stakeAmount * ((bet.lp_amount_b || 0) / (bet.lp_amount_a || 1));
-      const fee = winAmount * (bet.fee_percent || 200) / 10000;
-      const potentialPayout = stakeAmount + winAmount - fee;
+      const newMatched = (offer.amount_matched || 0) + matchAmount;
+      const newUnmatched = offer.amount_offered - newMatched;
+      const newStatus = newUnmatched <= 0.01 ? 'fully_matched' : 'partially_matched';
+      await base44.entities.BetOffer.update(offer.id, {
+        amount_matched: newMatched,
+        amount_unmatched: Math.max(0, newUnmatched),
+        status: newStatus,
+      });
 
       await base44.entities.UserBet.create({
         bet_id: bet.id,
         match_id: matchId,
-        outcome: selectedOutcome,
-        amount: stakeAmount,
-        potential_payout: potentialPayout,
-        outcome_label: isA ? bet.outcome_a : bet.outcome_b,
-        match_title: `${match.team_a} vs ${match.team_b}`,
+        offer_id: offer.id,
+        outcome: matcherOutcome,
+        amount: matchAmount,
+        role: 'matcher',
         status: 'active',
+        outcome_label: matcherLabel,
+        match_title: `${match.team_a} vs ${match.team_b}`,
+        potential_payout: potentialPayout,
       });
 
-      const updates = {
+      const lpBets = await base44.entities.UserBet.filter({ offer_id: offer.id, role: 'lp' });
+      if (lpBets.length > 0) {
+        const lpWin = matchAmount;
+        const lpFee = lpWin * FEE_BPS / 10000;
+        const lpPayout = offer.amount_offered + lpWin - lpFee;
+        await base44.entities.UserBet.update(lpBets[0].id, {
+          status: 'active',
+          potential_payout: lpPayout,
+        });
+      }
+
+      const backedField = matcherOutcome === 'a' ? 'backed_amount_a' : matcherOutcome === 'b' ? 'backed_amount_b' : 'backed_amount_draw';
+      await base44.entities.Bet.update(bet.id, {
+        [backedField]: (bet[backedField] || 0) + matchAmount,
+        total_pool: (bet.total_pool || 0) + matchAmount,
         total_bettors: (bet.total_bettors || 0) + 1,
-        total_pool: (bet.total_pool || 0) + stakeAmount,
-      };
-      if (isA) updates.backed_amount_a = alreadyBacked + stakeAmount;
-      else updates.backed_amount_b = alreadyBacked + stakeAmount;
-      await base44.entities.Bet.update(bet.id, updates);
+      });
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['offersForBet', bet?.id] });
       queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
-      queryClient.invalidateQueries({ queryKey: ['myBetsForMatch', matchId] });
+      queryClient.invalidateQueries({ queryKey: ['myUserBets', matchId, user?.id] });
       queryClient.invalidateQueries({ queryKey: ['allUserBetsForBet', bet?.id] });
-      setSelectedOutcome(null);
-      setAmount('');
+      resetForm();
     },
   });
 
   const claimMutation = useMutation({
-    mutationFn: async () => {
-      await base44.entities.UserBet.update(myBet.id, { status: 'claimed' });
+    mutationFn: async (ubId) => {
+      await base44.entities.UserBet.update(ubId, { status: 'claimed' });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['myBetsForMatch', matchId] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['myUserBets', matchId, user?.id] }),
   });
+
+  function resetForm() {
+    setMode(null); setSelectedOutcome(null); setAmount(''); setMatchingOffer(null);
+  }
+
+  function getOutcomeLabel(o) {
+    if (!match || !bet) return o;
+    if (o === 'a') return bet.outcome_a || match.team_a;
+    if (o === 'b') return bet.outcome_b || match.team_b;
+    return 'Draw';
+  }
 
   if (!match) {
     return (
@@ -154,30 +219,26 @@ export default function MatchDetail() {
   const isOpen = bet?.status === 'open';
   const isSettled = bet?.status === 'settled';
 
-  // Odds
-  const lpA = bet?.lp_amount_a || 0;
-  const lpB = bet?.lp_amount_b || 0;
-  const backedA = bet?.backed_amount_a || 0;
-  const backedB = bet?.backed_amount_b || 0;
-
-  // For bettors:
-  // Bet on A → you're matched against LP-A pool, you win from LP-A
-  // odds displayed: "bet $1 → win $X"  where X = lp_a/lp_b
-  const oddsForA = lpB > 0 ? (lpA / lpB) : 1; // e.g. lp_a=200,lp_b=100 → A wins 2x
-  const oddsForB = lpA > 0 ? (lpB / lpA) : 1;
-  const maxBetA = Math.max(0, lpA - backedA); // coverage from LP-A for people betting on A
-  const maxBetB = Math.max(0, lpB - backedB);
+  const avA = totalAvailable(offers, 'a');
+  const avB = totalAvailable(offers, 'b');
+  const avDraw = totalAvailable(offers, 'draw');
+  const { oddsA, oddsB, oddsDraw } = calcImpliedOdds(avA, avB, avDraw);
+  const totalLiquidity = avA + avB + avDraw;
 
   const stakeNum = parseFloat(amount) || 0;
-  const isPickingA = selectedOutcome === 'a';
-  const currentOdds = isPickingA ? oddsForA : oddsForB;
-  const currentMax = isPickingA ? maxBetA : maxBetB;
-  const winnings = stakeNum * currentOdds;
-  const fee = winnings * (bet?.fee_percent || 200) / 10000;
-  const netWin = winnings - fee;
-  const totalPayout = stakeNum + netWin;
+  const matchOdds = selectedOutcome === 'a' ? oddsA : selectedOutcome === 'b' ? oddsB : oddsDraw;
+  const matchMax = matchingOffer
+    ? matchingOffer.amount_unmatched
+    : (selectedOutcome === 'a' ? avA : selectedOutcome === 'b' ? avB : avDraw);
+  const matchWin = stakeNum * matchOdds;
+  const matchFee = matchWin * FEE_BPS / 10000;
+  const matchPayout = stakeNum + matchWin - matchFee;
 
-  const lpPct = lpA + lpB > 0 ? (lpA / (lpA + lpB)) * 100 : 50;
+  const OUTCOMES = [
+    { key: 'a', label: bet?.outcome_a || match.team_a, flag: match.team_a_flag, odds: oddsA, available: avA, color: 'primary' },
+    { key: 'draw', label: 'Draw', flag: '🤝', odds: oddsDraw, available: avDraw, color: 'yellow' },
+    { key: 'b', label: bet?.outcome_b || match.team_b, flag: match.team_b_flag, odds: oddsB, available: avB, color: 'accent' },
+  ];
 
   return (
     <div className="space-y-5 max-w-2xl mx-auto">
@@ -186,12 +247,9 @@ export default function MatchDetail() {
         Back to matches
       </Link>
 
-      {/* ── Match Header ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-card border border-border/50 rounded-2xl p-6"
-      >
+      {/* Match Header */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+        className="bg-card border border-border/50 rounded-2xl p-6">
         <div className="flex items-center justify-between mb-5">
           <span className="text-xs text-muted-foreground font-medium">{match.group_stage || 'World Cup 2026'}</span>
           <div className="flex items-center gap-2">
@@ -212,17 +270,17 @@ export default function MatchDetail() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-6">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex-1 text-center">
             <div className="text-5xl mb-3">{match.team_a_flag || '🏳️'}</div>
             <p className="font-heading font-black text-lg">{match.team_a}</p>
-            {hasBet && (
+            {hasBet && avA > 0 && (
               <div className="mt-2 inline-flex items-center gap-1 bg-primary/10 border border-primary/20 rounded-full px-3 py-1">
-                <span className="text-xs font-bold text-primary">{oddsForA.toFixed(2)}x odds</span>
+                <span className="text-xs font-bold text-primary">{oddsA.toFixed(2)}x</span>
               </div>
             )}
           </div>
-          <div className="text-center px-4">
+          <div className="text-center flex flex-col items-center gap-2">
             {match.status === 'finished' || match.status === 'live' ? (
               <div className="flex items-center gap-3">
                 <span className="text-4xl font-heading font-bold">{match.score_a ?? 0}</span>
@@ -232,307 +290,415 @@ export default function MatchDetail() {
             ) : (
               <span className="text-sm font-bold text-primary bg-primary/10 px-4 py-2 rounded-full">VS</span>
             )}
+            {hasBet && avDraw > 0 && (
+              <div className="inline-flex items-center gap-1 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-2 py-0.5">
+                <span className="text-[10px] font-bold text-yellow-400">Draw {oddsDraw.toFixed(2)}x</span>
+              </div>
+            )}
           </div>
           <div className="flex-1 text-center">
             <div className="text-5xl mb-3">{match.team_b_flag || '🏳️'}</div>
             <p className="font-heading font-black text-lg">{match.team_b}</p>
-            {hasBet && (
+            {hasBet && avB > 0 && (
               <div className="mt-2 inline-flex items-center gap-1 bg-accent/10 border border-accent/20 rounded-full px-3 py-1">
-                <span className="text-xs font-bold text-accent">{oddsForB.toFixed(2)}x odds</span>
+                <span className="text-xs font-bold text-accent">{oddsB.toFixed(2)}x</span>
               </div>
             )}
           </div>
         </div>
       </motion.div>
 
-      {/* ── No Bet Yet — Admin Seeds LP ── */}
+      {/* No market yet */}
       {!hasBet && isAdmin && (
-        <SeedLiquidityPanel match={match} onSeed={({ lpA, lpB }) => seedMutation.mutate({ lpA, lpB })} isSeeding={seedMutation.isPending} />
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="bg-card border border-primary/20 rounded-2xl p-5 text-center">
+          <Zap className="w-8 h-8 text-primary mx-auto mb-3" />
+          <h3 className="font-heading font-bold mb-1">Open Betting Market</h3>
+          <p className="text-xs text-muted-foreground mb-4">Create the market so users can start offering liquidity P2P</p>
+          <Button onClick={() => createMarketMutation.mutate()} disabled={createMarketMutation.isPending}
+            className="bg-primary hover:bg-primary/90 font-heading font-bold h-11 rounded-xl px-8">
+            {createMarketMutation.isPending ? 'Opening...' : 'Open Market'}
+          </Button>
+        </motion.div>
       )}
       {!hasBet && !isAdmin && (
         <div className="text-center py-12 bg-card border border-border/50 rounded-2xl">
           <Trophy className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-muted-foreground text-sm">Betting pool not yet available for this match</p>
+          <p className="text-muted-foreground text-sm">Betting market not yet open for this match</p>
         </div>
       )}
 
-      {/* ── Bet Pool Stats ── */}
+      {/* Pool overview */}
       {hasBet && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
           className="bg-card border border-border/50 rounded-2xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-heading font-bold text-sm flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary" /> Pool Overview
+              <TrendingUp className="w-4 h-4 text-primary" /> Live Market
             </h3>
-            <Badge className={`text-[10px] ${isOpen ? 'bg-accent/20 text-accent' : 'bg-secondary text-secondary-foreground'}`}>
-              {bet.status}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge className={`text-[10px] ${isOpen ? 'bg-accent/20 text-accent' : 'bg-secondary text-secondary-foreground'}`}>
+                {bet.status}
+              </Badge>
+              <span className="text-xs text-muted-foreground">${totalLiquidity.toLocaleString()} available</span>
+            </div>
           </div>
 
-          {/* Odds bar */}
-          <div>
-            <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
-              <span>{match.team_a}</span>
-              <span>{match.team_b}</span>
+          {totalLiquidity > 0 && (
+            <div>
+              <div className="h-3 rounded-full overflow-hidden bg-secondary flex gap-0.5">
+                <div className="h-full bg-primary transition-all duration-500" style={{ width: `${(avA / totalLiquidity) * 100}%` }} />
+                <div className="h-full bg-yellow-500 transition-all duration-500" style={{ width: `${(avDraw / totalLiquidity) * 100}%` }} />
+                <div className="h-full bg-accent transition-all duration-500" style={{ width: `${(avB / totalLiquidity) * 100}%` }} />
+              </div>
+              <div className="flex justify-between text-[10px] mt-1.5">
+                <span className="text-primary font-bold">{match.team_a} {oddsA > 0 ? `${oddsA.toFixed(2)}x` : '—'}</span>
+                <span className="text-yellow-400 font-bold">Draw {oddsDraw > 0 ? `${oddsDraw.toFixed(2)}x` : '—'}</span>
+                <span className="text-accent font-bold">{match.team_b} {oddsB > 0 ? `${oddsB.toFixed(2)}x` : '—'}</span>
+              </div>
             </div>
-            <div className="h-3 rounded-full overflow-hidden bg-secondary flex">
-              <div className="h-full bg-primary transition-all duration-500 rounded-full" style={{ width: `${lpPct}%` }} />
-            </div>
-            <div className="flex justify-between text-[11px] mt-1">
-              <span className="text-primary font-bold">{lpA > 0 ? ((lpA/(lpA+lpB))*100).toFixed(0) : 50}% LP</span>
-              <span className="text-accent font-bold">{lpB > 0 ? ((lpB/(lpA+lpB))*100).toFixed(0) : 50}% LP</span>
-            </div>
-          </div>
+          )}
 
           <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="bg-secondary/40 rounded-xl p-3">
-              <p className="text-[10px] text-muted-foreground mb-1">LP Pool</p>
-              <p className="font-heading font-bold text-sm">${(lpA + lpB).toLocaleString()}</p>
-            </div>
-            <div className="bg-secondary/40 rounded-xl p-3">
-              <p className="text-[10px] text-muted-foreground mb-1">Bettor Stakes</p>
-              <p className="font-heading font-bold text-sm">${(backedA + backedB).toLocaleString()}</p>
-            </div>
-            <div className="bg-secondary/40 rounded-xl p-3">
-              <p className="text-[10px] text-muted-foreground mb-1">Bettors</p>
-              <p className="font-heading font-bold text-sm flex items-center justify-center gap-1">
-                <Users className="w-3 h-3" />{bet.total_bettors || 0}
-              </p>
-            </div>
-          </div>
-
-          {/* Coverage remaining */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-primary/5 border border-primary/15 rounded-xl p-3">
-              <p className="text-[10px] text-muted-foreground mb-1">Max bet on {match.team_a}</p>
-              <p className="font-heading font-bold text-primary text-sm">${maxBetA.toLocaleString()}</p>
-              <p className="text-[10px] text-muted-foreground">coverage left</p>
-            </div>
-            <div className="bg-accent/5 border border-accent/15 rounded-xl p-3">
-              <p className="text-[10px] text-muted-foreground mb-1">Max bet on {match.team_b}</p>
-              <p className="font-heading font-bold text-accent text-sm">${maxBetB.toLocaleString()}</p>
-              <p className="text-[10px] text-muted-foreground">coverage left</p>
-            </div>
+            {OUTCOMES.map(o => (
+              <div key={o.key} className="bg-secondary/40 rounded-xl p-3">
+                <p className="text-[10px] text-muted-foreground mb-0.5">{o.label}</p>
+                <p className={`font-heading font-bold text-sm ${
+                  o.color === 'primary' ? 'text-primary' : o.color === 'accent' ? 'text-accent' : 'text-yellow-400'
+                }`}>${o.available.toFixed(0)}</p>
+                <p className="text-[9px] text-muted-foreground">available</p>
+              </div>
+            ))}
           </div>
         </motion.div>
       )}
 
-      {/* ── My Existing Bet ── */}
-      {myBet && (
+      {/* Offer Book */}
+      {hasBet && isOpen && offers.some(o => o.status === 'open' || o.status === 'partially_matched') && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="bg-card border border-primary/20 rounded-2xl p-5">
-          <h3 className="font-heading font-bold text-sm mb-3 flex items-center gap-2">
-            {myBet.status === 'won' || myBet.status === 'claimed' ? <CheckCircle2 className="w-4 h-4 text-accent" /> :
-             myBet.status === 'lost' ? <XCircle className="w-4 h-4 text-destructive" /> :
-             <Trophy className="w-4 h-4 text-primary" />}
-            Your Active Bet
+          className="bg-card border border-border/50 rounded-2xl p-5 space-y-4">
+          <h3 className="font-heading font-bold text-sm flex items-center gap-2">
+            <Users className="w-4 h-4 text-muted-foreground" /> Open Offers
           </h3>
-          <div className="grid grid-cols-3 gap-4 text-sm">
-            <div>
-              <p className="text-muted-foreground text-xs">Pick</p>
-              <p className="font-bold text-primary">{myBet.outcome_label}</p>
+          {OUTCOMES.map(o => {
+            const oOffers = offers.filter(of => of.outcome === o.key && (of.status === 'open' || of.status === 'partially_matched'));
+            if (oOffers.length === 0) return null;
+            return (
+              <div key={o.key}>
+                <p className={`text-xs font-bold mb-2 ${
+                  o.color === 'primary' ? 'text-primary' : o.color === 'accent' ? 'text-accent' : 'text-yellow-400'
+                }`}>{o.label}</p>
+                <OfferBook
+                  offers={oOffers}
+                  outcome={o.key}
+                  outcomeLabel={o.label}
+                  color={o.color}
+                  canMatch={!!user && isOpen}
+                  onMatch={(offer) => {
+                    setMatchingOffer(offer);
+                    setMode('match');
+                    const opp = offer.outcome === 'a' ? 'b' : offer.outcome === 'b' ? 'a' : 'a';
+                    setSelectedOutcome(opp);
+                    setAmount('');
+                  }}
+                />
+              </div>
+            );
+          })}
+        </motion.div>
+      )}
+
+      {/* My Positions */}
+      {myActiveBets.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="bg-card border border-primary/20 rounded-2xl p-5 space-y-3">
+          <h3 className="font-heading font-bold text-sm flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-primary" /> My Positions
+          </h3>
+          {myActiveBets.map(ub => (
+            <div key={ub.id} className="bg-secondary/30 rounded-xl p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  {ub.status === 'won' || ub.status === 'claimed' ? <CheckCircle2 className="w-3.5 h-3.5 text-accent" /> :
+                   ub.status === 'lost' ? <XCircle className="w-3.5 h-3.5 text-destructive" /> :
+                   <div className="w-1.5 h-1.5 rounded-full bg-yellow-400" />}
+                  <span className="font-bold text-xs text-primary">{ub.outcome_label}</span>
+                  <Badge className={`text-[9px] py-0 ${
+                    ub.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                    ub.status === 'active' ? 'bg-accent/20 text-accent' :
+                    ub.status === 'won' ? 'bg-accent/30 text-accent' :
+                    ub.status === 'lost' ? 'bg-destructive/20 text-destructive' :
+                    'bg-secondary text-secondary-foreground'
+                  }`}>
+                    {ub.status === 'pending' && ub.role === 'lp' ? 'waiting to match' : ub.status}
+                  </Badge>
+                </div>
+                <span className="text-xs font-bold">${ub.amount?.toFixed(2)}</span>
+              </div>
+              {ub.potential_payout > 0 && (
+                <p className="text-[10px] text-muted-foreground">
+                  If win: <span className="text-accent font-bold">${ub.potential_payout?.toFixed(2)}</span>
+                </p>
+              )}
+              {ub.status === 'won' && (
+                <Button onClick={() => claimMutation.mutate(ub.id)} size="sm"
+                  className="w-full mt-2 h-8 text-xs bg-accent hover:bg-accent/90 text-accent-foreground font-bold rounded-lg">
+                  Claim ${ub.actual_payout?.toFixed(2) || ub.potential_payout?.toFixed(2)}
+                </Button>
+              )}
             </div>
-            <div>
-              <p className="text-muted-foreground text-xs">Stake</p>
-              <p className="font-bold">${myBet.amount?.toFixed(2)}</p>
+          ))}
+        </motion.div>
+      )}
+
+      {/* Action Panel */}
+      {hasBet && isOpen && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+          className="bg-card border border-primary/20 rounded-2xl p-5">
+
+          {!mode && (
+            <div className="space-y-3">
+              <h3 className="font-heading font-bold text-sm mb-3 flex items-center gap-2">
+                <Zap className="w-4 h-4 text-primary" /> Place a Bet
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => setMode('offer')}
+                  className="flex flex-col items-center gap-2 rounded-xl border-2 border-primary/30 bg-primary/5 p-4 hover:border-primary/60 transition-all">
+                  <Plus className="w-6 h-6 text-primary" />
+                  <p className="font-heading font-bold text-sm text-primary">Open Offer</p>
+                  <p className="text-[11px] text-muted-foreground text-center">Provide liquidity. Others can match you.</p>
+                </button>
+                <button onClick={() => setMode('match')} disabled={totalLiquidity <= 0}
+                  className="flex flex-col items-center gap-2 rounded-xl border-2 border-accent/30 bg-accent/5 p-4 hover:border-accent/60 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                  <TrendingUp className="w-6 h-6 text-accent" />
+                  <p className="font-heading font-bold text-sm text-accent">Match a Bet</p>
+                  <p className="text-[11px] text-muted-foreground text-center">Bet against an open offer at live odds.</p>
+                </button>
+              </div>
+              {totalLiquidity <= 0 && (
+                <p className="text-[11px] text-muted-foreground text-center">No offers to match yet — be the first!</p>
+              )}
             </div>
-            <div>
-              <p className="text-muted-foreground text-xs">If win</p>
-              <p className="font-bold text-accent">${myBet.potential_payout?.toFixed(2)}</p>
+          )}
+
+          {/* OFFER MODE */}
+          {mode === 'offer' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-heading font-bold text-sm flex items-center gap-2">
+                  <Plus className="w-4 h-4 text-primary" /> Open LP Offer
+                </h3>
+                <button onClick={resetForm} className="text-xs text-muted-foreground hover:text-foreground">Cancel</button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Pick an outcome and provide liquidity. Funds lock when matched; unmatched portion stays open.
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {OUTCOMES.map(o => (
+                  <button key={o.key}
+                    onClick={() => { setSelectedOutcome(o.key); setAmount(''); }}
+                    className={`rounded-xl p-3 border-2 text-center transition-all ${
+                      selectedOutcome === o.key
+                        ? o.color === 'primary' ? 'border-primary bg-primary/10' :
+                          o.color === 'accent' ? 'border-accent bg-accent/10' :
+                          'border-yellow-500 bg-yellow-500/10'
+                        : 'border-border/50 bg-secondary/30 hover:border-border'
+                    }`}>
+                    <div className="text-2xl mb-1">{o.flag}</div>
+                    <p className="font-heading font-bold text-xs">{o.label}</p>
+                    {o.odds > 0 && (
+                      <p className={`text-[10px] font-bold mt-0.5 ${
+                        o.color === 'primary' ? 'text-primary' : o.color === 'accent' ? 'text-accent' : 'text-yellow-400'
+                      }`}>{o.odds.toFixed(2)}x</p>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              <AnimatePresence>
+                {selectedOutcome && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                    className="space-y-3 overflow-hidden">
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1.5 block">Amount to offer</label>
+                      <Input type="number" placeholder="0.00" value={amount} min={1}
+                        onChange={e => setAmount(e.target.value)}
+                        className="bg-secondary/50 border-border/50 text-lg font-heading font-bold h-12" />
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      {QUICK_AMOUNTS.map(qa => (
+                        <button key={qa} onClick={() => setAmount(String(qa))}
+                          className="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 rounded-lg transition-colors">${qa}</button>
+                      ))}
+                    </div>
+                    {stakeNum > 0 && (
+                      <div className="bg-primary/5 border border-primary/15 rounded-xl p-3 space-y-1.5 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">You offer</span>
+                          <span className="font-bold">${stakeNum.toFixed(2)} on {getOutcomeLabel(selectedOutcome)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">If matched & you win</span>
+                          <span className="font-bold text-accent">you keep matcher's stake (−2% fee)</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Unmatched portion</span>
+                          <span className="font-bold text-yellow-400">stays open, refundable</span>
+                        </div>
+                      </div>
+                    )}
+                    <Button
+                      onClick={() => openOfferMutation.mutate({ outcome: selectedOutcome, offerOutcomeLabel: getOutcomeLabel(selectedOutcome), offerAmount: stakeNum })}
+                      disabled={stakeNum <= 0 || openOfferMutation.isPending}
+                      className="w-full h-12 font-heading font-bold text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl">
+                      {openOfferMutation.isPending
+                        ? <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                        : `Open $${stakeNum > 0 ? stakeNum.toFixed(2) : '0.00'} offer on ${getOutcomeLabel(selectedOutcome)}`}
+                    </Button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-          </div>
-          {myBet.status === 'won' && (
-            <Button onClick={() => claimMutation.mutate()} disabled={claimMutation.isPending}
-              className="w-full mt-4 bg-accent hover:bg-accent/90 text-accent-foreground font-heading font-bold h-11 rounded-xl">
-              Claim ${myBet.actual_payout?.toFixed(2) || myBet.potential_payout?.toFixed(2)}
-            </Button>
+          )}
+
+          {/* MATCH MODE */}
+          {mode === 'match' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-heading font-bold text-sm flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-accent" />
+                  {matchingOffer ? `Match Offer (${getOutcomeLabel(matchingOffer.outcome)})` : 'Match a Bet'}
+                </h3>
+                <button onClick={resetForm} className="text-xs text-muted-foreground hover:text-foreground">Cancel</button>
+              </div>
+
+              {matchingOffer && (
+                <div className="bg-secondary/40 rounded-xl p-3 text-xs">
+                  <p className="text-muted-foreground">Matching against: <span className="font-bold text-foreground">{getOutcomeLabel(matchingOffer.outcome)}</span> offer · <span className="font-bold text-accent">${matchingOffer.amount_unmatched?.toFixed(2)} available</span></p>
+                </div>
+              )}
+
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">Pick your outcome:</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {OUTCOMES.map(o => {
+                    const avail = matchingOffer
+                      ? (o.key !== matchingOffer.outcome ? matchingOffer.amount_unmatched : 0)
+                      : (o.key === 'a' ? avA : o.key === 'b' ? avB : avDraw);
+                    const disabled = avail <= 0 || (matchingOffer && o.key === matchingOffer.outcome);
+                    return (
+                      <button key={o.key}
+                        onClick={() => { if (!disabled) { setSelectedOutcome(o.key); setAmount(''); } }}
+                        disabled={disabled}
+                        className={`rounded-xl p-3 border-2 text-center transition-all disabled:opacity-30 disabled:cursor-not-allowed ${
+                          selectedOutcome === o.key
+                            ? o.color === 'primary' ? 'border-primary bg-primary/10' :
+                              o.color === 'accent' ? 'border-accent bg-accent/10' :
+                              'border-yellow-500 bg-yellow-500/10'
+                            : 'border-border/50 bg-secondary/30 hover:border-border'
+                        }`}>
+                        <div className="text-2xl mb-1">{o.flag}</div>
+                        <p className="font-heading font-bold text-xs">{o.label}</p>
+                        <p className={`text-[10px] font-bold mt-0.5 ${
+                          o.color === 'primary' ? 'text-primary' : o.color === 'accent' ? 'text-accent' : 'text-yellow-400'
+                        }`}>{o.odds > 0 ? `${o.odds.toFixed(2)}x` : '—'}</p>
+                        <p className="text-[9px] text-muted-foreground">${avail.toFixed(0)} avail.</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <AnimatePresence>
+                {selectedOutcome && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                    className="space-y-3 overflow-hidden">
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1.5 block">Stake (max ${matchMax.toFixed(2)})</label>
+                      <Input type="number" placeholder="0.00" value={amount} min={0} max={matchMax}
+                        onChange={e => setAmount(Math.min(parseFloat(e.target.value) || 0, matchMax).toString())}
+                        className="bg-secondary/50 border-border/50 text-lg font-heading font-bold h-12" />
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      {QUICK_AMOUNTS.filter(q => q <= matchMax).map(qa => (
+                        <button key={qa} onClick={() => setAmount(String(qa))}
+                          className="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 rounded-lg transition-colors">${qa}</button>
+                      ))}
+                      <button onClick={() => setAmount(matchMax.toFixed(2))}
+                        className="px-3 py-1.5 text-xs font-bold bg-accent/10 hover:bg-accent/20 text-accent rounded-lg">MAX</button>
+                    </div>
+                    {stakeNum > 0 && (
+                      <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Your stake</span>
+                          <span className="font-bold">${stakeNum.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">If {getOutcomeLabel(selectedOutcome)} wins</span>
+                          <span className="font-bold text-accent">+${(matchWin - matchFee).toFixed(2)}</span>
+                        </div>
+                        <div className="h-px bg-border/30" />
+                        <div className="flex justify-between text-sm font-bold">
+                          <span>Total payout</span>
+                          <span className="text-accent text-lg">${matchPayout.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Odds</span>
+                          <span>{matchOdds.toFixed(2)}x · 2% fee</span>
+                        </div>
+                      </div>
+                    )}
+                    <Button
+                      onClick={() => {
+                        const offerToMatch = matchingOffer || offers.find(o =>
+                          (o.status === 'open' || o.status === 'partially_matched') &&
+                          o.outcome !== selectedOutcome &&
+                          o.amount_unmatched >= stakeNum
+                        );
+                        if (offerToMatch) matchOfferMutation.mutate({ offer: offerToMatch, matchAmount: stakeNum });
+                      }}
+                      disabled={stakeNum <= 0 || stakeNum > matchMax || matchOfferMutation.isPending}
+                      className="w-full h-12 font-heading font-bold text-sm bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl">
+                      {matchOfferMutation.isPending
+                        ? <div className="w-5 h-5 border-2 border-accent-foreground/30 border-t-accent-foreground rounded-full animate-spin" />
+                        : `Bet $${stakeNum > 0 ? stakeNum.toFixed(2) : '0.00'} on ${getOutcomeLabel(selectedOutcome)}`}
+                    </Button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           )}
         </motion.div>
       )}
 
-      {/* ── Wallet Gate ── */}
-      {hasBet && isOpen && !myBet && !isConnected && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-          className="rounded-2xl border border-primary/20 p-7 text-center"
-          style={{ background: 'linear-gradient(145deg, #1a1040 0%, #0f0a1e 100%)' }}>
-          <div className="w-14 h-14 rounded-2xl bg-primary/20 border border-primary/30 flex items-center justify-center mx-auto mb-4">
-            <Wallet className="w-7 h-7 text-primary" />
-          </div>
-          <h3 className="font-heading font-black text-xl text-white mb-2">Connect to Bet</h3>
-          <p className="text-white/50 text-sm mb-5 max-w-xs mx-auto">Connect your Phantom wallet to place a bet.</p>
-          <Button onClick={connect} className="font-heading font-bold px-8 h-11 rounded-xl text-sm"
-            style={{ background: 'linear-gradient(135deg, #a69cf2, #8b84e8)', boxShadow: '0 0 24px rgba(166,156,242,0.3)' }}>
-            <Wallet className="w-4 h-4 mr-2" /> Connect Phantom Wallet
-          </Button>
-        </motion.div>
-      )}
-
-      {/* ── Bet Slip ── */}
-      {hasBet && isOpen && !myBet && isConnected && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-          className="bg-card border border-primary/20 rounded-2xl p-5">
-          <h3 className="font-heading font-bold text-sm mb-4 flex items-center gap-2">
-            <Zap className="w-4 h-4 text-primary" /> Place Your Bet
-          </h3>
-
-          {/* Pick outcome */}
-          <div className="grid grid-cols-2 gap-3 mb-5">
-            {[
-              { side: 'a', team: match.team_a, flag: match.team_a_flag, odds: oddsForA, maxB: maxBetA, color: 'primary' },
-              { side: 'b', team: match.team_b, flag: match.team_b_flag, odds: oddsForB, maxB: maxBetB, color: 'accent' },
-            ].map(({ side, team, flag, odds, maxB, color }) => (
-              <button key={side}
-                onClick={() => { setSelectedOutcome(side); setAmount(''); }}
-                disabled={maxB <= 0}
-                className={`rounded-xl p-4 border-2 text-center transition-all duration-200 ${
-                  selectedOutcome === side
-                    ? color === 'primary' ? 'border-primary bg-primary/10' : 'border-accent bg-accent/10'
-                    : 'border-border/50 bg-secondary/30 hover:border-border'
-                } disabled:opacity-40 disabled:cursor-not-allowed`}>
-                <div className="text-3xl mb-1">{flag || '🏳️'}</div>
-                <p className="font-heading font-bold text-sm">{team}</p>
-                <p className={`text-xs font-bold mt-1 ${color === 'primary' ? 'text-primary' : 'text-accent'}`}>
-                  {odds.toFixed(2)}x · max ${maxB.toFixed(0)}
-                </p>
-                {maxB <= 0 && <p className="text-[10px] text-muted-foreground mt-1">Pool full</p>}
-              </button>
-            ))}
-          </div>
-
-          <AnimatePresence>
-            {selectedOutcome && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                <div className="mb-3">
-                  <label className="text-xs text-muted-foreground mb-1.5 block">
-                    Stake amount (max ${currentMax.toFixed(2)})
-                  </label>
-                  <Input
-                    type="number"
-                    placeholder="0.00"
-                    value={amount}
-                    min={0}
-                    max={currentMax}
-                    onChange={e => setAmount(Math.min(parseFloat(e.target.value) || 0, currentMax).toString())}
-                    className="bg-secondary/50 border-border/50 text-lg font-heading font-bold h-12"
-                  />
-                </div>
-
-                <div className="flex gap-2 mb-4 flex-wrap">
-                  {quickAmounts.filter(q => q <= currentMax).map(qa => (
-                    <button key={qa} onClick={() => setAmount(String(qa))}
-                      className="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 rounded-lg transition-colors">
-                      ${qa}
-                    </button>
-                  ))}
-                  <button onClick={() => setAmount(currentMax.toFixed(2))}
-                    className="px-3 py-1.5 text-xs font-bold bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors">
-                    MAX
-                  </button>
-                </div>
-
-                {stakeNum > 0 && (
-                  <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 mb-4 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Your stake</span>
-                      <span className="font-bold">${stakeNum.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Winnings if correct</span>
-                      <span className="font-bold text-accent">+${netWin.toFixed(2)}</span>
-                    </div>
-                    <div className="h-px bg-border/30" />
-                    <div className="flex justify-between text-sm font-bold">
-                      <span>Total payout</span>
-                      <span className="text-accent text-lg">${totalPayout.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Odds</span>
-                      <span>{currentOdds.toFixed(2)}x &nbsp;·&nbsp; 2% fee included</span>
-                    </div>
-                  </div>
-                )}
-
-                <Button
-                  onClick={() => placeBetMutation.mutate(stakeNum)}
-                  disabled={stakeNum <= 0 || stakeNum > currentMax || placeBetMutation.isPending}
-                  className="w-full h-12 font-heading font-bold text-base bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl">
-                  {placeBetMutation.isPending
-                    ? <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                    : `Bet $${stakeNum > 0 ? stakeNum.toFixed(2) : '0.00'} on ${selectedOutcome === 'a' ? match.team_a : match.team_b}`}
-                </Button>
-                <p className="text-[10px] text-muted-foreground text-center mt-2">{shortAddress} · Bets are final</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-      )}
-
-      {hasBet && !isOpen && !myBet && (
+      {hasBet && !isOpen && (
         <div className="text-center py-8 bg-card border border-border/50 rounded-2xl">
-          <p className="text-muted-foreground text-sm">
-            {isSettled ? 'This bet has been settled.' : 'Betting is closed.'}
-          </p>
+          <p className="text-muted-foreground text-sm">{isSettled ? 'Market settled.' : 'Betting is closed.'}</p>
         </div>
       )}
 
-      {/* ── Recent Bets List ── */}
+      {/* Recent activity */}
       {allUserBets.length > 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
           className="bg-card border border-border/50 rounded-2xl p-5">
           <h3 className="font-heading font-bold text-sm mb-3 flex items-center gap-2">
-            <Users className="w-4 h-4 text-muted-foreground" /> Recent Bets
+            <Users className="w-4 h-4 text-muted-foreground" /> Recent Activity
           </h3>
           <div className="space-y-2">
             {allUserBets.slice(0, 8).map(ub => (
               <div key={ub.id} className="flex items-center justify-between text-xs py-2 border-b border-border/20 last:border-0">
-                <span className="text-muted-foreground">{ub.outcome_label}</span>
+                <div className="flex items-center gap-2">
+                  <span className={`w-1.5 h-1.5 rounded-full ${ub.role === 'lp' ? 'bg-yellow-400' : 'bg-accent'}`} />
+                  <span className="text-muted-foreground">{ub.outcome_label}</span>
+                  <span className="text-[10px] text-muted-foreground/60">{ub.role === 'lp' ? 'LP' : 'bet'}</span>
+                </div>
                 <span className="font-bold">${ub.amount?.toFixed(2)}</span>
-                <span className="text-accent font-medium">→ ${ub.potential_payout?.toFixed(2)}</span>
+                {ub.potential_payout > 0 && <span className="text-accent font-medium">→ ${ub.potential_payout?.toFixed(2)}</span>}
               </div>
             ))}
           </div>
         </motion.div>
       )}
     </div>
-  );
-}
-
-// ── Admin LP Seed Panel ───────────────────────────────────────────────────────
-function SeedLiquidityPanel({ match, onSeed, isSeeding }) {
-  const [lpA, setLpA] = useState('100');
-  const [lpB, setLpB] = useState('100');
-
-  const lpANum = parseFloat(lpA) || 0;
-  const lpBNum = parseFloat(lpB) || 0;
-  const oddsA = lpBNum > 0 ? (lpANum / lpBNum) : 1;
-  const oddsB = lpANum > 0 ? (lpBNum / lpANum) : 1;
-
-  return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-      className="bg-card border border-primary/20 rounded-2xl p-5">
-      <h3 className="font-heading font-bold text-sm mb-1 flex items-center gap-2">
-        <Zap className="w-4 h-4 text-primary" /> Seed Liquidity Pool (Admin)
-      </h3>
-      <p className="text-xs text-muted-foreground mb-4">
-        Set the initial LP amounts. Bettors can only bet up to the coverage you provide on each side.
-        Odds are determined by LP ratio (e.g. LP-A=$200, LP-B=$100 → Team A pays 2x, Team B pays 0.5x).
-      </p>
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">{match.team_a} LP ($)</label>
-          <Input value={lpA} onChange={e => setLpA(e.target.value)} type="number" className="bg-secondary/50 h-10" />
-          <p className="text-[10px] text-primary mt-1">→ bettors on {match.team_a} win {oddsA.toFixed(2)}x</p>
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">{match.team_b} LP ($)</label>
-          <Input value={lpB} onChange={e => setLpB(e.target.value)} type="number" className="bg-secondary/50 h-10" />
-          <p className="text-[10px] text-accent mt-1">→ bettors on {match.team_b} win {oddsB.toFixed(2)}x</p>
-        </div>
-      </div>
-      <Button onClick={() => onSeed({ lpA: lpANum, lpB: lpBNum })} disabled={isSeeding || lpANum <= 0 || lpBNum <= 0}
-        className="w-full h-11 font-heading font-bold bg-primary hover:bg-primary/90 rounded-xl">
-        {isSeeding ? 'Opening Pool...' : `Open Betting Pool · $${(lpANum + lpBNum).toFixed(0)} total liquidity`}
-      </Button>
-    </motion.div>
   );
 }

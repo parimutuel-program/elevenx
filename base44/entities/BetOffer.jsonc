@@ -1,0 +1,62 @@
+{
+  "name": "BetOffer",
+  "type": "object",
+  "properties": {
+    "bet_id": {
+      "type": "string",
+      "description": "Reference to Bet entity"
+    },
+    "match_id": {
+      "type": "string",
+      "description": "Reference to Match entity"
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "a",
+        "b",
+        "draw"
+      ],
+      "description": "Which outcome this offer backs (a=team_a, b=team_b, draw)"
+    },
+    "outcome_label": {
+      "type": "string",
+      "description": "Display label e.g. 'Mexico', 'South Africa', 'Draw'"
+    },
+    "amount_offered": {
+      "type": "number",
+      "description": "Total amount the LP is putting up"
+    },
+    "amount_matched": {
+      "type": "number",
+      "default": 0,
+      "description": "How much of this offer has been matched by bettors on the other side"
+    },
+    "amount_unmatched": {
+      "type": "number",
+      "default": 0,
+      "description": "Remaining unmatched liquidity"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "partially_matched",
+        "fully_matched",
+        "cancelled",
+        "settled"
+      ],
+      "default": "open"
+    },
+    "odds_at_creation": {
+      "type": "number",
+      "description": "The implied odds for the opposing side at the time this offer was made"
+    }
+  },
+  "required": [
+    "bet_id",
+    "match_id",
+    "outcome",
+    "amount_offered"
+  ]
+}

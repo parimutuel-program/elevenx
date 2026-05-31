@@ -10,13 +10,27 @@
       "type": "string",
       "description": "Reference to Match entity"
     },
+    "offer_id": {
+      "type": "string",
+      "description": "Reference to the BetOffer being matched (for matchers) or created (for LPs)"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "lp",
+        "matcher"
+      ],
+      "default": "matcher",
+      "description": "lp = opened the offer, matcher = matched against an offer"
+    },
     "outcome": {
       "type": "string",
       "enum": [
         "a",
-        "b"
+        "b",
+        "draw"
       ],
-      "description": "Which outcome the user bet on"
+      "description": "Which outcome the user is backing"
     },
     "amount": {
       "type": "number",
@@ -35,6 +49,7 @@
     "status": {
       "type": "string",
       "enum": [
+        "pending",
         "active",
         "won",
         "lost",
@@ -42,7 +57,8 @@
         "refunded",
         "void"
       ],
-      "default": "active"
+      "default": "pending",
+      "description": "pending = unmatched LP offer, active = matched and locked"
     },
     "outcome_label": {
       "type": "string",
