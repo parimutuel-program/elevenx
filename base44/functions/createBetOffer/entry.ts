@@ -10,37 +10,15 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const serviceRole = base44.asServiceRole;
     
-    // Get wallet address from request payload (passed by frontend for wallet-only auth)
+    // Get wallet address from request payload
     const payload = await req.json();
     const walletAddress = payload.walletAddress;
     
     if (!walletAddress) {
-      return Response.json({ error: 'Please login first: Connect your wallet and register/login to place bets' }, { status: 401 });
+      return Response.json({ error: 'Wallet not connected' }, { status: 401 });
     }
 
-    // Fetch all users to check wallet registration
-    const users = await serviceRole.entities.User.filter({});
-    console.log('🔍 Checking wallet:', walletAddress);
-    
-    // Verify user exists with this wallet address
-    let user = null;
-    for (const u of users) {
-      const wallet = u.wallet_address || (u.data && u.data.wallet_address);
-      if (wallet === walletAddress) {
-        user = u;
-        break;
-      }
-    }
-    
-    if (!user) {
-      console.log('❌ Wallet not found:', walletAddress);
-      return Response.json({ 
-        error: 'Wallet not registered. Please register with this wallet first.',
-        needsRegistration: true
-      }, { status: 401 });
-    }
-
-    console.log('✓ User authenticated:', user.id);
+    console.log('✓ Wallet connected:', walletAddress);
 
     const { bet_id, match_id, outcome, amount } = payload;
 
