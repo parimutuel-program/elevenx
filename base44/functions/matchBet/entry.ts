@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Offer not found' }, { status: 404 });
     }
 
-    if (offer.status !== 'open' && offer.status !== 'partially_matched') {
+    if (offer.status !== 'open' && offer.status !== 'partially_matched' && offer.status !== 'pending') {
       return Response.json({ error: 'Offer is not available' }, { status: 400 });
     }
 
