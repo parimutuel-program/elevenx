@@ -15,16 +15,22 @@ const statusStyles = {
 export default function MatchCard({ match, bet, index = 0 }) {
   const matchTime = match.match_time ? new Date(match.match_time) : null;
 
+  const lpA = bet?.lp_amount_a || 0;
+  const lpB = bet?.lp_amount_b || 0;
+  const lpDraw = bet?.lp_amount_draw || 0;
+  const totalLP = lpA + lpB + lpDraw;
+  const oddsA = lpA > 0 ? (lpB + lpDraw) / lpA : null;
+  const oddsB = lpB > 0 ? (lpA + lpDraw) / lpB : null;
+  const oddsDraw = lpDraw > 0 ? (lpA + lpB) / lpDraw : null;
+  const hasOdds = totalLP > 0;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.4 }}
     >
-      <Link
-        to={`/match/${match.id}`}
-        className="group block"
-      >
+      <Link to={`/match/${match.id}`} className="group block">
         <div className="relative bg-card border border-border/50 rounded-2xl p-5 hover:border-primary/30 transition-all duration-300 hover:shadow-[0_0_30px_-10px_hsl(45,100%,51%,0.15)]">
           {/* Status badge */}
           <div className="flex items-center justify-between mb-4">
@@ -52,9 +58,7 @@ export default function MatchCard({ match, bet, index = 0 }) {
                   <span className="text-2xl font-heading font-bold text-foreground">{match.score_b ?? 0}</span>
                 </div>
               ) : (
-                <span className="text-xs font-semibold text-primary px-3 py-1.5 bg-primary/10 rounded-full">
-                  VS
-                </span>
+                <span className="text-xs font-semibold text-primary px-3 py-1.5 bg-primary/10 rounded-full">VS</span>
               )}
               {matchTime && (
                 <span className="text-[10px] text-muted-foreground mt-1">
@@ -72,26 +76,28 @@ export default function MatchCard({ match, bet, index = 0 }) {
           {/* Bet info */}
           {bet && (
             <div className="mt-4 pt-3 border-t border-border/50">
-              <div className="grid grid-cols-2 gap-2 mb-2">
-                {(() => {
-                  const lpA = bet.lp_amount_a || 0;
-                  const lpB = bet.lp_amount_b || 0;
-                  const oddsA = lpB > 0 ? (lpA / lpB) : 1;
-                  const oddsB = lpA > 0 ? (lpB / lpA) : 1;
-                  return (
-                    <>
-                      <div className="bg-primary/10 rounded-lg px-2 py-1.5 text-center">
-                        <p className="text-[10px] text-muted-foreground">Win odds</p>
-                        <p className="font-heading font-bold text-xs text-primary">{oddsA.toFixed(2)}x</p>
-                      </div>
-                      <div className="bg-accent/10 rounded-lg px-2 py-1.5 text-center">
-                        <p className="text-[10px] text-muted-foreground">Win odds</p>
-                        <p className="font-heading font-bold text-xs text-accent">{oddsB.toFixed(2)}x</p>
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
+              {hasOdds && (
+                <div className={`grid gap-2 mb-2 ${oddsDraw !== null ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                  {oddsA !== null && (
+                    <div className="bg-primary/10 rounded-lg px-2 py-1.5 text-center">
+                      <p className="text-[10px] text-muted-foreground truncate">{match.team_a}</p>
+                      <p className="font-heading font-bold text-xs text-primary">{oddsA.toFixed(2)}x</p>
+                    </div>
+                  )}
+                  {oddsDraw !== null && (
+                    <div className="bg-yellow-500/10 rounded-lg px-2 py-1.5 text-center">
+                      <p className="text-[10px] text-muted-foreground">Draw</p>
+                      <p className="font-heading font-bold text-xs text-yellow-400">{oddsDraw.toFixed(2)}x</p>
+                    </div>
+                  )}
+                  {oddsB !== null && (
+                    <div className="bg-accent/10 rounded-lg px-2 py-1.5 text-center">
+                      <p className="text-[10px] text-muted-foreground truncate">{match.team_b}</p>
+                      <p className="font-heading font-bold text-xs text-accent">{oddsB.toFixed(2)}x</p>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Users className="w-3 h-3" />
