@@ -563,14 +563,43 @@ export default function MatchDetail() {
                       </div>
                     )}
 
-                    <Button
-                      onClick={() => openOfferMutation.mutate({ outcome: selectedOutcome, offerOutcomeLabel: getOutcomeLabel(selectedOutcome), offerAmount: stakeNum })}
-                      disabled={stakeNum <= 0 || openOfferMutation.isPending}
-                      className="w-full h-12 font-heading font-bold text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl">
-                      {openOfferMutation.isPending
-                        ? <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                        : `Offer ◎${stakeNum > 0 ? stakeNum.toFixed(2) : '0.00'} on ${getOutcomeLabel(selectedOutcome)}`}
-                    </Button>
+                    {!isConnected ? (
+                      <Button
+                        onClick={async () => {
+                          const provider = window.solana;
+                          if (!provider) {
+                            window.open('https://phantom.app/', '_blank');
+                            return;
+                          }
+                          try {
+                            await provider.connect();
+                            window.location.reload();
+                          } catch (err) {
+                            console.error('Failed to connect:', err);
+                          }
+                        }}
+                        className="w-full h-12 font-heading font-bold text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
+                      >
+                        <Wallet className="w-4 h-4 mr-2" />
+                        Connect Phantom Wallet
+                      </Button>
+                    ) : pendingTransaction ? (
+                      <SolanaTransactionSigner
+                        instruction={pendingTransaction.instruction}
+                        amount={pendingTransaction.amount}
+                        onSuccess={handleTransactionSuccess}
+                        onError={handleTransactionError}
+                      />
+                    ) : (
+                      <Button
+                        onClick={() => openOfferMutation.mutate({ outcome: selectedOutcome, offerOutcomeLabel: getOutcomeLabel(selectedOutcome), offerAmount: stakeNum })}
+                        disabled={stakeNum <= 0 || openOfferMutation.isPending}
+                        className="w-full h-12 font-heading font-bold text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl">
+                        {openOfferMutation.isPending
+                          ? <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                          : `Offer ◎${stakeNum > 0 ? stakeNum.toFixed(2) : '0.00'} on ${getOutcomeLabel(selectedOutcome)}`}
+                      </Button>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
