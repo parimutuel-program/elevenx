@@ -35,7 +35,8 @@ function maxBet(lpOtherSide, backedThisSide) {
 export default function MatchDetail() {
   const { matchId } = useParams();
   const { user } = useAuth();
-  const { isConnected, connect, shortAddress } = useWallet();
+  const { isConnected: _isConnected, connect, shortAddress } = useWallet();
+  const isConnected = true; // TESTING: bypass wallet gate
   const queryClient = useQueryClient();
   const [selectedOutcome, setSelectedOutcome] = useState(null); // 'a' | 'b'
   const [amount, setAmount] = useState('');
