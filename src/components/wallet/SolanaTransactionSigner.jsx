@@ -36,25 +36,29 @@ export default function SolanaTransactionSigner({ instruction, amount, onSuccess
       const { Transaction, PublicKey, SystemProgram } = await import('@solana/web3.js');
       
       const transaction = new Transaction();
-      const ix = {
-        programId: new PublicKey(instruction.programId),
-        keys: instruction.keys.map(k => ({
-          pubkey: new PublicKey(k.pubkey),
-          isSigner: k.isSigner,
-          isWritable: k.isWritable,
-        })),
-        data: Buffer.from(instruction.data, 'hex'),
-      };
-      transaction.add(ix);
-
-      // Add transfer instruction for SOL
+      
+      // Add transfer instruction for SOL (this deducts funds from wallet)
       if (instruction.amountLamports) {
         const transferIx = SystemProgram.transfer({
           fromPubkey: publicKey,
-          toPubkey: new PublicKey(instruction.keys[0].pubkey), // bet pool PDA
+          toPubkey: new PublicKey(instruction.betPoolPda || instruction.userPositionPda),
           lamports: instruction.amountLamports,
         });
         transaction.add(transferIx);
+      }
+      
+      // Add program instruction if provided
+      if (instruction.programId && instruction.data) {
+        const ix = {
+          programId: new PublicKey(instruction.programId),
+          keys: instruction.keys.map(k => ({
+            pubkey: new PublicKey(k.pubkey),
+            isSigner: k.isSigner,
+            isWritable: k.isWritable,
+          })),
+          data: Buffer.from(instruction.data, 'hex'),
+        };
+        transaction.add(ix);
       }
 
       // Request signature

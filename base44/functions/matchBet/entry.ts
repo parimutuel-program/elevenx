@@ -164,16 +164,14 @@ Deno.serve(async (req) => {
 
     return Response.json({
       success: true,
-      userBet,
+      userBetId: userBet.id,
       potentialPayout,
       solana_instruction: {
-        programId: programId.toBase58(),
-        keys,
-        data: data.toString('hex'),
-        matcherPositionPda: matcherPositionPda.toBase58(),
-        amountLamports: amount * 1_000_000_000,
+        betPoolPda: betPoolPda.toBase58(),
+        userPositionPda: matcherPositionPda.toBase58(),
+        amountLamports: Math.round(amount * 1_000_000_000),
       },
-      message: 'Bet matched - sign transaction on frontend to complete on-chain'
+      message: 'Bet matched - sign transaction to lock your SOL'
     });
 
   } catch (error) {

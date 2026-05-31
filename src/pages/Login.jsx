@@ -55,10 +55,10 @@ export default function Login() {
         return;
       }
 
-      // Success - set token and reload
+      // Success - save wallet address to user profile and login
       if (response.data.success) {
-        // In production, you'd receive a JWT token here
-        // For now, use the platform's auth
+        // Save wallet address to the authenticated user's profile
+        await base44.auth.updateMe({ wallet_address: walletAddress });
         await checkUserAuth();
         window.location.href = '/';
       }

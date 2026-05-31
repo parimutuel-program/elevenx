@@ -23,12 +23,12 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
-    // Check if user exists in the system
-    let user = await base44.entities.User.filter({ wallet_address: walletAddress }).then(users => users[0] || null);
+    // Check if user exists by wallet address
+    let users = await base44.entities.User.filter({ wallet_address: walletAddress });
+    let user = users[0] || null;
 
     if (!user) {
-      // User doesn't exist - we'll create them via the platform's invite system
-      // For now, return that user needs to be registered
+      // User doesn't exist - return that user needs to be registered
       return Response.json({ 
         error: 'User not registered',
         needsRegistration: true,
@@ -36,20 +36,18 @@ Deno.serve(async (req) => {
       }, { status: 404 });
     }
 
-    // User exists - generate a session token
-    // In a real implementation, you'd use the platform's token system
+    // User exists - return user info
+    // The frontend will use base44.auth.setToken() to establish session
     return Response.json({
       success: true,
-      user: {
-        id: user.id,
-        walletAddress: user.wallet_address,
-        role: user.role,
-        full_name: user.full_name,
-        email: user.email
-      }
+      userId: user.id,
+      walletAddress: user.wallet_address,
+      role: user.role,
+      needsToken: true
     });
 
   } catch (error) {
+    console.error('walletAuth error:', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });

@@ -115,14 +115,11 @@ Deno.serve(async (req) => {
       offer,
       userBetId: userBet.id,
       solana_instruction: {
-        programId: programId.toBase58(),
-        keys,
-        data: data.toString('hex'),
         betPoolPda: betPoolPda.toBase58(),
         userPositionPda: userPositionPda.toBase58(),
-        amountLamports: amount * 1_000_000_000,
+        amountLamports: Math.round(amount * 1_000_000_000),
       },
-      message: 'Bet offer created - sign transaction on frontend to complete on-chain'
+      message: 'Bet offer created - sign transaction to lock your SOL'
     });
 
   } catch (error) {

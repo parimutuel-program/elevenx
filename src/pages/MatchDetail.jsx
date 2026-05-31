@@ -105,8 +105,8 @@ export default function MatchDetail() {
         throw new Error(response.data.error);
       }
       
-      if (!response.data.offer) {
-        throw new Error('No offer returned');
+      if (!response.data.solana_instruction) {
+        throw new Error('No solana_instruction returned');
       }
       
       return { 
@@ -140,13 +140,6 @@ export default function MatchDetail() {
 
   const matchOfferMutation = useMutation({
     mutationFn: async ({ offer, matchAmount }) => {
-      console.log('=== BET DEBUG ===');
-      console.log('User:', user);
-      console.log('Wallet:', user?.wallet_address);
-      console.log('Offer:', { id: offer.id, status: offer.status, amount_unmatched: offer.amount_unmatched });
-      console.log('Bet:', { id: bet.id, status: bet.status });
-      console.log('Amount:', matchAmount);
-      
       const payload = {
         offer_id: offer.id,
         bet_id: bet.id,
@@ -155,21 +148,20 @@ export default function MatchDetail() {
       };
       
       const response = await base44.functions.invoke('matchBet', payload);
-      console.log('Response:', response);
       
       if (response.data.error) {
         throw new Error(response.data.error);
       }
       
-      if (!response.data.userBet) {
-        throw new Error('No userBet returned');
+      if (!response.data.solana_instruction) {
+        throw new Error('No solana_instruction returned');
       }
       
       return { 
         response, 
         offer, 
         amount: matchAmount,
-        userBetId: response.data.userBet.id 
+        userBetId: response.data.userBetId 
       };
     },
     onSuccess: async (result) => {
@@ -573,9 +565,15 @@ export default function MatchDetail() {
                           }
                           try {
                             await provider.connect();
+                            // Save wallet to backend
+                            const { base44 } = await import('@/api/base44Client');
+                            const resp = await provider.connect();
+                            const address = resp.publicKey.toString();
+                            await base44.auth.updateMe({ wallet_address: address });
                             window.location.reload();
                           } catch (err) {
                             console.error('Failed to connect:', err);
+                            alert('Failed to connect wallet: ' + err.message);
                           }
                         }}
                         className="w-full h-12 font-heading font-bold text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
@@ -713,9 +711,15 @@ export default function MatchDetail() {
                           }
                           try {
                             await provider.connect();
+                            // Save wallet to backend
+                            const { base44 } = await import('@/api/base44Client');
+                            const resp = await provider.connect();
+                            const address = resp.publicKey.toString();
+                            await base44.auth.updateMe({ wallet_address: address });
                             window.location.reload();
                           } catch (err) {
                             console.error('Failed to connect:', err);
+                            alert('Failed to connect wallet: ' + err.message);
                           }
                         }}
                         className="w-full h-12 font-heading font-bold text-sm bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl"
