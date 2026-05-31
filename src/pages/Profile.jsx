@@ -77,7 +77,10 @@ export default function Profile() {
         <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
           <User className="w-8 h-8 text-primary" />
         </div>
-        <h1 className="font-heading font-bold text-xl">{user?.full_name || 'Bettor'}</h1>
+        <h1 className="font-heading font-bold text-xl">{user?.full_name || 'Complete Registration'}</h1>
+        {!user?.full_name && (
+          <p className="text-sm text-accent mb-2">Please complete your registration</p>
+        )}
         <p className="text-sm text-muted-foreground">{user?.email}</p>
         <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 bg-secondary/50 rounded-lg border border-border/30">
           <Wallet className="w-3 h-3 text-primary" />
@@ -89,6 +92,14 @@ export default function Profile() {
           <Trophy className="w-3 h-3 text-primary" />
           <span className="text-xs font-semibold text-primary">{user?.role || 'user'}</span>
         </div>
+        {!user?.full_name && (
+          <Button
+            onClick={() => window.location.href = '/register'}
+            className="mt-4 bg-primary hover:bg-primary/90 font-heading font-bold h-11 rounded-xl px-8"
+          >
+            Complete Registration
+          </Button>
+        )}
       </motion.div>
 
       <div className="grid grid-cols-2 gap-3">
