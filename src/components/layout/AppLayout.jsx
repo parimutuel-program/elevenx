@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, Trophy, BarChart3, User, Shield } from 'lucide-react';
+import { Home, Trophy, BarChart3, User, Layers } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import WalletButton from '@/components/wallet/WalletButton';
 
@@ -19,6 +19,7 @@ const TelegramIcon = () => (
 const navItems = [
   { path: '/', icon: Home, label: 'Home' },
   { path: '/matches', icon: Trophy, label: 'Matches' },
+  { path: '/groups', icon: Layers, label: 'Groups' },
   { path: '/my-bets', icon: BarChart3, label: 'My Bets' },
   { path: '/profile', icon: User, label: 'Profile' },
 ];
@@ -55,19 +56,7 @@ export default function AppLayout() {
                 </Link>
               );
             })}
-            {isAdmin && (
-              <Link
-                to="/admin"
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  location.pathname === '/admin'
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-                }`}
-              >
-                <Shield className="w-4 h-4" />
-                Admin
-              </Link>
-            )}
+
           </nav>
 
           <div className="flex items-center gap-3">
@@ -115,17 +104,7 @@ export default function AppLayout() {
               </Link>
             );
           })}
-          {isAdmin && (
-            <Link
-              to="/admin"
-              className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all duration-200 ${
-                location.pathname === '/admin' ? 'text-primary' : 'text-muted-foreground'
-              }`}
-            >
-              <Shield className={`w-5 h-5 ${location.pathname === '/admin' ? 'drop-shadow-[0_0_8px_hsl(45,100%,51%,0.4)]' : ''}`} />
-              <span className="text-[10px] font-medium">Admin</span>
-            </Link>
-          )}
+
         </div>
       </nav>
     </div>

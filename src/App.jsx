@@ -16,6 +16,7 @@ import ResetPassword from '@/pages/ResetPassword';
 import AppLayout from '@/components/layout/AppLayout';
 import Home from '@/pages/Home';
 import Matches from '@/pages/Matches';
+import Groups from '@/pages/Groups';
 import BetDetail from '@/pages/BetDetail';
 import MyBets from '@/pages/MyBets';
 import Profile from '@/pages/Profile';
@@ -53,6 +54,7 @@ const AuthenticatedApp = () => {
       <Route element={<AppLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/matches" element={<Matches />} />
+        <Route path="/groups" element={<Groups />} />
         <Route path="/bet/:betId" element={<BetDetail />} />
         <Route path="/match/:matchId" element={<MatchDetail />} />
         <Route path="/my-bets" element={<MyBets />} />
