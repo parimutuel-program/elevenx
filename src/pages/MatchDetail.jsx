@@ -132,7 +132,9 @@ export default function MatchDetail() {
     },
     onError: (error) => {
       console.error('openOfferMutation error:', error);
-      alert('Failed to create offer: ' + (error.message || 'Unknown error'));
+      console.error('Error response:', error.response?.data);
+      const backendError = error.response?.data?.error || error.message || 'Unknown error';
+      alert('Failed to create offer: ' + backendError);
     },
   });
 
@@ -188,7 +190,9 @@ export default function MatchDetail() {
     },
     onError: (error) => {
       console.error('matchOfferMutation error:', error);
-      alert('Failed to place bet: ' + (error.message || 'Unknown error'));
+      console.error('Error response:', error.response?.data);
+      const backendError = error.response?.data?.error || error.message || 'Unknown error';
+      alert('Failed to place bet: ' + backendError);
     },
   });
 
