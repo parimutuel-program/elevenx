@@ -103,6 +103,7 @@ export default function MatchDetail() {
         match_id: matchId,
         outcome,
         amount: offerAmount,
+        walletAddress: user.wallet_address || user.data?.wallet_address,
       };
       
       const response = await base44.functions.invoke('createBetOffer', payload);
@@ -157,6 +158,7 @@ export default function MatchDetail() {
         bet_id: bet.id,
         match_id: matchId,
         amount: matchAmount,
+        walletAddress: user.wallet_address || user.data?.wallet_address,
       };
       
       const response = await base44.functions.invoke('matchBet', payload);

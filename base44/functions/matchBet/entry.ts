@@ -8,24 +8,25 @@ const SOLANA_RPC_URL = 'https://api.devnet.solana.com'; // Using devnet for test
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const serviceRole = base44.asServiceRole;
     
-    let user;
-    try {
-      user = await base44.auth.me();
-    } catch (err) {
-      return Response.json({ error: 'Please login first: Connect your wallet and register/login to place bets' }, { status: 401 });
-    }
-
-    if (!user) {
-      return Response.json({ error: 'Please login first: Connect your wallet and register/login to place bets' }, { status: 401 });
-    }
-
-    const walletAddress = user.wallet_address || user.data?.wallet_address;
+    // Get wallet address from request payload (passed by frontend for wallet-only auth)
+    const payload = await req.json();
+    const walletAddress = payload.walletAddress;
+    
     if (!walletAddress) {
-      return Response.json({ error: 'Wallet not connected' }, { status: 400 });
+      return Response.json({ error: 'Please login first: Connect your wallet and register/login to place bets' }, { status: 401 });
     }
 
-    const { offer_id, bet_id, match_id, amount } = await req.json();
+    // Verify user exists with this wallet address
+    const users = await serviceRole.entities.User.filter({ wallet_address: walletAddress });
+    if (!users || users.length === 0) {
+      return Response.json({ error: 'Wallet not registered. Please connect your wallet first.' }, { status: 401 });
+    }
+
+    const user = users[0];
+
+    const { offer_id, bet_id, match_id, amount } = payload;
 
     if (!offer_id || !bet_id || !match_id || !amount) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
