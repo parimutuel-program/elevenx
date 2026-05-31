@@ -107,8 +107,14 @@ export const AuthProvider = ({ children }) => {
       if (walletSession) {
         // Wallet-based session - fetch user from backend using wallet address
         console.log('Wallet session detected, fetching user...');
+        let address = walletSession;
+        try {
+          // Handle both string and JSON formats
+          const parsed = JSON.parse(walletSession);
+          address = parsed.address || walletSession;
+        } catch {}
         const response = await base44.functions.invoke('walletAuth', {
-          walletAddress: walletSession
+          walletAddress: address
         });
         
         if (response.data.success && response.data.user) {
