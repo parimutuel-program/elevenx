@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing wallet address' }, { status: 400 });
     }
 
-    console.log('walletAuth called:', { walletAddress, register, username: username ? username : 'N/A' });
+    console.log('walletAuth called - walletAddress:', walletAddress, 'register:', register, 'username:', username || 'N/A');
 
     // If signature provided, verify it
     if (signature && message) {
@@ -37,10 +37,10 @@ Deno.serve(async (req) => {
     try {
       console.log('Looking up user by wallet address...');
       const users = await serviceRole.entities.User.filter({ wallet_address: walletAddress });
-      console.log('User lookup result:', users?.length || 0, 'users found');
+      console.log('User lookup - found:', users?.length || 0);
       user = users[0] || null;
       if (user) {
-        console.log('Found existing user:', user.full_name, user.id);
+        console.log('Found existing user - username:', user.full_name || user.username, 'id:', user.id);
       }
     } catch (err) {
       console.log('User lookup failed:', err.message);
@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
 
     // If registering, create user
     if (register && username) {
-      console.log('Registering new user with username:', username);
+      console.log('Registering user - username:', username);
       
       // Check if username is already taken
       let usernameTaken = false;
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
           role: 'user',
         });
         
-        console.log('✓ User created successfully:', newUser.id, newUser.full_name);
+        console.log('✓ User created - id:', newUser.id, 'username:', newUser.full_name);
         
         return Response.json({
           success: true,
@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
     }
 
     // User exists - return user info (handle both root-level and data.* fields)
-    console.log('✓ User authenticated:', user.full_name, user.id);
+    console.log('✓ User authenticated - username:', user.full_name || user.username, 'id:', user.id);
     return Response.json({
       success: true,
       userId: user.id,

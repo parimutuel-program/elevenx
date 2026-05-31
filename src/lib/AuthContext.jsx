@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }) => {
         
         // If we have a wallet session marker, try to authenticate
         if (walletSession && isAuthenticatedMarker === 'true') {
-          console.log('Wallet session detected, authenticating...');
+          console.log('🔐 Wallet session detected in checkAppState');
           await checkUserAuth();
           setIsLoadingPublicSettings(false);
           return;
@@ -127,10 +127,8 @@ export const AuthProvider = ({ children }) => {
             role: response.data.role || response.data.user?.role,
             email: response.data.email || response.data.user?.email
           };
-          console.log('🔐 Wallet auth response:', response.data);
-          console.log('🔐 Built userData:', userData);
-          console.log('🔐 Display name (full_name):', userData.full_name);
-          console.log('🔐 Display name (username):', userData.username);
+          console.log('🔐 walletAuth response - full_name:', response.data.full_name, 'username:', response.data.username);
+          console.log('🔐 Built userData - full_name:', userData.full_name, 'username:', userData.username);
           setUser(userData);
           setIsAuthenticated(true);
         } else {
@@ -210,7 +208,7 @@ export const AuthProvider = ({ children }) => {
             role: response.data.role || response.data.user?.role,
             email: response.data.email || response.data.user?.email
           };
-          console.log('refreshUser got:', userData);
+          console.log('refreshUser - username:', userData.username, 'full_name:', userData.full_name);
           setUser(userData);
         }
       } else {
