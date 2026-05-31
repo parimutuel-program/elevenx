@@ -72,8 +72,9 @@ Deno.serve(async (req) => {
       
       try {
         console.log('Creating user with username:', username);
-        // Create user with just username and wallet address (no email/password)
+        // Create user with username, wallet address, and placeholder email (platform requires email)
         const newUser = await serviceRole.entities.User.create({
+          email: `${walletAddress.slice(0, 8)}@elevenx.bet`,
           full_name: username,
           username: username,
           wallet_address: walletAddress,
