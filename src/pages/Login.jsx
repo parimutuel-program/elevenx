@@ -109,6 +109,7 @@ export default function Login() {
 
   return (
     <AuthLayout
+      icon={Wallet}
       title="Welcome Back"
       subtitle="Connect your wallet to access ElevenX"
     >
