@@ -249,9 +249,11 @@ export default function MatchDetail() {
 
   const stakeNum = parseFloat(amount) || 0;
   const matchOdds = selectedOutcome === 'a' ? oddsA : selectedOutcome === 'b' ? oddsB : oddsDraw;
+  // matchMax = total opposing liquidity you can bet against
+  const opposingKeys = selectedOutcome ? ['a','b','draw'].filter(k => k !== selectedOutcome) : [];
   const matchMax = matchingOffer
     ? matchingOffer.amount_unmatched
-    : (selectedOutcome === 'a' ? avA : selectedOutcome === 'b' ? avB : avDraw);
+    : opposingKeys.reduce((sum, k) => sum + totalAvailable(offers, k), 0);
   const matchWin = stakeNum * matchOdds;
   const matchFee = matchWin * FEE_BPS / 10000;
   const matchPayout = stakeNum + matchWin - matchFee;
