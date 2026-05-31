@@ -3,7 +3,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
-import { User, Trophy, TrendingUp, DollarSign, LogOut } from 'lucide-react';
+import { User, Trophy, TrendingUp, DollarSign, LogOut, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function Profile() {
@@ -36,6 +36,14 @@ export default function Profile() {
         </div>
         <h1 className="font-heading font-bold text-xl">{user?.full_name || 'Bettor'}</h1>
         <p className="text-sm text-muted-foreground">{user?.email}</p>
+        {user?.wallet_address && (
+          <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 bg-secondary/50 rounded-lg border border-border/30">
+            <Wallet className="w-3 h-3 text-primary" />
+            <span className="text-xs font-mono text-primary">
+              {user.wallet_address.slice(0, 4)}...{user.wallet_address.slice(-4)}
+            </span>
+          </div>
+        )}
         <div className="mt-2 inline-flex items-center gap-1 px-3 py-1 bg-primary/10 rounded-full">
           <Trophy className="w-3 h-3 text-primary" />
           <span className="text-xs font-semibold text-primary">{user?.role || 'user'}</span>
@@ -46,8 +54,8 @@ export default function Profile() {
         {[
           { label: 'Total Bets', value: myBets.length, icon: DollarSign, color: 'text-foreground' },
           { label: 'Win Rate', value: `${winRate}%`, icon: TrendingUp, color: 'text-accent' },
-          { label: 'Total Staked', value: `$${totalStaked.toLocaleString()}`, icon: DollarSign, color: 'text-primary' },
-          { label: 'Total Won', value: `$${totalWon.toLocaleString()}`, icon: Trophy, color: 'text-accent' },
+          { label: 'Total Staked', value: `◎${totalStaked.toLocaleString()}`, icon: DollarSign, color: 'text-primary' },
+          { label: 'Total Won', value: `◎${totalWon.toLocaleString()}`, icon: Trophy, color: 'text-accent' },
         ].map((stat, i) => (
           <motion.div
             key={stat.label}

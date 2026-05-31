@@ -1,0 +1,25 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "wallet_address": {
+      "type": "string",
+      "description": "Solana wallet address for authentication and payouts"
+    },
+    "total_bets": {
+      "type": "number",
+      "default": 0,
+      "description": "Total number of bets placed"
+    },
+    "total_won": {
+      "type": "number",
+      "default": 0,
+      "description": "Total amount won in SOL"
+    },
+    "total_staked": {
+      "type": "number",
+      "default": 0,
+      "description": "Total amount staked in SOL"
+    }
+  }
+}

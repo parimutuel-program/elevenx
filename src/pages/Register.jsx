@@ -1,228 +1,190 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { UserPlus, Mail, Lock, Loader2 } from "lucide-react";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import AuthLayout from "@/components/AuthLayout";
-import GoogleIcon from "@/components/GoogleIcon";
-import { toast } from "@/components/ui/use-toast";
+import React, { useState } from 'react';
+import { base44 } from '@/api/base44Client';
+import { Wallet, User, Mail } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import AuthLayout from '@/components/AuthLayout';
 
 export default function Register() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [showOtp, setShowOtp] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
+  const [step, setStep] = useState('wallet'); // 'wallet' | 'details'
+  const [walletAddress, setWalletAddress] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
+  const getPhantom = () => {
+    if (typeof window !== 'undefined' && window.solana?.isPhantom) {
+      return window.solana;
+    }
+    return null;
+  };
+
+  const handleConnectWallet = async () => {
+    const phantom = getPhantom();
+    
+    if (!phantom) {
+      window.open('https://phantom.app/', '_blank');
+      setError('Phantom wallet not found. Please install it.');
       return;
     }
-    setLoading(true);
+
+    setIsConnecting(true);
+    setError('');
+
     try {
-      await base44.auth.register({ email, password });
-      setShowOtp(true);
+      const resp = await phantom.connect();
+      const address = resp.publicKey.toString();
+      setWalletAddress(address);
+      setStep('details');
     } catch (err) {
-      setError(err.message || "Registration failed");
+      console.error('Wallet connect failed:', err);
+      setError(err.message || 'Failed to connect wallet');
     } finally {
-      setLoading(false);
+      setIsConnecting(false);
     }
   };
 
-  const handleVerify = async () => {
-    setError("");
-    setLoading(true);
-    try {
-      const result = await base44.auth.verifyOtp({ email, otpCode });
-      if (result?.access_token) {
-        base44.auth.setToken(result.access_token);
-      }
-      window.location.href = "/";
-    } catch (err) {
-      setError(err.message || "Invalid verification code");
-    } finally {
-      setLoading(false);
+  const handleRegister = async () => {
+    if (!fullName || !email) {
+      setError('Please fill in all fields');
+      return;
     }
-  };
 
-  const handleResend = async () => {
-    setError("");
+    setIsRegistering(true);
+    setError('');
+
     try {
-      await base44.auth.resendOtp(email);
-      toast({
-        title: "Code sent",
-        description: "Check your email for the new code.",
+      // In production, this would create a user with wallet address
+      // For now, we'll use the platform's registration
+      await base44.auth.register({
+        email,
+        password: Math.random().toString(36).slice(-10), // Random password (wallet-based auth)
       });
+
+      // After registration, update user with wallet address
+      const user = await base44.auth.me();
+      if (user) {
+        await base44.auth.updateMe({
+          wallet_address: walletAddress,
+          full_name: fullName,
+        });
+      }
+
+      window.location.href = '/';
     } catch (err) {
-      setError(err.message || "Failed to resend code");
+      console.error('Registration failed:', err);
+      setError(err.message || 'Failed to register');
+    } finally {
+      setIsRegistering(false);
     }
   };
-
-  const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", "/");
-  };
-
-  if (showOtp) {
-    return (
-      <AuthLayout
-        icon={Mail}
-        title="Verify your email"
-        subtitle={`We sent a code to ${email}`}
-      >
-        {error && (
-          <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-            {error}
-          </div>
-        )}
-        <div className="flex justify-center mb-6">
-          <InputOTP
-            maxLength={6}
-            value={otpCode}
-            onChange={setOtpCode}
-            autoFocus
-            autoComplete="one-time-code"
-          >
-            <InputOTPGroup>
-              <InputOTPSlot index={0} />
-              <InputOTPSlot index={1} />
-              <InputOTPSlot index={2} />
-              <InputOTPSlot index={3} />
-              <InputOTPSlot index={4} />
-              <InputOTPSlot index={5} />
-            </InputOTPGroup>
-          </InputOTP>
-        </div>
-        <Button
-          className="w-full h-12 font-medium"
-          onClick={handleVerify}
-          disabled={loading || otpCode.length < 6}
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Verifying...
-            </>
-          ) : (
-            "Verify"
-          )}
-        </Button>
-        <p className="text-center text-sm text-muted-foreground mt-4">
-          Didn't receive the code?{" "}
-          <button onClick={handleResend} className="text-primary font-medium hover:underline">
-            Resend
-          </button>
-        </p>
-      </AuthLayout>
-    );
-  }
 
   return (
     <AuthLayout
-      icon={UserPlus}
-      title="Create your account"
-      subtitle="Sign up to get started"
-      footer={
-        <>
-          Already have an account?{" "}
-          <Link to="/login" className="text-primary font-medium hover:underline">
-            Log in
-          </Link>
-        </>
-      }
+      title="Create Account"
+      subtitle="Register with your Solana wallet"
     >
-      <Button
-        variant="outline"
-        className="w-full h-12 text-sm font-medium mb-6"
-        onClick={handleGoogle}
-      >
-        <GoogleIcon className="w-5 h-5 mr-2" />
-        Continue with Google
-      </Button>
+      <div className="space-y-4">
+        {error && (
+          <div className="bg-destructive/10 border border-destructive/30 text-destructive text-sm p-3 rounded-xl">
+            {error}
+          </div>
+        )}
 
-      <div className="relative mb-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-card px-3 text-muted-foreground">or</span>
-        </div>
+        {step === 'wallet' ? (
+          <div className="space-y-4">
+            <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 text-center">
+              <Wallet className="w-8 h-8 text-primary mx-auto mb-2" />
+              <p className="text-sm font-medium text-foreground mb-1">Connect Your Wallet First</p>
+              <p className="text-xs text-muted-foreground">We'll use your wallet address for authentication and payouts</p>
+            </div>
+
+            <Button
+              onClick={handleConnectWallet}
+              disabled={isConnecting}
+              className="w-full h-12 font-heading font-bold rounded-xl text-sm"
+              style={{ background: 'linear-gradient(135deg, #a69cf2, #8b84e8)', boxShadow: '0 0 16px rgba(166,156,242,0.25)' }}
+            >
+              {isConnecting ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <Wallet className="w-5 h-5 mr-2" />
+                  Connect Phantom Wallet
+                </>
+              )}
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="bg-accent/5 border border-accent/20 rounded-2xl p-4">
+              <p className="text-xs font-medium text-accent mb-1">Wallet Connected</p>
+              <p className="text-xs text-muted-foreground font-mono">
+                {walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="fullName" className="text-sm font-medium">Full Name</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="fullName"
+                  placeholder="John Doe"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="pl-10 h-11 rounded-xl"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="john@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-10 h-11 rounded-xl"
+                />
+              </div>
+            </div>
+
+            <Button
+              onClick={handleRegister}
+              disabled={isRegistering || !fullName || !email}
+              className="w-full h-12 font-heading font-bold rounded-xl text-sm"
+              style={{ background: 'linear-gradient(135deg, #a69cf2, #8b84e8)', boxShadow: '0 0 16px rgba(166,156,242,0.25)' }}
+            >
+              {isRegistering ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
+                  Creating Account...
+                </>
+              ) : (
+                'Create Account'
+              )}
+            </Button>
+
+            <Button
+              onClick={() => setStep('wallet')}
+              variant="outline"
+              className="w-full h-11 rounded-xl"
+            >
+              Back
+            </Button>
+          </div>
+        )}
       </div>
-
-      {error && (
-        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              autoFocus
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="pl-10 h-12"
-              required
-            />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
-            <Input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="pl-10 h-12"
-              required
-            />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="confirm">Confirm Password</Label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
-            <Input
-              id="confirm"
-              type="password"
-              autoComplete="new-password"
-              placeholder="••••••••"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="pl-10 h-12"
-              required
-            />
-          </div>
-        </div>
-        <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Creating account...
-            </>
-          ) : (
-            "Create account"
-          )}
-        </Button>
-      </form>
     </AuthLayout>
   );
 }
