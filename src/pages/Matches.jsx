@@ -19,7 +19,7 @@ export default function Matches() {
 
   const { data: bets = [] } = useQuery({
     queryKey: ['bets'],
-    queryFn: () => base44.entities.Bet.list('-created_date', 100),
+    queryFn: () => base44.entities.Bet.filter({}),
   });
 
   const betByMatch = {};
