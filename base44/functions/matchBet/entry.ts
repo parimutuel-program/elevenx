@@ -119,17 +119,9 @@ Deno.serve(async (req) => {
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ];
 
-    const newMatched = (offer.amount_matched || 0) + amount;
-    const newUnmatched = offer.amount_offered - newMatched;
-    const newStatus = newUnmatched <= 0.01 ? 'fully_matched' : 'partially_matched';
-    
-    await base44.entities.BetOffer.update(offer_id, {
-      amount_matched: newMatched,
-      amount_unmatched: Math.max(0, newUnmatched),
-      status: newStatus,
-    });
-
     const match = await base44.entities.Match.list().then(ms => ms.find(m => m.id === match_id));
+    
+    // Create UserBet in pending state - will update after transaction confirms
     const userBet = await base44.entities.UserBet.create({
       bet_id,
       match_id,
@@ -137,41 +129,24 @@ Deno.serve(async (req) => {
       outcome: matcherOutcome,
       amount,
       role: 'matcher',
-      status: 'active',
+      status: 'pending', // Changed from 'active' - will update after signing
       outcome_label: matcherLabel,
       match_title: `${match.team_a} vs ${match.team_b}`,
       potential_payout: potentialPayout,
       solana_position_pda: matcherPositionPda.toBase58(),
     });
 
-    const lpBets = await base44.entities.UserBet.filter({ offer_id, role: 'lp' });
-    if (lpBets.length > 0) {
-      const lpWin = amount;
-      const lpFee = lpWin * FEE_BPS / 10000;
-      const lpPayout = offer.amount_offered + lpWin - lpFee;
-      await base44.entities.UserBet.update(lpBets[0].id, {
-        status: 'active',
-        potential_payout: lpPayout,
-      });
-    }
-
-    const backedField = matcherOutcome === 'a' ? 'backed_amount_a' : matcherOutcome === 'b' ? 'backed_amount_b' : 'backed_amount_draw';
-    await base44.entities.Bet.update(bet_id, {
-      [backedField]: (bet[backedField] || 0) + amount,
-      total_pool: (bet.total_pool || 0) + amount,
-      total_bettors: (bet.total_bettors || 0) + 1,
-    });
-
     return Response.json({
       success: true,
       userBetId: userBet.id,
+      offerId: offer_id,
       potentialPayout,
       solana_instruction: {
         betPoolPda: betPoolPda.toBase58(),
         userPositionPda: matcherPositionPda.toBase58(),
         amountLamports: Math.round(amount * 1_000_000_000),
       },
-      message: 'Bet matched - sign transaction to lock your SOL'
+      message: 'Sign transaction to lock your SOL'
     });
 
   } catch (error) {

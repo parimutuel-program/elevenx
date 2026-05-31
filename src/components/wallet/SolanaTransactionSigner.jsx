@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Buffer } from 'buffer';
 import { Connection } from '@solana/web3.js';
 
-export default function SolanaTransactionSigner({ instruction, amount, onSuccess, onError }) {
+export default function SolanaTransactionSigner({ instruction, amount, userBetId, offerId, isOffer, onSuccess, onError }) {
   const { isConnected, connect } = useWallet();
   const [isSigning, setIsSigning] = useState(false);
   const [signature, setSignature] = useState(null);
@@ -28,51 +28,63 @@ export default function SolanaTransactionSigner({ instruction, amount, onSuccess
         throw new Error('Phantom wallet not found. Please install Phantom extension.');
       }
 
-      // Connect to wallet
-      const resp = await provider.connect();
-      const publicKey = resp.publicKey;
+      // Ensure wallet is connected
+      if (!provider.isConnected) {
+        await provider.connect();
+      }
 
       // Create transaction from instruction
       const { Transaction, PublicKey, SystemProgram } = await import('@solana/web3.js');
+      const connection = new Connection('https://api.mainnet-beta.solana.com', 'confirmed');
       
       const transaction = new Transaction();
       
       // Add transfer instruction for SOL (this deducts funds from wallet)
       if (instruction.amountLamports) {
+        const fromPubkey = provider.publicKey;
+        const toPubkey = new PublicKey(instruction.betPoolPda);
+        
+        console.log('Creating transfer instruction:', {
+          from: fromPubkey.toString(),
+          to: toPubkey.toString(),
+          lamports: instruction.amountLamports,
+          amount: instruction.amountLamports / 1_000_000_000
+        });
+        
         const transferIx = SystemProgram.transfer({
-          fromPubkey: publicKey,
-          toPubkey: new PublicKey(instruction.betPoolPda || instruction.userPositionPda),
+          fromPubkey,
+          toPubkey,
           lamports: instruction.amountLamports,
         });
         transaction.add(transferIx);
       }
-      
-      // Add program instruction if provided
-      if (instruction.programId && instruction.data) {
-        const ix = {
-          programId: new PublicKey(instruction.programId),
-          keys: instruction.keys.map(k => ({
-            pubkey: new PublicKey(k.pubkey),
-            isSigner: k.isSigner,
-            isWritable: k.isWritable,
-          })),
-          data: Buffer.from(instruction.data, 'hex'),
-        };
-        transaction.add(ix);
-      }
 
-      // Request signature
-      const { signature: sig } = await provider.signAndSendTransaction(transaction);
+      // Get recent blockhash for transaction
+      const { blockhash } = await connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = provider.publicKey;
+
+      console.log('Sending transaction to Phantom for signature...');
+      
+      // Request signature - this should trigger Phantom popup
+      const { signature: sig } = await provider.signAndSendTransaction(transaction, {
+        skipPreflight: false,
+        preflightCommitment: 'confirmed'
+      });
+      
+      console.log('Transaction signed, signature:', sig);
       setSignature(sig);
 
       // Wait for confirmation
-      const connection = new Connection('https://api.mainnet-beta.solana.com', 'confirmed');
+      console.log('Waiting for confirmation...');
       await connection.confirmTransaction(sig, 'confirmed');
+      console.log('Transaction confirmed!');
 
       onSuccess({ signature: sig, status: 'confirmed' });
     } catch (err) {
       console.error('Transaction failed:', err);
-      setError(err.message);
+      console.error('Error stack:', err.stack);
+      setError(err.message || 'Transaction failed');
       onError?.(err);
     } finally {
       setIsSigning(false);

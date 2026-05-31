@@ -222,19 +222,71 @@ export default function MatchDetail() {
     setPendingTransaction(null);
   }
 
-  const handleTransactionSuccess = async () => {
+  const handleTransactionSuccess = async (txResult) => {
+    console.log('Transaction confirmed:', txResult);
+    
     if (pendingTransaction?.userBetId) {
-      if (pendingTransaction.isOffer) {
-        // Update the UserBet created by createBetOffer
-        const lpBets = await base44.entities.UserBet.filter({ offer_id: pendingTransaction.userBetId, role: 'lp' });
-        if (lpBets.length > 0) {
-          await base44.entities.UserBet.update(lpBets[0].id, { status: 'active' });
+      try {
+        if (pendingTransaction.isOffer) {
+          // Update the offer status to open
+          await base44.entities.BetOffer.update(pendingTransaction.offerId, {
+            status: 'open'
+          });
+          // Update the UserBet to active
+          await base44.entities.UserBet.update(pendingTransaction.userBetId, { 
+            status: 'active',
+            transaction_signature: txResult?.signature 
+          });
+          // Update the Bet LP amount
+          const ub = await base44.entities.UserBet.get(pendingTransaction.userBetId);
+          const lpField = ub.outcome === 'a' ? 'lp_amount_a' : ub.outcome === 'b' ? 'lp_amount_b' : 'lp_amount_draw';
+          await base44.entities.Bet.update(ub.bet_id, {
+            [lpField]: (bet[lpField] || 0) + ub.amount,
+          });
+        } else {
+          // Update the offer amounts
+          const ub = await base44.entities.UserBet.get(pendingTransaction.userBetId);
+          const offer = await base44.entities.BetOffer.get(ub.offer_id);
+          const newMatched = (offer.amount_matched || 0) + ub.amount;
+          const newUnmatched = offer.amount_offered - newMatched;
+          const newStatus = newUnmatched <= 0.01 ? 'fully_matched' : 'partially_matched';
+          
+          await base44.entities.BetOffer.update(offer.id, {
+            amount_matched: newMatched,
+            amount_unmatched: Math.max(0, newUnmatched),
+            status: newStatus,
+          });
+          
+          // Update UserBet to active
+          await base44.entities.UserBet.update(pendingTransaction.userBetId, { 
+            status: 'active',
+            transaction_signature: txResult?.signature 
+          });
+          
+          // Update LP bet
+          const lpBets = await base44.entities.UserBet.filter({ offer_id: offer.id, role: 'lp' });
+          if (lpBets.length > 0) {
+            const lpWin = ub.amount;
+            const lpPayout = offer.amount_offered + lpWin;
+            await base44.entities.UserBet.update(lpBets[0].id, {
+              status: 'active',
+              potential_payout: lpPayout,
+            });
+          }
+          
+          // Update Bet totals
+          const backedField = ub.outcome === 'a' ? 'backed_amount_a' : ub.outcome === 'b' ? 'backed_amount_b' : 'backed_amount_draw';
+          await base44.entities.Bet.update(ub.bet_id, {
+            [backedField]: (bet[backedField] || 0) + ub.amount,
+            total_pool: (bet.total_pool || 0) + ub.amount,
+            total_bettors: (bet.total_bettors || 0) + 1,
+          });
         }
-      } else {
-        // Update the UserBet created by matchBet
-        await base44.entities.UserBet.update(pendingTransaction.userBetId, { status: 'active' });
+      } catch (err) {
+        console.error('Failed to update records after transaction:', err);
       }
     }
+    
     queryClient.invalidateQueries({ queryKey: ['offersForBet', bet?.id] });
     queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
     queryClient.invalidateQueries({ queryKey: ['myUserBets', matchId, user?.id] });
@@ -585,6 +637,9 @@ export default function MatchDetail() {
                       <SolanaTransactionSigner
                         instruction={pendingTransaction.instruction}
                         amount={pendingTransaction.amount}
+                        userBetId={pendingTransaction.userBetId}
+                        offerId={pendingTransaction.offerId}
+                        isOffer={pendingTransaction.isOffer}
                         onSuccess={handleTransactionSuccess}
                         onError={handleTransactionError}
                       />
@@ -731,18 +786,19 @@ export default function MatchDetail() {
                       <SolanaTransactionSigner
                         instruction={pendingTransaction.instruction}
                         amount={pendingTransaction.amount}
+                        userBetId={pendingTransaction.userBetId}
+                        offerId={pendingTransaction.offerId}
+                        isOffer={pendingTransaction.isOffer}
                         onSuccess={handleTransactionSuccess}
                         onError={handleTransactionError}
                       />
                     ) : (
                       <Button
                         onClick={() => {
-                          console.log('Bet button clicked', { stakeNum, selectedOutcome, matchingOffer, openOffersCount: openOffers.length });
                           const offerToMatch = matchingOffer || openOffers.find(o =>
                             o.outcome !== selectedOutcome &&
                             o.amount_unmatched >= stakeNum
                           );
-                          console.log('Found offer to match:', offerToMatch);
                           if (offerToMatch) {
                             matchOfferMutation.mutate({ offer: offerToMatch, matchAmount: stakeNum });
                           }

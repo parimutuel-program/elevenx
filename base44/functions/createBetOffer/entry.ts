@@ -76,6 +76,7 @@ Deno.serve(async (req) => {
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ];
 
+    // Create offer but mark as pending until transaction is confirmed
     const offer = await base44.entities.BetOffer.create({
       bet_id,
       match_id,
@@ -84,18 +85,15 @@ Deno.serve(async (req) => {
       amount_offered: amount,
       amount_matched: 0,
       amount_unmatched: amount,
-      status: 'open',
+      status: 'pending', // Changed from 'open' - will update to 'open' after signing
       odds_at_creation: 0,
       solana_bet_pool_pda: betPoolPda.toBase58(),
       solana_position_pda: userPositionPda.toBase58(),
     });
 
-    const lpField = outcome === 'a' ? 'lp_amount_a' : outcome === 'b' ? 'lp_amount_b' : 'lp_amount_draw';
-    await base44.entities.Bet.update(bet_id, {
-      [lpField]: (bet[lpField] || 0) + amount,
-    });
-
     const match = await base44.entities.Match.list().then(ms => ms.find(m => m.id === match_id));
+    
+    // Create UserBet in pending state - will update to 'active' after transaction confirms
     const userBet = await base44.entities.UserBet.create({
       bet_id,
       match_id,
@@ -112,14 +110,14 @@ Deno.serve(async (req) => {
 
     return Response.json({
       success: true,
-      offer,
+      offerId: offer.id,
       userBetId: userBet.id,
       solana_instruction: {
         betPoolPda: betPoolPda.toBase58(),
         userPositionPda: userPositionPda.toBase58(),
         amountLamports: Math.round(amount * 1_000_000_000),
       },
-      message: 'Bet offer created - sign transaction to lock your SOL'
+      message: 'Sign transaction to lock your SOL'
     });
 
   } catch (error) {
