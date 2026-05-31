@@ -4,7 +4,9 @@ import bs58 from 'npm:bs58@5.0.0';
 
 Deno.serve(async (req) => {
   try {
+    // Initialize in service role mode for unauthenticated endpoint
     const base44 = createClientFromRequest(req);
+    const serviceRole = base44.asServiceRole;
     
     const { walletAddress, signature, message, fullName, register } = await req.json();
 
@@ -27,7 +29,7 @@ Deno.serve(async (req) => {
 
     // Always use service role for this endpoint to allow unauthenticated requests
     // Check if user exists by wallet address
-    let users = await base44.asServiceRole.entities.User.filter({ wallet_address: walletAddress });
+    let users = await serviceRole.entities.User.filter({ wallet_address: walletAddress });
     let user = users[0] || null;
 
     // If registering and user doesn't exist, create user with service role
@@ -35,7 +37,7 @@ Deno.serve(async (req) => {
       const walletEmail = `${walletAddress.slice(0, 8)}@elevenx.bet`;
       
       // Create user using service role (bypasses email/password auth requirement)
-      const newUser = await base44.asServiceRole.entities.User.create({
+      const newUser = await serviceRole.entities.User.create({
         email: walletEmail,
         full_name: fullName,
         wallet_address: walletAddress,
