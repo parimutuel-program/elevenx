@@ -44,33 +44,37 @@ export default function MatchCard({ match, bet, index = 0 }) {
             </Badge>
           </div>
 
-          {/* Teams */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex-1 text-center">
-              <div className="text-3xl mb-2">{match.team_a_flag || '🏳️'}</div>
-              <p className="font-heading font-bold text-sm text-foreground truncate">{match.team_a}</p>
+          {/* Teams with Flags */}
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex-1 flex flex-col items-center gap-2">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center text-4xl shadow-lg">
+                {match.team_a_flag || '🏳️'}
+              </div>
+              <p className="font-heading font-bold text-xs text-foreground truncate w-full text-center">{match.team_a}</p>
             </div>
 
-            <div className="flex flex-col items-center gap-1">
+            <div className="flex flex-col items-center gap-2 px-3">
               {match.status === 'finished' || match.status === 'live' ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-heading font-bold text-foreground">{match.score_a ?? 0}</span>
-                  <span className="text-muted-foreground text-sm">-</span>
-                  <span className="text-2xl font-heading font-bold text-foreground">{match.score_b ?? 0}</span>
+                <div className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-2">
+                  <span className="text-3xl font-heading font-bold text-foreground">{match.score_a ?? 0}</span>
+                  <span className="text-muted-foreground text-lg">-</span>
+                  <span className="text-3xl font-heading font-bold text-foreground">{match.score_b ?? 0}</span>
                 </div>
               ) : (
-                <span className="text-xs font-semibold text-primary px-3 py-1.5 bg-primary/10 rounded-full">VS</span>
+                <span className="text-xs font-bold text-primary px-4 py-2 bg-primary/10 border border-primary/20 rounded-xl shadow-sm">VS</span>
               )}
               {matchTime && (
-                <span className="text-[10px] text-muted-foreground mt-1">
+                <span className="text-[10px] text-muted-foreground font-medium">
                   {format(matchTime, 'MMM d · HH:mm')}
                 </span>
               )}
             </div>
 
-            <div className="flex-1 text-center">
-              <div className="text-3xl mb-2">{match.team_b_flag || '🏳️'}</div>
-              <p className="font-heading font-bold text-sm text-foreground truncate">{match.team_b}</p>
+            <div className="flex-1 flex flex-col items-center gap-2">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent/20 to-accent/5 border border-accent/30 flex items-center justify-center text-4xl shadow-lg">
+                {match.team_b_flag || '🏳️'}
+              </div>
+              <p className="font-heading font-bold text-xs text-foreground truncate w-full text-center">{match.team_b}</p>
             </div>
           </div>
 
