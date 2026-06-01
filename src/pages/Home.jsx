@@ -236,12 +236,12 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="p-4 flex flex-col">
+              <div className="p-4 flex flex-col flex-1">
                 {/* Teams */}
-                <div className="flex items-center justify-between mb-auto">
+                <div className="flex items-center justify-between mb-3">
                   <div className="text-center flex-1">
                     <div className="text-2xl mb-1">{fm.flag_a}</div>
-                    <p className="font-heading font-bold text-xs">{fm.team_a}</p>
+                    <p className="font-heading font-bold text-xs leading-tight">{fm.team_a}</p>
                   </div>
                   <div className="flex flex-col items-center gap-0.5 px-2">
                     <span className="font-heading font-black text-primary text-sm">VS</span>
@@ -249,18 +249,20 @@ export default function Home() {
                   </div>
                   <div className="text-center flex-1">
                     <div className="text-2xl mb-1">{fm.flag_b}</div>
-                    <p className="font-heading font-bold text-xs">{fm.team_b}</p>
+                    <p className="font-heading font-bold text-xs leading-tight">{fm.team_b}</p>
                   </div>
                 </div>
 
-                <Link to={`/match/${fm.matchId}`} className="block mt-3">
-                  <Button className="w-full h-9 text-xs font-heading font-bold rounded-xl border transition-colors"
-                    style={{ background: 'rgba(33,196,93,0.1)', color: '#21c45d', borderColor: 'rgba(33,196,93,0.25)' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(33,196,93,0.2)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(33,196,93,0.1)'}>
-                    Bet Now →
-                  </Button>
-                </Link>
+                <div className="mt-auto">
+                  <Link to={`/match/${fm.matchId}`} className="block">
+                    <Button className="w-full h-9 text-xs font-heading font-bold rounded-xl border transition-colors"
+                      style={{ background: 'rgba(33,196,93,0.1)', color: '#21c45d', borderColor: 'rgba(33,196,93,0.25)' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(33,196,93,0.2)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(33,196,93,0.1)'}>
+                      Bet Now →
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </motion.div>
           ))}
