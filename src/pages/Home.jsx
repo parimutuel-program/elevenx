@@ -15,10 +15,10 @@ const WC_PHOTOS = [
 ];
 
 const FEATURED_MATCHES = [
-  { flag_a: '🇲🇽', flag_b: '🇿🇦', team_a: 'Mexico', team_b: 'South Africa', group: 'Group A', date: 'Jun 11', matchId: '6a1c3e3091c17c057b2a4245', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/a1d1835b2_image.png' },
-  { flag_a: '🇨🇦', flag_b: '🇸🇦', team_a: 'Canada', team_b: 'Saudi Arabia', group: 'Group A', date: 'Jun 11', matchId: '6a1c3e3091c17c057b2a4246', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/cf05870f3_image.png' },
-  { flag_a: '🇺🇸', flag_b: '🇪🇨', team_a: 'USA', team_b: 'Ecuador', group: 'Group B', date: 'Jun 12', matchId: '6a1c3e3091c17c057b2a4247', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/f0e42aabe_image.png' },
-  { flag_a: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', flag_b: '🇮🇷', team_a: 'England', team_b: 'Iran', group: 'Group B', date: 'Jun 12', matchId: '6a1c3e3091c17c057b2a4248', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/e4dbfaa4c_image.png' },
+  { flag_a: '🇲🇽', flag_b: '🇿🇦', team_a: 'Mexico', team_b: 'South Africa', group: 'Group A', date: 'Jun 11', matchId: '6a1e103ff521e27f3cc8935e', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/a1d1835b2_image.png' },
+  { flag_a: '🇰🇷', flag_b: '🇨🇿', team_a: 'South Korea', team_b: 'Czechia', group: 'Group A', date: 'Jun 12', matchId: '6a1e103ff521e27f3cc8935f', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/cf05870f3_image.png' },
+  { flag_a: '🇨🇦', flag_b: '🇧🇦', team_a: 'Canada', team_b: 'Bosnia and Herzegovina', group: 'Group B', date: 'Jun 12', matchId: '6a1e103ff521e27f3cc89360', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/f0e42aabe_image.png' },
+  { flag_a: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', flag_b: '🇯🇲', team_a: 'England', team_b: 'Jamaica', group: 'Group D', date: 'Jun 14', matchId: '6a1e103ff521e27f3cc89365', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/e4dbfaa4c_image.png' },
 ];
 
 // Helper to convert country code to emoji flag
