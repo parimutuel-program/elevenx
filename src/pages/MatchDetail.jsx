@@ -12,6 +12,16 @@ import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
 
+// Convert country code to emoji flag
+const getFlagEmoji = (countryCode) => {
+  if (!countryCode) return '🏳️';
+  const codePoints = countryCode
+    .toUpperCase()
+    .split('')
+    .map(char => 127397 + char.charCodeAt());
+  return String.fromCodePoint(...codePoints);
+};
+
 function totalAvailable(offers, outcome) {
   return offers
     .filter(o => o.outcome === outcome && (o.status === 'open' || o.status === 'partially_matched' || o.status === 'pending'))
@@ -255,9 +265,9 @@ export default function MatchDetail() {
   const matchPayout = stakeNum + matchWin - matchFee;
 
   const OUTCOMES = [
-    { key: 'a',    label: bet?.outcome_a || match.team_a, flag: match.team_a_flag, odds: oddsA,    available: avA,    color: 'primary' },
-    { key: 'draw', label: 'Draw',                          flag: '🤝',              odds: oddsDraw, available: avDraw, color: 'yellow'  },
-    { key: 'b',    label: bet?.outcome_b || match.team_b,  flag: match.team_b_flag, odds: oddsB,    available: avB,    color: 'accent'  },
+    { key: 'a',    label: bet?.outcome_a || match.team_a, flag: getFlagEmoji(match.team_a_flag), odds: oddsA,    available: avA,    color: 'primary' },
+    { key: 'draw', label: 'Draw',                          flag: '🤝',                            odds: oddsDraw, available: avDraw, color: 'yellow'  },
+    { key: 'b',    label: bet?.outcome_b || match.team_b,  flag: getFlagEmoji(match.team_b_flag), odds: oddsB,    available: avB,    color: 'accent'  },
   ];
 
   const openOffers = offers.filter(o => o.status === 'open' || o.status === 'partially_matched' || o.status === 'pending');
@@ -294,7 +304,9 @@ export default function MatchDetail() {
 
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1 text-center">
-            <div className="text-5xl mb-3">{match.team_a_flag || '🏳️'}</div>
+            <div className="w-20 h-20 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center text-5xl shadow-lg">
+              {getFlagEmoji(match.team_a_flag)}
+            </div>
             <p className="font-heading font-black text-lg">{match.team_a}</p>
           </div>
           <div className="text-center">
@@ -309,7 +321,9 @@ export default function MatchDetail() {
             )}
           </div>
           <div className="flex-1 text-center">
-            <div className="text-5xl mb-3">{match.team_b_flag || '🏳️'}</div>
+            <div className="w-20 h-20 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-accent/20 to-accent/5 border border-accent/30 flex items-center justify-center text-5xl shadow-lg">
+              {getFlagEmoji(match.team_b_flag)}
+            </div>
             <p className="font-heading font-black text-lg">{match.team_b}</p>
           </div>
         </div>
