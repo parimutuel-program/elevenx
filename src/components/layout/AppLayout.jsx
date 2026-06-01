@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, Trophy, BarChart3, User, Layers, TrendingUp, Shield } from 'lucide-react';
+import { Home, Trophy, BarChart3, User, Layers, TrendingUp, Shield, Flame } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import WalletButton from '@/components/wallet/WalletButton';
 
@@ -19,7 +19,7 @@ const TelegramIcon = () => (
 const navItems = [
   { path: '/', icon: Home, label: 'Home' },
   { path: '/matches', icon: Trophy, label: 'Matches' },
-  { path: '/groups', icon: Layers, label: 'Groups' },
+  { path: '/futures', icon: Flame, label: 'Futures' },
   { path: '/my-bets', icon: BarChart3, label: 'My Bets' },
   { path: '/lp', icon: TrendingUp, label: 'LP' },
   { path: '/profile', icon: User, label: 'Profile' },
@@ -60,12 +60,12 @@ export default function AppLayout() {
 
             {isAdmin && (
               <Link to="/admin"
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border ${
                   location.pathname === '/admin'
-                    ? 'bg-destructive/10 text-destructive'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+                    ? 'border-destructive/40 bg-destructive/10 text-destructive'
+                    : 'border-border/50 text-muted-foreground hover:text-foreground hover:bg-secondary/50'
                 }`}>
-                <Shield className="w-4 h-4" /> Admin
+                <Shield className="w-3.5 h-3.5" /> Admin
               </Link>
             )}
           </nav>
@@ -100,7 +100,7 @@ export default function AppLayout() {
       {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-xl border-t border-border/50">
         <div className="flex items-center justify-around py-2 px-2">
-          {[...navItems, ...(isAdmin ? [{ path: '/admin', icon: Shield, label: 'Admin' }] : [])].map(item => {
+          {navItems.map(item => {
             const active = location.pathname === item.path;
             return (
               <Link
