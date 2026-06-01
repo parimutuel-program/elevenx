@@ -5,6 +5,16 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 
+// Convert country code to emoji flag
+const getFlagEmoji = (countryCode) => {
+  if (!countryCode) return '🏳️';
+  const codePoints = countryCode
+    .toUpperCase()
+    .split('')
+    .map(char => 127397 + char.charCodeAt());
+  return String.fromCodePoint(...codePoints);
+};
+
 const statusStyles = {
   upcoming: 'bg-secondary text-secondary-foreground',
   live: 'bg-destructive/20 text-destructive border border-destructive/30',
@@ -48,7 +58,7 @@ export default function MatchCard({ match, bet, index = 0 }) {
           <div className="flex items-center justify-between gap-3 mb-4">
             <div className="flex-1 flex flex-col items-center gap-2">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center text-4xl shadow-lg">
-                {match.team_a_flag || '🏳️'}
+                {getFlagEmoji(match.team_a_flag)}
               </div>
               <p className="font-heading font-bold text-xs text-foreground truncate w-full text-center">{match.team_a}</p>
             </div>
@@ -72,7 +82,7 @@ export default function MatchCard({ match, bet, index = 0 }) {
 
             <div className="flex-1 flex flex-col items-center gap-2">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent/20 to-accent/5 border border-accent/30 flex items-center justify-center text-4xl shadow-lg">
-                {match.team_b_flag || '🏳️'}
+                {getFlagEmoji(match.team_b_flag)}
               </div>
               <p className="font-heading font-bold text-xs text-foreground truncate w-full text-center">{match.team_b}</p>
             </div>
