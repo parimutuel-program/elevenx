@@ -276,22 +276,22 @@ export default function Home() {
             {
               step: '01',
               icon: '🏦',
-              title: 'Open an Offer',
-              desc: 'Pick an outcome and put up funds. You\'re the "house" — others bet against you. You keep their stake if you\'re right.',
+              title: 'LPs Back the Odds',
+              desc: 'Liquidity Providers deposit SOL to cover bettors at fixed oracle odds. If bettors lose, LPs earn the stake. No house — pure P2P.',
               color: 'primary',
             },
             {
               step: '02',
               icon: '🎯',
-              title: 'Match a Bet',
-              desc: 'Browse open offers, pick your outcome, and stake against another bettor. Odds are set by the liquidity ratio — not us.',
+              title: 'Bet at Fixed Odds',
+              desc: 'Pick an outcome and stake SOL at the oracle-fixed price. Your payout is locked in the moment you bet — no slippage.',
               color: 'accent',
             },
             {
               step: '03',
               icon: '💸',
               title: 'Win & Claim',
-              desc: 'After the match settles, winners claim their payout instantly. Only a 2% fee on winnings — no hidden costs, ever.',
+              desc: 'After the match settles, winners claim their fixed payout instantly on-chain. Only a 2% fee — no hidden costs, ever.',
               color: 'yellow',
             },
           ].map((item, i) => (

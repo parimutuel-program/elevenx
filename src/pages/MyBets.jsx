@@ -9,12 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 const statusConfig = {
-  active: { color: 'bg-primary/10 text-primary border-primary/20', icon: Clock },
-  won: { color: 'bg-accent/20 text-accent border-accent/20', icon: TrendingUp },
-  lost: { color: 'bg-destructive/10 text-destructive border-destructive/20', icon: TrendingDown },
-  claimed: { color: 'bg-accent/20 text-accent border-accent/20', icon: Trophy },
+  active:   { color: 'bg-primary/10 text-primary border-primary/20', icon: Clock },
+  pending:  { color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20', icon: Clock },
+  won:      { color: 'bg-accent/20 text-accent border-accent/20', icon: TrendingUp },
+  lost:     { color: 'bg-destructive/10 text-destructive border-destructive/20', icon: TrendingDown },
+  claimed:  { color: 'bg-accent/20 text-accent border-accent/20', icon: Trophy },
   refunded: { color: 'bg-secondary text-secondary-foreground border-border', icon: Clock },
-  void: { color: 'bg-muted text-muted-foreground border-border', icon: Clock },
+  void:     { color: 'bg-muted text-muted-foreground border-border', icon: Clock },
 };
 
 export default function MyBets() {
@@ -31,8 +32,8 @@ export default function MyBets() {
 
   const totalStaked = myBets.reduce((s, b) => s + (b.amount || 0), 0);
   const totalWon = myBets.filter(b => b.status === 'won' || b.status === 'claimed').reduce((s, b) => s + (b.actual_payout || 0), 0);
-  const activeBets = myBets.filter(b => b.status === 'active');
-  const completedBets = myBets.filter(b => b.status !== 'active');
+  const activeBets = myBets.filter(b => b.status === 'active' || b.status === 'pending');
+  const completedBets = myBets.filter(b => b.status !== 'active' && b.status !== 'pending');
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -49,7 +50,7 @@ export default function MyBets() {
           className="bg-card border border-border/50 rounded-2xl p-4"
         >
           <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Staked</p>
-          <p className="font-heading font-bold text-xl">${totalStaked.toLocaleString()}</p>
+          <p className="font-heading font-bold text-xl">◎{totalStaked.toLocaleString()}</p>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 15 }}
@@ -58,7 +59,7 @@ export default function MyBets() {
           className="bg-card border border-border/50 rounded-2xl p-4"
         >
           <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Won</p>
-          <p className="font-heading font-bold text-xl text-accent">${totalWon.toLocaleString()}</p>
+          <p className="font-heading font-bold text-xl text-accent">◎{totalWon.toLocaleString()}</p>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 15 }}
@@ -139,14 +140,15 @@ function BetRow({ bet, index }) {
           <div>
             <p className="font-heading font-bold text-sm">{bet.match_title || 'Match'}</p>
             <p className="text-xs text-muted-foreground">
-              Picked: <span className="text-primary font-medium">{bet.outcome_label}</span> · ${bet.amount?.toFixed(2)}
+              Picked: <span className="text-primary font-medium">{bet.outcome_label}</span> · ◎{bet.amount?.toFixed(4)}
+              {bet.status === 'pending' && <span className="ml-1 text-yellow-400 font-medium">· awaiting LP</span>}
             </p>
           </div>
         </Link>
         <div className="flex items-center gap-3">
           {isWonAndClaimable ? (
             <>
-              <span className="text-sm font-bold text-accent">${bet.potential_payout?.toFixed(2)}</span>
+              <span className="text-sm font-bold text-accent">◎{bet.potential_payout?.toFixed(4)}</span>
               <Button
                 size="sm"
                 onClick={() => claimMutation.mutate()}
@@ -166,7 +168,7 @@ function BetRow({ bet, index }) {
           ) : (
             <>
               {(bet.status === 'won' || bet.status === 'claimed') && (
-                <span className="text-sm font-bold text-accent">${bet.actual_payout?.toFixed(2)}</span>
+                <span className="text-sm font-bold text-accent">◎{bet.actual_payout?.toFixed(4)}</span>
               )}
               <Badge className={`text-[10px] border ${config.color}`}>
                 {bet.status}

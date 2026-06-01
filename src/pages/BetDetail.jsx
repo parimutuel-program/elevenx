@@ -41,28 +41,14 @@ export default function BetDetail() {
 
   const placeBetMutation = useMutation({
     mutationFn: async (amount) => {
-      // Create user bet
-      await base44.entities.UserBet.create({
+      const result = await base44.functions.invoke('placeBet', {
+        walletAddress: shortAddress,
         bet_id: betId,
         match_id: bet.match_id,
         outcome: selectedOutcome,
         amount,
-        outcome_label: selectedOutcome === 'a' ? bet.outcome_a : bet.outcome_b,
-        match_title: `${match?.team_a} vs ${match?.team_b}`,
-        status: 'active',
       });
-
-      // Update bet totals
-      const updates = {
-        total_pool: (bet.total_pool || 0) + amount,
-        total_bettors: (bet.total_bettors || 0) + 1,
-      };
-      if (selectedOutcome === 'a') {
-        updates.total_a = (bet.total_a || 0) + amount;
-      } else {
-        updates.total_b = (bet.total_b || 0) + amount;
-      }
-      await base44.entities.Bet.update(betId, updates);
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bet', betId] });
@@ -156,14 +142,12 @@ export default function BetDetail() {
         transition={{ delay: 0.1 }}
         className="bg-card border border-border/50 rounded-2xl p-6"
       >
-        <h3 className="font-heading font-bold text-sm mb-4">Odds Distribution</h3>
+        <h3 className="font-heading font-bold text-sm mb-4">Fixed Odds</h3>
         <OddsBar
-          totalA={bet.total_a}
-          totalB={bet.total_b}
-          labelA={bet.outcome_a}
-          labelB={bet.outcome_b}
+          bet={bet}
           selected={selectedOutcome}
-          onSelect={(isOpen && !myBet && isConnected) ? setSelectedOutcome : () => {}}
+          onSelect={setSelectedOutcome}
+          canSelect={isOpen && !myBet && isConnected}
         />
       </motion.div>
 
@@ -192,7 +176,7 @@ export default function BetDetail() {
             </div>
             <div>
               <p className="text-muted-foreground text-xs">Stake</p>
-              <p className="font-bold">${myBet.amount?.toFixed(2)}</p>
+              <p className="font-bold">◎{myBet.amount?.toFixed(4)}</p>
             </div>
             <div>
               <p className="text-muted-foreground text-xs">Status</p>
@@ -205,10 +189,14 @@ export default function BetDetail() {
                 {myBet.status}
               </Badge>
             </div>
+            <div>
+              <p className="text-muted-foreground text-xs">Potential Payout</p>
+              <p className="font-bold text-primary">◎{myBet.potential_payout?.toFixed(4)}</p>
+            </div>
             {(myBet.status === 'won' || myBet.status === 'claimed') && (
               <div>
-                <p className="text-muted-foreground text-xs">Payout</p>
-                <p className="font-bold text-accent">${myBet.actual_payout?.toFixed(2)}</p>
+                <p className="text-muted-foreground text-xs">Actual Payout</p>
+                <p className="font-bold text-accent">◎{myBet.actual_payout?.toFixed(4)}</p>
               </div>
             )}
           </div>

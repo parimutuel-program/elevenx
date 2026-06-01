@@ -49,40 +49,55 @@
       "default": "",
       "description": "Which outcome won after settlement"
     },
+    "oracle_odds_a": {
+      "type": "number",
+      "default": 200,
+      "description": "Oracle fixed odds for outcome A in basis points (e.g. 210 = 2.10x)"
+    },
+    "oracle_odds_b": {
+      "type": "number",
+      "default": 300,
+      "description": "Oracle fixed odds for outcome B in basis points"
+    },
+    "oracle_odds_draw": {
+      "type": "number",
+      "default": 320,
+      "description": "Oracle fixed odds for Draw in basis points"
+    },
     "lp_amount_a": {
       "type": "number",
       "default": 0,
-      "description": "Total LP liquidity offered on outcome A"
+      "description": "Total LP liquidity committed for outcome A"
     },
     "lp_amount_b": {
       "type": "number",
       "default": 0,
-      "description": "Total LP liquidity offered on outcome B"
+      "description": "Total LP liquidity committed for outcome B"
     },
     "lp_amount_draw": {
       "type": "number",
       "default": 0,
-      "description": "Total LP liquidity offered on draw"
+      "description": "Total LP liquidity committed for Draw"
     },
     "backed_amount_a": {
       "type": "number",
       "default": 0,
-      "description": "Total matched/backed amount on outcome A"
+      "description": "Total matched bettor stakes on outcome A"
     },
     "backed_amount_b": {
       "type": "number",
       "default": 0,
-      "description": "Total matched/backed amount on outcome B"
+      "description": "Total matched bettor stakes on outcome B"
     },
     "backed_amount_draw": {
       "type": "number",
       "default": 0,
-      "description": "Total matched/backed amount on draw"
+      "description": "Total matched bettor stakes on Draw"
     },
     "total_pool": {
       "type": "number",
       "default": 0,
-      "description": "Total matched pool (all locked funds)"
+      "description": "Total SOL in the market (matched + pending)"
     },
     "fee_percent": {
       "type": "number",
