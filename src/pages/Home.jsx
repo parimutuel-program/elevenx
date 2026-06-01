@@ -15,10 +15,10 @@ const WC_PHOTOS = [
 ];
 
 const FEATURED_MATCHES = [
-  { team_a: 'Mexico', team_b: 'South Africa', group: 'Group A', date: 'Jun 11', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/a1d1835b2_image.png' },
-  { team_a: 'Canada', team_b: 'Saudi Arabia', group: 'Group A', date: 'Jun 11', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/cf05870f3_image.png' },
-  { team_a: 'USA', team_b: 'Ecuador', group: 'Group B', date: 'Jun 12', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/f0e42aabe_image.png' },
-  { team_a: 'England', team_b: 'Iran', group: 'Group B', date: 'Jun 12', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/e4dbfaa4c_image.png' },
+  { flag_a: '🇲🇽', flag_b: '🇿🇦', team_a: 'Mexico', team_b: 'South Africa', group: 'Group A', date: 'Jun 11', matchId: '6a1c3e3091c17c057b2a4245', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/a1d1835b2_image.png' },
+  { flag_a: '🇨🇦', flag_b: '🇸🇦', team_a: 'Canada', team_b: 'Saudi Arabia', group: 'Group A', date: 'Jun 11', matchId: '6a1c3e3091c17c057b2a4246', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/cf05870f3_image.png' },
+  { flag_a: '🇺🇸', flag_b: '🇪🇨', team_a: 'USA', team_b: 'Ecuador', group: 'Group B', date: 'Jun 12', matchId: '6a1c3e3091c17c057b2a4247', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/f0e42aabe_image.png' },
+  { flag_a: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', flag_b: '🇮🇷', team_a: 'England', team_b: 'Iran', group: 'Group B', date: 'Jun 12', matchId: '6a1c3e3091c17c057b2a4248', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/e4dbfaa4c_image.png' },
 ];
 
 
@@ -204,67 +204,59 @@ export default function Home() {
         </div>
 
         <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
-          {FEATURED_MATCHES.map((fm, i) => {
-            // Find the actual match from the database
-            const match = matches.find(m => 
-              (m.team_a === fm.team_a && m.team_b === fm.team_b) ||
-              (m.team_a === fm.team_b && m.team_b === fm.team_a)
-            );
-            if (!match) return null;
-            
-            return (
-              <Link key={i} to={`/match/${match.id}`} className="flex-shrink-0 w-64 block group">
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 + i * 0.08 }}
-                  className="bg-card border border-border/50 rounded-2xl overflow-hidden hover:border-primary/30 transition-all"
-                >
-                  {/* Match photo strip */}
-                  <div className="relative h-24 overflow-hidden">
-                    <img
-                      src={fm.img || WC_PHOTOS[(i + 1) % WC_PHOTOS.length]}
-                      alt="match"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      style={i === 1 ? { objectPosition: 'center 20%' } : {}}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
-                    <div className="absolute top-2 left-2">
-                      <span className="text-[10px] font-bold bg-black/50 backdrop-blur-sm text-white/90 px-2 py-0.5 rounded-full">{fm.group}</span>
-                    </div>
-                    <div className="absolute top-2 right-2">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border" style={{ background: 'rgba(33,196,93,0.15)', color: '#21c45d', borderColor: 'rgba(33,196,93,0.3)' }}>OPEN</span>
-                    </div>
-                  </div>
+          {FEATURED_MATCHES.map((fm, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 + i * 0.08 }}
+              className="flex-shrink-0 w-64 bg-card border border-border/50 rounded-2xl overflow-hidden hover:border-primary/30 transition-all group"
+            >
+              {/* Match photo strip */}
+              <div className="relative h-24 overflow-hidden">
+                <img
+                  src={fm.img || WC_PHOTOS[(i + 1) % WC_PHOTOS.length]}
+                  alt="match"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  style={i === 1 ? { objectPosition: 'center 20%' } : {}}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
+                <div className="absolute top-2 left-2">
+                  <span className="text-[10px] font-bold bg-black/50 backdrop-blur-sm text-white/90 px-2 py-0.5 rounded-full">{fm.group}</span>
+                </div>
+                <div className="absolute top-2 right-2">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border" style={{ background: 'rgba(33,196,93,0.15)', color: '#21c45d', borderColor: 'rgba(33,196,93,0.3)' }}>OPEN</span>
+                </div>
+              </div>
 
-                  <div className="p-4">
-                    {/* Teams */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="text-center flex-1">
-                        <div className="text-2xl mb-1">{match.team_a_flag === 'MX' ? '🇲🇽' : match.team_a_flag === 'CA' ? '🇨🇦' : match.team_a_flag === 'US' ? '🇺🇸' : match.team_a_flag === 'GB-ENG' ? '🏴󠁧󠁢󠁥󠁮󠁧󠁿' : '🏳️'}</div>
-                        <p className="font-heading font-bold text-xs">{match.team_a}</p>
-                      </div>
-                      <div className="flex flex-col items-center gap-0.5 px-2">
-                        <span className="font-heading font-black text-primary text-sm">VS</span>
-                        <span className="text-[9px] text-muted-foreground">{fm.date}</span>
-                      </div>
-                      <div className="text-center flex-1">
-                        <div className="text-2xl mb-1">{match.team_b_flag === 'ZA' ? '🇿🇦' : match.team_b_flag === 'SA' ? '🇸🇦' : match.team_b_flag === 'EC' ? '🇪🇨' : match.team_b_flag === 'IR' ? '🇮🇷' : '🏳️'}</div>
-                        <p className="font-heading font-bold text-xs">{match.team_b}</p>
-                      </div>
-                    </div>
-
-                    <Button className="w-full h-9 text-xs font-heading font-bold rounded-xl border transition-colors"
-                      style={{ background: 'rgba(33,196,93,0.1)', color: '#21c45d', borderColor: 'rgba(33,196,93,0.25)' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(33,196,93,0.2)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(33,196,93,0.1)'}>
-                      Bet Now →
-                    </Button>
+              <div className="p-4">
+                {/* Teams */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-center flex-1">
+                    <div className="text-2xl mb-1">{fm.flag_a}</div>
+                    <p className="font-heading font-bold text-xs">{fm.team_a}</p>
                   </div>
-                </motion.div>
-              </Link>
-            );
-          })}
+                  <div className="flex flex-col items-center gap-0.5 px-2">
+                    <span className="font-heading font-black text-primary text-sm">VS</span>
+                    <span className="text-[9px] text-muted-foreground">{fm.date}</span>
+                  </div>
+                  <div className="text-center flex-1">
+                    <div className="text-2xl mb-1">{fm.flag_b}</div>
+                    <p className="font-heading font-bold text-xs">{fm.team_b}</p>
+                  </div>
+                </div>
+
+                <Link to={`/match/${fm.matchId}`}>
+                  <Button className="w-full h-9 text-xs font-heading font-bold rounded-xl border transition-colors"
+                    style={{ background: 'rgba(33,196,93,0.1)', color: '#21c45d', borderColor: 'rgba(33,196,93,0.25)' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(33,196,93,0.2)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(33,196,93,0.1)'}>
+                    Bet Now →
+                  </Button>
+                </Link>
+              </div>
+            </motion.div>
+          ))}
         </div>
       </section>
 
