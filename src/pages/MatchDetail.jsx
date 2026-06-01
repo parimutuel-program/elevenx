@@ -94,142 +94,72 @@ export default function MatchDetail() {
   });
 
   const openOfferMutation = useMutation({
-    mutationFn: async ({ outcome, offerOutcomeLabel, offerAmount }) => {
-      // Get wallet address from multiple sources for reliability
+    mutationFn: async ({ outcome, offerAmount }) => {
       const walletSession = localStorage.getItem('elevenx_wallet_session');
-      let walletAddress = user?.wallet_address || user?.data?.wallet_address;
-      
-      // Fallback to localStorage if user object doesn't have it
-      if (!walletAddress && walletSession) {
-        try {
-          const parsed = JSON.parse(walletSession);
-          walletAddress = parsed.address || walletSession;
-        } catch {
-          walletAddress = walletSession;
-        }
+      let walletAddr = null;
+      if (walletSession) {
+        try { walletAddr = JSON.parse(walletSession).address || walletSession; } catch { walletAddr = walletSession; }
       }
-      
-      console.log('🎯 createBetOffer - walletAddress:', walletAddress, 'user:', user);
-      
-      if (!walletAddress) {
-        throw new Error('Wallet not connected. Please connect your wallet first.');
-      }
-      
-      const payload = {
+      if (!walletAddr) throw new Error('Wallet not connected. Please connect your wallet first.');
+
+      const response = await base44.functions.invoke('provideLiquidity', {
         bet_id: bet.id,
         match_id: matchId,
         outcome,
         amount: offerAmount,
-        walletAddress,
-      };
-      
-      const response = await base44.functions.invoke('provideLiquidity', payload);
-      
-      if (response.data.error) {
-        throw new Error(response.data.error);
-      }
-      
-      if (!response.data.solana_instruction) {
-        throw new Error('No solana_instruction returned');
-      }
-      
-      return { 
-        response, 
-        amount: offerAmount,
-        userBetId: response.data.userBetId 
-      };
+        walletAddress: walletAddr,
+      });
+
+      if (response.data.error) throw new Error(response.data.error);
+      if (!response.data.solana_instruction) throw new Error('No solana_instruction returned');
+
+      return { response, amount: offerAmount, offerId: response.data.offerId };
     },
-    onSuccess: async (result) => {
-      if (result.response.data.solana_instruction) {
-        setPendingTransaction({
-          instruction: result.response.data.solana_instruction,
-          amount: result.amount,
-          userBetId: result.userBetId,
-          isOffer: true,
-        });
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['offersForBet', bet?.id] });
-        queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
-        queryClient.invalidateQueries({ queryKey: ['myUserBets', matchId, user?.id] });
-        resetForm();
-      }
+    onSuccess: (result) => {
+      setPendingTransaction({
+        instruction: result.response.data.solana_instruction,
+        amount: result.amount,
+        offerId: result.offerId,
+        isOffer: true,
+      });
     },
     onError: (error) => {
-      console.error('openOfferMutation error:', error);
-      console.error('Error response:', error.response?.data);
       const backendError = error.response?.data?.error || error.message || 'Unknown error';
-      alert('Failed to create offer: ' + backendError);
+      alert('Failed to provide liquidity: ' + backendError);
     },
   });
 
   const matchOfferMutation = useMutation({
-    mutationFn: async ({ offer, matchAmount }) => {
-      // Get wallet address from multiple sources for reliability
+    mutationFn: async ({ outcome, matchAmount }) => {
       const walletSession = localStorage.getItem('elevenx_wallet_session');
-      let walletAddress = user?.wallet_address || user?.data?.wallet_address;
-      
-      // Fallback to localStorage if user object doesn't have it
-      if (!walletAddress && walletSession) {
-        try {
-          const parsed = JSON.parse(walletSession);
-          walletAddress = parsed.address || walletSession;
-        } catch {
-          walletAddress = walletSession;
-        }
+      let walletAddr = null;
+      if (walletSession) {
+        try { walletAddr = JSON.parse(walletSession).address || walletSession; } catch { walletAddr = walletSession; }
       }
-      
-      console.log('🎯 matchBet - walletAddress:', walletAddress, 'user:', user);
-      
-      if (!walletAddress) {
-        throw new Error('Wallet not connected. Please connect your wallet first.');
-      }
-      
-      const payload = {
-        offer_id: offer.id,
+      if (!walletAddr) throw new Error('Wallet not connected. Please connect your wallet first.');
+
+      const response = await base44.functions.invoke('placeBet', {
         bet_id: bet.id,
         match_id: matchId,
+        outcome,
         amount: matchAmount,
-        walletAddress,
-      };
-      
-      const response = await base44.functions.invoke('placeBet', payload);
-      
-      if (response.data.error) {
-        throw new Error(response.data.error);
-      }
-      
-      if (!response.data.solana_instruction) {
-        throw new Error('No solana_instruction returned');
-      }
-      
-      return { 
-        response, 
-        offer, 
-        amount: matchAmount,
-        userBetId: response.data.userBetId,
-        offerId: response.data.offerId 
-      };
+        walletAddress: walletAddr,
+      });
+
+      if (response.data.error) throw new Error(response.data.error);
+      if (!response.data.solana_instruction) throw new Error('No solana_instruction returned');
+
+      return { response, amount: matchAmount, userBetId: response.data.userBetId };
     },
-    onSuccess: async (result) => {
-      console.log('onSuccess called', result);
-      if (result.response.data.solana_instruction) {
-        setPendingTransaction({
-          instruction: result.response.data.solana_instruction,
-          amount: result.amount,
-          userBetId: result.userBetId,
-          offerId: result.offerId,
-        });
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['offersForBet', bet?.id] });
-        queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
-        queryClient.invalidateQueries({ queryKey: ['myUserBets', matchId, user?.id] });
-        queryClient.invalidateQueries({ queryKey: ['allUserBetsForBet', bet?.id] });
-        resetForm();
-      }
+    onSuccess: (result) => {
+      setPendingTransaction({
+        instruction: result.response.data.solana_instruction,
+        amount: result.amount,
+        userBetId: result.userBetId,
+        isOffer: false,
+      });
     },
     onError: (error) => {
-      console.error('matchOfferMutation error:', error);
-      console.error('Error response:', error.response?.data);
       const backendError = error.response?.data?.error || error.message || 'Unknown error';
       alert('Failed to place bet: ' + backendError);
     },
@@ -270,70 +200,9 @@ export default function MatchDetail() {
   }
 
   const handleTransactionSuccess = async (txResult) => {
-    console.log('Transaction confirmed:', txResult);
-    
-    if (pendingTransaction?.userBetId) {
-      try {
-        if (pendingTransaction.isOffer) {
-          // Update the offer status to open
-          await base44.entities.BetOffer.update(pendingTransaction.offerId, {
-            status: 'open'
-          });
-          // Update the UserBet to active
-          await base44.entities.UserBet.update(pendingTransaction.userBetId, { 
-            status: 'active',
-            transaction_signature: txResult?.signature 
-          });
-          // Update the Bet LP amount
-          const ub = await base44.entities.UserBet.get(pendingTransaction.userBetId);
-          const lpField = ub.outcome === 'a' ? 'lp_amount_a' : ub.outcome === 'b' ? 'lp_amount_b' : 'lp_amount_draw';
-          await base44.entities.Bet.update(ub.bet_id, {
-            [lpField]: (bet[lpField] || 0) + ub.amount,
-          });
-        } else {
-          // Update the offer amounts
-          const ub = await base44.entities.UserBet.get(pendingTransaction.userBetId);
-          const offer = await base44.entities.BetOffer.get(ub.offer_id);
-          const newMatched = (offer.amount_matched || 0) + ub.amount;
-          const newUnmatched = offer.amount_offered - newMatched;
-          const newStatus = newUnmatched <= 0.01 ? 'fully_matched' : 'partially_matched';
-          
-          await base44.entities.BetOffer.update(offer.id, {
-            amount_matched: newMatched,
-            amount_unmatched: Math.max(0, newUnmatched),
-            status: newStatus,
-          });
-          
-          // Update UserBet to active
-          await base44.entities.UserBet.update(pendingTransaction.userBetId, { 
-            status: 'active',
-            transaction_signature: txResult?.signature 
-          });
-          
-          // Update LP bet
-          const lpBets = await base44.entities.UserBet.filter({ offer_id: offer.id, role: 'lp' });
-          if (lpBets.length > 0) {
-            const lpWin = ub.amount;
-            const lpPayout = offer.amount_offered + lpWin;
-            await base44.entities.UserBet.update(lpBets[0].id, {
-              status: 'active',
-              potential_payout: lpPayout,
-            });
-          }
-          
-          // Update Bet totals
-          const backedField = ub.outcome === 'a' ? 'backed_amount_a' : ub.outcome === 'b' ? 'backed_amount_b' : 'backed_amount_draw';
-          await base44.entities.Bet.update(ub.bet_id, {
-            [backedField]: (bet[backedField] || 0) + ub.amount,
-            total_pool: (bet.total_pool || 0) + ub.amount,
-            total_bettors: (bet.total_bettors || 0) + 1,
-          });
-        }
-      } catch (err) {
-        console.error('Failed to update records after transaction:', err);
-      }
-    }
-    
+    // placeBet backend already updated all DB records before returning the instruction.
+    // provideLiquidity backend also updated BetOffer + Bet LP totals.
+    // Just refresh all relevant queries.
     queryClient.invalidateQueries({ queryKey: ['offersForBet', bet?.id] });
     queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
     queryClient.invalidateQueries({ queryKey: ['myUserBets', matchId, user?.id] });
@@ -684,7 +553,7 @@ export default function MatchDetail() {
                       />
                     ) : (
                       <Button
-                        onClick={() => openOfferMutation.mutate({ outcome: selectedOutcome, offerOutcomeLabel: getOutcomeLabel(selectedOutcome), offerAmount: stakeNum })}
+                        onClick={() => openOfferMutation.mutate({ outcome: selectedOutcome, offerAmount: stakeNum })}
                         disabled={stakeNum <= 0 || openOfferMutation.isPending}
                         className="w-full h-12 font-heading font-bold text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl">
                         {openOfferMutation.isPending
@@ -829,15 +698,9 @@ export default function MatchDetail() {
                     ) : (
                       <Button
                         onClick={() => {
-                          const offerToMatch = matchingOffer || openOffers.find(o =>
-                            o.outcome !== selectedOutcome &&
-                            o.amount_unmatched >= stakeNum
-                          );
-                          if (offerToMatch) {
-                            matchOfferMutation.mutate({ offer: offerToMatch, matchAmount: stakeNum });
-                          }
+                          matchOfferMutation.mutate({ outcome: selectedOutcome, matchAmount: stakeNum });
                         }}
-                        disabled={stakeNum <= 0 || stakeNum > matchMax || matchOfferMutation.isPending || !isConnected}
+                        disabled={stakeNum <= 0 || matchOfferMutation.isPending || !isConnected}
                         className="w-full h-12 font-heading font-bold text-sm bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl"
                       >
                         {matchOfferMutation.isPending
