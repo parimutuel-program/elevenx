@@ -18,11 +18,14 @@ function totalAvailable(offers, outcome) {
     .reduce((s, o) => s + (o.amount_unmatched || 0), 0);
 }
 
-function calcOdds(avA, avB, avDraw) {
-  const oddsA = avA > 0 && (avB + avDraw) > 0 ? (avB + avDraw) / avA : null;
-  const oddsB = avB > 0 && (avA + avDraw) > 0 ? (avA + avDraw) / avB : null;
-  const oddsDraw = avDraw > 0 && (avA + avB) > 0 ? (avA + avB) / avDraw : null;
-  return { oddsA, oddsB, oddsDraw };
+// Oracle odds (from bet entity) take precedence; fall back to computed ratio only as display hint
+function getOracleOdds(bet) {
+  if (!bet) return { oddsA: null, oddsB: null, oddsDraw: null };
+  return {
+    oddsA:    bet.oracle_odds_a    ? bet.oracle_odds_a / 100    : null,
+    oddsB:    bet.oracle_odds_b    ? bet.oracle_odds_b / 100    : null,
+    oddsDraw: bet.oracle_odds_draw ? bet.oracle_odds_draw / 100 : null,
+  };
 }
 
 const QUICK_AMOUNTS = [0.1, 0.25, 0.5, 1];
@@ -120,7 +123,7 @@ export default function MatchDetail() {
         walletAddress,
       };
       
-      const response = await base44.functions.invoke('createBetOffer', payload);
+      const response = await base44.functions.invoke('provideLiquidity', payload);
       
       if (response.data.error) {
         throw new Error(response.data.error);
@@ -189,7 +192,7 @@ export default function MatchDetail() {
         walletAddress,
       };
       
-      const response = await base44.functions.invoke('matchBet', payload);
+      const response = await base44.functions.invoke('placeBet', payload);
       
       if (response.data.error) {
         throw new Error(response.data.error);
@@ -366,10 +369,10 @@ export default function MatchDetail() {
   const isOpen = bet?.status === 'open';
   const isSettled = bet?.status === 'settled';
 
-  const avA = totalAvailable(offers, 'a');
-  const avB = totalAvailable(offers, 'b');
-  const avDraw = totalAvailable(offers, 'draw');
-  const { oddsA, oddsB, oddsDraw } = calcOdds(avA, avB, avDraw);
+  const avA = bet ? (bet.lp_amount_a || 0) - (bet.backed_amount_a || 0) : 0;
+  const avB = bet ? (bet.lp_amount_b || 0) - (bet.backed_amount_b || 0) : 0;
+  const avDraw = bet ? (bet.lp_amount_draw || 0) - (bet.backed_amount_draw || 0) : 0;
+  const { oddsA, oddsB, oddsDraw } = getOracleOdds(bet);
   const totalLiquidity = avA + avB + avDraw;
 
   const stakeNum = parseFloat(amount) || 0;
@@ -383,9 +386,9 @@ export default function MatchDetail() {
   const matchPayout = stakeNum + matchWin - matchFee;
 
   const OUTCOMES = [
-    { key: 'a', label: bet?.outcome_a || match.team_a, flag: match.team_a_flag, odds: oddsA, available: avA, color: 'primary' },
-    { key: 'draw', label: 'Draw', flag: '🤝', odds: oddsDraw, available: avDraw, color: 'yellow' },
-    { key: 'b', label: bet?.outcome_b || match.team_b, flag: match.team_b_flag, odds: oddsB, available: avB, color: 'accent' },
+    { key: 'a',    label: bet?.outcome_a || match.team_a, flag: match.team_a_flag, odds: oddsA,    available: avA,    color: 'primary' },
+    { key: 'draw', label: 'Draw',                          flag: '🤝',              odds: oddsDraw, available: avDraw, color: 'yellow'  },
+    { key: 'b',    label: bet?.outcome_b || match.team_b,  flag: match.team_b_flag, odds: oddsB,    available: avB,    color: 'accent'  },
   ];
 
   const openOffers = offers.filter(o => o.status === 'open' || o.status === 'partially_matched' || o.status === 'pending');
@@ -484,7 +487,10 @@ export default function MatchDetail() {
                   {o.odds !== null ? `${o.odds.toFixed(2)}x` : '—'}
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  {o.odds !== null ? 'current odds' : 'no offers yet'}
+                  {o.odds !== null ? 'oracle fixed odds' : 'odds not set'}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  ◎{Math.max(0, o.available).toFixed(2)} LP avail.
                 </p>
               </div>
             ))}

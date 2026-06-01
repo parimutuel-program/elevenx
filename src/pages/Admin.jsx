@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+// Admin page — manages matches, markets (with oracle odds), and bet settlement
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -7,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Trophy, Settings, Gavel, RefreshCw, Shield, Radio, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Plus, Trophy, Settings, Gavel, RefreshCw, Shield, Radio, CheckCircle2, AlertCircle, Zap, BarChart2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
@@ -181,16 +182,25 @@ function AdminMatchRow({ match, bets, index }) {
   const queryClient = useQueryClient();
   const existingBet = bets.find(b => b.match_id === match.id);
 
+  const [oddsForm, setOddsForm] = useState({ a: '200', draw: '320', b: '300' });
+  const [showOdds, setShowOdds] = useState(false);
+
   const createBetMutation = useMutation({
     mutationFn: () => base44.entities.Bet.create({
       match_id: match.id,
       title: `${match.team_a} vs ${match.team_b}`,
       outcome_a: match.team_a,
       outcome_b: match.team_b,
+      outcome_draw: 'Draw',
       open_until: match.match_time,
       status: 'open',
       fee_percent: 200,
-      total_a: 0, total_b: 0, total_pool: 0, total_bettors: 0,
+      oracle_odds_a: parseInt(oddsForm.a) || 200,
+      oracle_odds_draw: parseInt(oddsForm.draw) || 320,
+      oracle_odds_b: parseInt(oddsForm.b) || 300,
+      lp_amount_a: 0, lp_amount_b: 0, lp_amount_draw: 0,
+      backed_amount_a: 0, backed_amount_b: 0, backed_amount_draw: 0,
+      total_pool: 0, total_bettors: 0,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bets'] });
@@ -234,14 +244,35 @@ function AdminMatchRow({ match, bets, index }) {
           </SelectContent>
         </Select>
         {!existingBet && (
-          <Button
-            size="sm"
-            onClick={() => createBetMutation.mutate()}
-            disabled={createBetMutation.isPending}
-            className="h-8 text-xs bg-primary text-primary-foreground font-heading rounded-lg"
-          >
-            <Plus className="w-3 h-3 mr-1" /> Bet
-          </Button>
+          <div className="flex flex-col gap-1 items-end">
+            <button onClick={() => setShowOdds(v => !v)} className="text-[10px] text-muted-foreground hover:text-primary underline">
+              {showOdds ? 'Hide odds' : 'Set odds'}
+            </button>
+            {showOdds && (
+              <div className="flex gap-1 items-center">
+                {[['a', match.team_a], ['draw', 'Draw'], ['b', match.team_b]].map(([key, label]) => (
+                  <div key={key} className="flex flex-col items-center gap-0.5">
+                    <span className="text-[9px] text-muted-foreground truncate max-w-[40px]">{label}</span>
+                    <Input
+                      type="number"
+                      value={oddsForm[key]}
+                      onChange={e => setOddsForm(f => ({ ...f, [key]: e.target.value }))}
+                      className="w-14 h-7 text-xs text-center bg-secondary/50 px-1"
+                      placeholder="200"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+            <Button
+              size="sm"
+              onClick={() => createBetMutation.mutate()}
+              disabled={createBetMutation.isPending}
+              className="h-8 text-xs bg-primary text-primary-foreground font-heading rounded-lg"
+            >
+              <Plus className="w-3 h-3 mr-1" /> Open Market
+            </Button>
+          </div>
         )}
       </div>
     </motion.div>
@@ -251,38 +282,53 @@ function AdminMatchRow({ match, bets, index }) {
 function AdminBetRow({ bet, matches, index }) {
   const queryClient = useQueryClient();
   const match = matches.find(m => m.id === bet.match_id);
+  const [editOdds, setEditOdds] = useState(false);
+  const [oddsForm, setOddsForm] = useState({
+    a: String(bet.oracle_odds_a || 200),
+    draw: String(bet.oracle_odds_draw || 320),
+    b: String(bet.oracle_odds_b || 300),
+  });
 
-  const settleMutation = useMutation({
-    mutationFn: async (winningOutcome) => {
-      // Get all user bets for this bet
-      const userBets = await base44.entities.UserBet.filter({ bet_id: bet.id });
-      const winnersPool = winningOutcome === 'a' ? (bet.total_a || 0) : (bet.total_b || 0);
-      const losersPool = winningOutcome === 'a' ? (bet.total_b || 0) : (bet.total_a || 0);
-
-      // Update each user bet
-      for (const ub of userBets) {
-        if (ub.outcome === winningOutcome) {
-          const gross = ub.amount + (winnersPool > 0 ? (ub.amount / winnersPool) * losersPool : 0);
-          const fee = gross * (bet.fee_percent || 200) / 10000;
-          const payout = gross - fee;
-          await base44.entities.UserBet.update(ub.id, { status: 'won', actual_payout: payout });
-        } else {
-          await base44.entities.UserBet.update(ub.id, { status: 'lost', actual_payout: 0 });
-        }
-      }
-
-      // Handle edge case: no winners
-      if (winnersPool === 0 && userBets.length > 0) {
-        for (const ub of userBets) {
-          await base44.entities.UserBet.update(ub.id, { status: 'refunded', actual_payout: ub.amount });
-        }
-      }
-
-      await base44.entities.Bet.update(bet.id, { status: 'settled', winning_outcome: winningOutcome });
-    },
+  const updateOddsMutation = useMutation({
+    mutationFn: () => base44.entities.Bet.update(bet.id, {
+      oracle_odds_a: parseInt(oddsForm.a) || 200,
+      oracle_odds_draw: parseInt(oddsForm.draw) || 320,
+      oracle_odds_b: parseInt(oddsForm.b) || 300,
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bets'] });
+      setEditOdds(false);
+    },
+  });
+
+  const fetchOracleMutation = useMutation({
+    mutationFn: () => base44.functions.invoke('oracleService', {
+      matchId: bet.match_id,
+      mode: 'fetch_odds',
+      provider: 'odds_api',
+    }),
+    onSuccess: (res) => {
+      if (res.data.success) {
+        queryClient.invalidateQueries({ queryKey: ['bets'] });
+        alert(res.data.message);
+      }
+    },
+  });
+
+  // Use announceWinner backend function for fixed-odds settlement
+  const settleMutation = useMutation({
+    mutationFn: async (winningOutcome) => {
+      const res = await base44.functions.invoke('announceWinner', {
+        bet_id: bet.id,
+        winning_outcome: winningOutcome,
+      });
+      if (!res.data.success) throw new Error(res.data.error || 'Settlement failed');
+      return res.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['bets'] });
       queryClient.invalidateQueries({ queryKey: ['myBets'] });
+      alert(data.message);
     },
   });
 
@@ -310,8 +356,13 @@ function AdminBetRow({ bet, matches, index }) {
         <div>
           <p className="font-heading font-bold text-sm">{bet.outcome_a} vs {bet.outcome_b}</p>
           <p className="text-[10px] text-muted-foreground">
-            Pool: ${(bet.total_pool || 0).toLocaleString()} · {bet.total_bettors || 0} bettors · Fee: {(bet.fee_percent || 200) / 100}%
+            Pool: ◎{(bet.total_pool || 0).toFixed(2)} · {bet.total_bettors || 0} bettors · Fee: {(bet.fee_percent || 200) / 100}%
           </p>
+          <div className="flex gap-3 mt-0.5 text-[10px] text-muted-foreground">
+            <span className="text-primary font-bold">{bet.outcome_a}: {((bet.oracle_odds_a || 200) / 100).toFixed(2)}x</span>
+            <span className="text-yellow-400 font-bold">Draw: {((bet.oracle_odds_draw || 320) / 100).toFixed(2)}x</span>
+            <span className="text-accent font-bold">{bet.outcome_b}: {((bet.oracle_odds_b || 300) / 100).toFixed(2)}x</span>
+          </div>
         </div>
         <Badge className={`text-[10px] ${
           bet.status === 'open' ? 'bg-accent/20 text-accent' :
@@ -323,37 +374,79 @@ function AdminBetRow({ bet, matches, index }) {
         </Badge>
       </div>
 
+      {/* Oracle odds editor */}
+      {bet.status === 'open' && (
+        <div className="flex gap-2 flex-wrap mb-2">
+          <Button size="sm" variant="outline" onClick={() => setEditOdds(v => !v)}
+            className="h-7 text-[10px] border-border/50 rounded-lg">
+            <Zap className="w-3 h-3 mr-1" /> {editOdds ? 'Cancel' : 'Edit Odds'}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => fetchOracleMutation.mutate()}
+            disabled={fetchOracleMutation.isPending}
+            className="h-7 text-[10px] border-primary/30 text-primary hover:bg-primary/10 rounded-lg">
+            {fetchOracleMutation.isPending
+              ? <div className="w-3 h-3 border border-primary/30 border-t-primary rounded-full animate-spin mr-1" />
+              : <BarChart2 className="w-3 h-3 mr-1" />}
+            Fetch Oracle Odds
+          </Button>
+        </div>
+      )}
+
+      {editOdds && bet.status === 'open' && (
+        <div className="bg-secondary/40 rounded-xl p-3 mb-2 space-y-2">
+          <p className="text-[10px] text-muted-foreground">Odds in basis points (210 = 2.10x)</p>
+          <div className="flex gap-2">
+            {[['a', bet.outcome_a], ['draw', 'Draw'], ['b', bet.outcome_b]].map(([key, label]) => (
+              <div key={key} className="flex-1">
+                <label className="text-[10px] text-muted-foreground block mb-1">{label}</label>
+                <Input type="number" value={oddsForm[key]}
+                  onChange={e => setOddsForm(f => ({ ...f, [key]: e.target.value }))}
+                  className="h-8 text-xs text-center bg-secondary/50" />
+              </div>
+            ))}
+          </div>
+          <Button size="sm" onClick={() => updateOddsMutation.mutate()}
+            disabled={updateOddsMutation.isPending}
+            className="w-full h-8 text-xs bg-primary text-primary-foreground rounded-lg font-bold">
+            Save Odds
+          </Button>
+        </div>
+      )}
+
       {bet.status === 'open' || bet.status === 'closed' ? (
         <div className="flex gap-2 mt-2">
-          <Button
-            size="sm"
-            onClick={() => settleMutation.mutate('a')}
-            disabled={settleMutation.isPending}
-            className="h-8 text-xs bg-accent/20 text-accent hover:bg-accent/30 rounded-lg flex-1"
-          >
-            <Trophy className="w-3 h-3 mr-1" /> {bet.outcome_a} Wins
+          <Button size="sm" onClick={() => {
+            if (confirm(`Confirm ${bet.outcome_a} wins? This distributes fixed-odds payouts.`))
+              settleMutation.mutate('a');
+          }} disabled={settleMutation.isPending}
+            className="h-8 text-xs bg-primary/20 text-primary hover:bg-primary/30 rounded-lg flex-1">
+            <Trophy className="w-3 h-3 mr-1" /> {bet.outcome_a}
           </Button>
-          <Button
-            size="sm"
-            onClick={() => settleMutation.mutate('b')}
-            disabled={settleMutation.isPending}
-            className="h-8 text-xs bg-accent/20 text-accent hover:bg-accent/30 rounded-lg flex-1"
-          >
-            <Trophy className="w-3 h-3 mr-1" /> {bet.outcome_b} Wins
+          <Button size="sm" onClick={() => {
+            if (confirm('Confirm Draw? This distributes fixed-odds payouts.'))
+              settleMutation.mutate('draw');
+          }} disabled={settleMutation.isPending}
+            className="h-8 text-xs bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 rounded-lg flex-1">
+            <Trophy className="w-3 h-3 mr-1" /> Draw
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => voidMutation.mutate()}
+          <Button size="sm" onClick={() => {
+            if (confirm(`Confirm ${bet.outcome_b} wins? This distributes fixed-odds payouts.`))
+              settleMutation.mutate('b');
+          }} disabled={settleMutation.isPending}
+            className="h-8 text-xs bg-accent/20 text-accent hover:bg-accent/30 rounded-lg flex-1">
+            <Trophy className="w-3 h-3 mr-1" /> {bet.outcome_b}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => voidMutation.mutate()}
             disabled={voidMutation.isPending}
-            className="h-8 text-xs rounded-lg border-destructive/30 text-destructive hover:bg-destructive/10"
-          >
+            className="h-8 text-xs rounded-lg border-destructive/30 text-destructive hover:bg-destructive/10">
             <RefreshCw className="w-3 h-3 mr-1" /> Void
           </Button>
         </div>
       ) : bet.status === 'settled' ? (
         <p className="text-xs text-muted-foreground mt-1">
-          Winner: <span className="text-primary font-bold">{bet.winning_outcome === 'a' ? bet.outcome_a : bet.outcome_b}</span>
+          Winner: <span className="text-primary font-bold">
+            {bet.winning_outcome === 'a' ? bet.outcome_a : bet.winning_outcome === 'b' ? bet.outcome_b : 'Draw'}
+          </span>
         </p>
       ) : null}
     </motion.div>

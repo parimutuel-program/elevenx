@@ -61,17 +61,18 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         
         transaction.add(claimIx);
       } else if (instruction.amountLamports) {
-        // Regular bet/offer - transfer SOL from user to pool
+        // place_bet / provide_liquidity — transfer SOL from user to market PDA (escrow)
         const fromPubkey = provider.publicKey;
-        const toPubkey = new PublicKey(instruction.betPoolPda);
-        
-        console.log('Creating transfer instruction:', {
+        // marketPda is the escrow for both place_bet and provide_liquidity
+        const toPubkey = new PublicKey(instruction.marketPda || instruction.betPoolPda);
+
+        console.log('Transfer to market escrow:', {
           from: fromPubkey.toString(),
           to: toPubkey.toString(),
           lamports: instruction.amountLamports,
-          amount: instruction.amountLamports / 1_000_000_000
+          type: instruction.instruction_type,
         });
-        
+
         const transferIx = SystemProgram.transfer({
           fromPubkey,
           toPubkey,
