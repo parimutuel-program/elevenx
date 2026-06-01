@@ -601,7 +601,7 @@ export default function MatchDetail() {
                         {openOfferMutation.isPending ? (
                           <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                         ) : (
-                          `Offer ◎${stakeNum > 0 ? stakeNum.toFixed(2) : '0.00'} on ${getOutcomeLabel(selectedOutcome)}`
+                          <span>Offer ◎{stakeNum > 0 ? stakeNum.toFixed(2) : '0.00'} on {getOutcomeLabel(selectedOutcome)}</span>
                         )}
                       </Button>
                     )}
@@ -752,9 +752,9 @@ export default function MatchDetail() {
                         {matchOfferMutation.isPending ? (
                           <div className="w-5 h-5 border-2 border-accent-foreground/30 border-t-accent-foreground rounded-full animate-spin" />
                         ) : !isConnected ? (
-                          'Connect Wallet First'
+                          <span>Connect Wallet First</span>
                         ) : (
-                          `Bet ◎${stakeNum > 0 ? stakeNum.toFixed(2) : '0.00'} on ${getOutcomeLabel(selectedOutcome)}`
+                          <span>Bet ◎{stakeNum > 0 ? stakeNum.toFixed(2) : '0.00'} on {getOutcomeLabel(selectedOutcome)}</span>
                         )}
                       </Button>
                     )}
