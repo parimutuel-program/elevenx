@@ -369,6 +369,23 @@ function AdminMatchRow({ match, bets, index }) {
     },
   });
 
+  const recreateMarketMutation = useMutation({
+    mutationFn: ({ bet_id, match_id }) => base44.functions.invoke('createMarketOnChain', {
+      bet_id,
+      match_id,
+      force_recreate: true,
+    }),
+    onSuccess: (data) => {
+      if (data.solana_instruction) {
+        alert('Market recreation instruction generated. Please sign the transaction in your wallet to complete.');
+        // In a full implementation, we'd trigger the wallet signer here
+      } else {
+        alert(data.message || 'Market recreated');
+      }
+      queryClient.invalidateQueries({ queryKey: ['bets'] });
+    },
+  });
+
   const updateStatusMutation = useMutation({
     mutationFn: (status) => base44.entities.Match.update(match.id, { status }),
     onSuccess: () => {
@@ -435,6 +452,36 @@ function AdminMatchRow({ match, bets, index }) {
               <Plus className="w-3 h-3 mr-1" /> Open Market
             </Button>
           </div>
+        )}
+        {existingBet && existingBet.solana_market_created && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              if (confirm('Recreate market on-chain? This will update the market with current odds.')) {
+                recreateMarketMutation.mutate({ bet_id: existingBet.id, match_id: match.id });
+              }
+            }}
+            disabled={recreateMarketMutation.isPending}
+            className="h-8 text-xs border-primary/30 text-primary hover:bg-primary/10 rounded-lg"
+          >
+            <RefreshCw className="w-3 h-3 mr-1" /> Recreate
+          </Button>
+        )}
+        {existingBet && existingBet.solana_market_created && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              if (confirm('Recreate market on-chain with updated odds? This will overwrite existing market data.')) {
+                recreateMarketMutation.mutate({ bet_id: existingBet.id, match_id: match.id });
+              }
+            }}
+            disabled={recreateMarketMutation.isPending}
+            className="h-8 text-xs border-destructive/30 text-destructive hover:bg-destructive/10 rounded-lg"
+          >
+            <RefreshCw className="w-3 h-3 mr-1" /> Recreate
+          </Button>
         )}
       </div>
     </motion.div>

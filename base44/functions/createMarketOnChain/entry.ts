@@ -45,11 +45,19 @@ Deno.serve(async (req) => {
       const expectedMinSize = 210;
       if (accountInfo.data.length >= expectedMinSize) {
         console.log('Market already exists and is properly initialized at:', marketPda.toBase58());
-        return Response.json({
-          success: true,
-          marketPda: marketPda.toBase58(),
-          alreadyExists: true,
-        });
+        
+        // Check if force recreate is requested
+        const forceRecreate = payload.force_recreate === true;
+        if (forceRecreate) {
+          console.log('Force recreating market with updated odds...');
+          // Continue to recreate instruction below
+        } else {
+          return Response.json({
+            success: true,
+            marketPda: marketPda.toBase58(),
+            alreadyExists: true,
+          });
+        }
       }
     }
 
@@ -159,6 +167,7 @@ Deno.serve(async (req) => {
       success: true,
       marketPda: marketPda.toBase58(),
       alreadyExists: false,
+      forceRecreated: payload.force_recreate === true,
       solana_instruction: {
         instruction_type: 'create_market',
         programId: SOLANA_PROGRAM_ID,
@@ -172,7 +181,9 @@ Deno.serve(async (req) => {
           platformConfig: platformConfigPda.toBase58(),
         }
       },
-      message: 'Sign to create pari-mutuel market on-chain',
+      message: payload.force_recreate === true 
+        ? 'Sign to RECREATE market with updated odds (this will overwrite existing market data)' 
+        : 'Sign to create pari-mutuel market on-chain',
     });
 
   } catch (error) {
