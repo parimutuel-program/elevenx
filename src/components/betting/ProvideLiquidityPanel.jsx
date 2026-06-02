@@ -229,17 +229,30 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
                 </>
               )}
             </Button>
-            <Button
-              onClick={async () => {
-                const res = await base44.functions.invoke('debugMarketAccount', { match_id });
-                console.log('DEBUG MARKET ACCOUNT:', res.data);
-                alert('Debug info logged to console. Check browser console (F12).');
-              }}
-              variant="outline"
-              className="w-full border-destructive/50 text-destructive text-xs"
-            >
-              Debug: Check On-Chain Account
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={async () => {
+                  const res = await base44.functions.invoke('debugMarketAccount', { match_id });
+                  console.log('DEBUG MARKET ACCOUNT:', res.data);
+                  alert('Debug info logged to console. Check browser console (F12).');
+                }}
+                variant="outline"
+                className="flex-1 border-destructive/50 text-destructive text-xs"
+              >
+                Debug: Market PDA
+              </Button>
+              <Button
+                onClick={async () => {
+                  const res = await base44.functions.invoke('debugMarketAccount', { match_id: 'platform' });
+                  console.log('DEBUG PLATFORM CONFIG:', res.data);
+                  alert('Platform config debug logged to console. Check browser console (F12).');
+                }}
+                variant="outline"
+                className="flex-1 border-yellow-500/50 text-yellow-500 text-xs"
+              >
+                Debug: Platform
+              </Button>
+            </div>
           </>
         )}
       </div>
