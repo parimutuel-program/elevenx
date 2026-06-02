@@ -108,6 +108,7 @@ export default function MatchDetail() {
 
   const createMarketMutation = useMutation({
     mutationFn: async () => {
+      console.log('[MatchDetail] createMarketMutation triggered');
       // First create the Bet entity
       await base44.entities.Bet.create({
         match_id: matchId,
@@ -121,10 +122,13 @@ export default function MatchDetail() {
       });
       
       // Then call createMarketOnChain to get the Solana instruction
+      console.log('[MatchDetail] Calling createMarketOnChain');
       const response = await base44.functions.invoke('createMarketOnChain', {
         bet_id: bet.id || matchId,
         match_id: matchId,
       });
+      
+      console.log('[MatchDetail] createMarketOnChain response:', response.data);
       
       if (response.data.error) throw new Error(response.data.error);
       if (!response.data.solana_instruction) throw new Error('No solana_instruction returned');
@@ -132,8 +136,10 @@ export default function MatchDetail() {
       return { response, betId: response.data.betId || bet.id };
     },
     onSuccess: (result) => {
+      console.log('[MatchDetail] createMarketMutation onSuccess:', result);
       if (result.response.data.solana_instruction) {
         // Need to sign transaction to create market on-chain
+        console.log('[MatchDetail] Setting pending transaction for Phantom');
         setPendingTransaction({
           instruction: result.response.data.solana_instruction,
           amount: 0,
@@ -143,6 +149,7 @@ export default function MatchDetail() {
       queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
     },
     onError: (error) => {
+      console.error('[MatchDetail] createMarketMutation error:', error);
       const backendError = error.response?.data?.error || error.message || 'Unknown error';
       alert('Failed to create market: ' + backendError);
     },

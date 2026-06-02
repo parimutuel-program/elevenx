@@ -7,6 +7,7 @@ import { Buffer } from 'buffer';
 import { Connection, PublicKey, SystemProgram, Transaction, TransactionInstruction } from '@solana/web3.js';
 
 export default function SolanaTransactionSigner({ instruction, amount, userBetId, offerId, isOffer, onSuccess, onError }) {
+  // userBetId, offerId, isOffer are optional - used for tracking DB records after transaction
   const { isConnected, connect } = useWallet();
   const [isSigning, setIsSigning] = useState(false);
   const [signature, setSignature] = useState(null);

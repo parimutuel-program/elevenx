@@ -22,26 +22,33 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
 
   const handleCreateMarket = async () => {
     setCreateMarketMutation({ isPending: true });
+    setError(null);
     try {
+      console.log('[ProvideLiquidityPanel] Creating market on-chain for bet:', bet.id, 'match:', match_id);
       const response = await base44.functions.invoke('createMarketOnChain', {
         bet_id: bet.id,
         match_id,
       });
       
+      console.log('[ProvideLiquidityPanel] createMarketOnChain response:', response.data);
+      
       if (response.data.error) {
         setError(response.data.error);
       } else if (response.data.solana_instruction) {
         // Need to sign transaction to create market
+        console.log('[ProvideLiquidityPanel] Setting instruction for Phantom signing:', response.data.solana_instruction);
         setInstruction({
           ...response.data.solana_instruction,
           amount: 0, // No SOL amount for market creation
         });
       } else {
         // Market already exists
+        console.log('[ProvideLiquidityPanel] Market already exists, refreshing status');
         await checkMarketStatus();
       }
     } catch (err) {
-      setError(err.message);
+      console.error('[ProvideLiquidityPanel] handleCreateMarket error:', err);
+      setError(err.message || 'Failed to create market');
     } finally {
       setCreateMarketMutation({ isPending: false });
     }
@@ -49,10 +56,12 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
 
   const checkMarketStatus = async () => {
     try {
+      console.log('[ProvideLiquidityPanel] Checking market status for match:', match_id);
       const response = await base44.functions.invoke('checkMarketStatus', { match_id });
+      console.log('[ProvideLiquidityPanel] Market status response:', response.data);
       setMarketStatus(response.data);
     } catch (err) {
-      console.error('Failed to check market status:', err);
+      console.error('[ProvideLiquidityPanel] checkMarketStatus error:', err);
       setMarketStatus({ status: 'error', message: err.message });
     }
   };
@@ -237,7 +246,7 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
       {instruction ? (
         <SolanaTransactionSigner
           instruction={instruction}
-          amount={amount}
+          amount={instruction.instruction_type === 'create_market' ? 0 : amount}
           onSuccess={handleTransactionSuccess}
           onError={(err) => setError(err.message)}
         />
