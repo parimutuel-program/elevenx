@@ -26,6 +26,7 @@ export default function MatchDetail() {
   const [selectedOffer, setSelectedOffer] = useState(null); // offer to bet against
   const [betMode, setBetMode] = useState('offer'); // 'offer' | 'match'
   const [isRefreshingOdds, setIsRefreshingOdds] = useState(false);
+  const [statsApiMatchId, setStatsApiMatchId] = useState('');
 
   const { data: match } = useQuery({
     queryKey: ['match', matchId],
@@ -73,16 +74,28 @@ export default function MatchDetail() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] }),
   });
 
+  // Sync local statsApiMatchId when bet loads
+  React.useEffect(() => {
+    if (bet?.stats_api_match_id && !statsApiMatchId) {
+      setStatsApiMatchId(bet.stats_api_match_id);
+    }
+  }, [bet?.stats_api_match_id]);
+
   // Refresh odds from TheStatsAPI
   const refreshOdds = async () => {
-    if (!bet?.stats_api_match_id) {
-      alert('Set a TheStatsAPI match ID on this market first (Admin panel)');
+    const matchIdToUse = statsApiMatchId.trim();
+    if (!matchIdToUse) {
+      alert('Enter a TheStatsAPI match ID first');
       return;
+    }
+    // Save it if changed
+    if (matchIdToUse !== bet?.stats_api_match_id) {
+      await base44.entities.Bet.update(bet.id, { stats_api_match_id: matchIdToUse });
     }
     setIsRefreshingOdds(true);
     try {
       const res = await base44.functions.invoke('fetchMatchOdds', {
-        stats_api_match_id: bet.stats_api_match_id,
+        stats_api_match_id: matchIdToUse,
         action: 'odds',
       });
       if (res.data.odds) {
@@ -243,15 +256,10 @@ export default function MatchDetail() {
           </div>
           <div className="flex gap-2">
             <input
-              defaultValue={bet.stats_api_match_id || ''}
+              value={statsApiMatchId}
+              onChange={e => setStatsApiMatchId(e.target.value)}
               placeholder="TheStatsAPI match ID (e.g. mt_14502)"
               className="flex-1 text-xs bg-secondary/50 border border-border/50 rounded-xl px-3 py-2 text-foreground placeholder:text-muted-foreground"
-              onBlur={async (e) => {
-                if (e.target.value && e.target.value !== bet.stats_api_match_id) {
-                  await base44.entities.Bet.update(bet.id, { stats_api_match_id: e.target.value });
-                  queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
-                }
-              }}
             />
             <Button size="sm" onClick={refreshOdds} disabled={isRefreshingOdds}
               className="h-9 text-xs font-bold rounded-xl">
