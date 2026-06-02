@@ -32,20 +32,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check if user exists by wallet address (check both root and data fields)
+    // Check if user exists by wallet address
     let user = null;
     try {
       console.log('Looking up user by wallet:', walletAddress?.slice(0, 8));
-      // Try data.wallet_address first (new format)
-      let users = await serviceRole.entities.User.filter({ 'data.wallet_address': walletAddress });
-      // If not found, try root-level wallet_address (legacy format)
-      if (!users || users.length === 0) {
-        users = await serviceRole.entities.User.filter({ wallet_address: walletAddress });
-      }
+      const users = await serviceRole.entities.User.filter({ wallet_address: walletAddress });
       console.log('User lookup - found:', users?.length || 0, 'users');
       if (users && users.length > 0) {
         user = users[0];
-        console.log('✓ Found user - full_name:', user.full_name, 'username:', user.username, 'wallet:', user.data?.wallet_address || user.wallet_address);
+        console.log('✓ Found user - username:', user.username, 'wallet:', user.wallet_address);
       }
     } catch (err) {
       console.log('User lookup failed:', err.message);
@@ -57,13 +52,11 @@ Deno.serve(async (req) => {
       console.log('Registering user - wallet:', walletAddress);
       
       try {
-        // Create user with wallet address and placeholder email (platform requires email)
+        // Create user with wallet address at root level (not in data)
         const newUser = await serviceRole.entities.User.create({
           email: `${walletAddress.slice(0, 8)}@elevenx.bet`,
-          data: {
-            wallet_address: walletAddress,
-            role: 'user',
-          },
+          wallet_address: walletAddress,
+          username: walletAddress.slice(0, 8),
           role: 'user',
         });
         
@@ -93,15 +86,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    // User exists - return user info (handle both root-level and data.* fields)
-    console.log('✓ User authenticated - username:', user.full_name || user.username, 'id:', user.id);
+    // User exists - return user info
+    console.log('✓ User authenticated - username:', user.username, 'id:', user.id);
     return Response.json({
       success: true,
       userId: user.id,
-      walletAddress: user.wallet_address || user.data?.wallet_address,
-      role: user.role || user.data?.role,
-      full_name: user.full_name || user.data?.full_name,
-      username: user.username || user.data?.username,
+      walletAddress: user.wallet_address,
+      role: user.role,
+      username: user.username,
       email: user.email
     });
 

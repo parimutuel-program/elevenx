@@ -25,18 +25,13 @@ Deno.serve(async (req) => {
     const trimmedWallet = wallet_address.trim();
     console.log('[createBetOffer] Authenticating wallet:', trimmedWallet.slice(0, 8) + '...');
     
-    // Check data.wallet_address first (new format), then root-level (legacy)
-    let users = await base44.asServiceRole.entities.User.filter({ 'data.wallet_address': trimmedWallet });
-    if (!users || users.length === 0) {
-      users = await base44.asServiceRole.entities.User.filter({ wallet_address: trimmedWallet });
-    }
-    
+    const users = await base44.asServiceRole.entities.User.filter({ wallet_address: trimmedWallet });
     console.log('[createBetOffer] User lookup result:', users?.length || 0, 'users found');
     if (!users || users.length === 0) {
       console.error('[createBetOffer] Authentication failed - no user found for wallet');
       return Response.json({ error: 'Wallet not authenticated. Please sign in with your wallet first.' }, { status: 401 });
     }
-    console.log('[createBetOffer] ✓ Authenticated user:', users[0].full_name || users[0].email);
+    console.log('[createBetOffer] ✓ Authenticated user:', users[0].username);
 
     // Validate base58 format
     const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
