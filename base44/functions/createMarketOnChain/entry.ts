@@ -72,10 +72,9 @@ Deno.serve(async (req) => {
     }
 
     // Prepare create_market instruction
-    // Anchor discriminator for create_market (instruction index 1)
-    const data = Buffer.alloc(8);
-    data.writeUInt32LE(1, 0);
-    data.writeUInt32LE(0, 4);
+    // Anchor discriminator for create_market (first 8 bytes of SHA256("global:create_market"))
+    // Pre-computed: [0x17, 0x88, 0x06, 0x4f, 0x3b, 0x87, 0x70, 0x14]
+    const discriminator = Buffer.from([0x17, 0x88, 0x06, 0x4f, 0x3b, 0x87, 0x70, 0x14]);
 
     // Prepare params for create_market
     // This needs to match the CreateMarketParams struct in the Solana program
@@ -141,7 +140,7 @@ Deno.serve(async (req) => {
     paramsData.writeBigUInt64LE(BigInt(oracleOdds[2]), offset);
     offset += 8;
 
-    const instructionData = Buffer.concat([data, paramsData.slice(0, offset)]);
+    const instructionData = Buffer.concat([discriminator, paramsData.slice(0, offset)]);
 
     const keys = [
       { pubkey: marketPda, isSigner: false, isWritable: true },
