@@ -53,35 +53,55 @@ Deno.serve(async (req) => {
           expectedSize: expectedMinSize,
         });
         
-        // Check if there's an existing Bet for this match - if so, return its ID for retry
+        // Check if there's an existing Bet for this match
         const existingBets = await base44.entities.Bet.filter({ match_id: match_id });
-        if (existingBets && existingBets.length > 0) {
-          const existingBet = existingBets[0];
-          console.log('Found existing bet, returning for retry:', existingBet.id);
-          return Response.json({
-            success: false,
-            error: 'Market exists but needs retry. Attempting to use existing bet.',
-            betId: existingBet.id,
-            marketPda: marketPda.toBase58(),
-            needsRetry: true,
-            solana_instruction: {
-              instruction_type: 'create_market',
-              programId: SOLANA_PROGRAM_ID,
-              marketPda: marketPda.toBase58(),
-              instruction_data: instructionData.toString('base64'),
-            },
-            message: 'Retry: Sign to initialize existing market PDA',
+        
+        let betIdToUse = bet_id;
+        
+        // If no existing bet found, create one
+        if (!existingBets || existingBets.length === 0) {
+          console.log('No existing bet found, creating new Bet entity');
+          const matches = await base44.entities.Match.filter({ id: match_id });
+          const match = matches[0];
+          if (!match) {
+            return Response.json({ error: 'Match not found' }, { status: 404 });
+          }
+          
+          const newBet = await base44.entities.Bet.create({
+            match_id: match_id,
+            outcome_a: match.team_a,
+            outcome_b: match.team_b,
+            outcome_draw: 'Draw',
+            status: 'open',
+            lp_amount_a: 0, lp_amount_b: 0, lp_amount_draw: 0,
+            backed_amount_a: 0, backed_amount_b: 0, backed_amount_draw: 0,
+            total_pool: 0, total_bettors: 0, fee_percent: bet.fee_percent || 200,
+            oracle_odds_a: bet.oracle_odds_a || 200,
+            oracle_odds_b: bet.oracle_odds_b || 300,
+            oracle_odds_draw: bet.oracle_odds_draw || 320,
           });
+          betIdToUse = newBet.id;
+          console.log('Created new bet with ID:', betIdToUse);
+        } else {
+          betIdToUse = existingBets[0].id;
+          console.log('Using existing bet ID:', betIdToUse);
         }
         
+        // Return instruction for retry
         return Response.json({
           success: false,
-          error: 'Market account exists but is not properly initialized. The market creation may have failed.',
-          hint: 'The market PDA exists with incorrect size. Try creating a new match entity or contact support.',
+          error: 'Market exists but needs retry initialization.',
+          betId: betIdToUse,
           marketPda: marketPda.toBase58(),
-          actualSize: accountInfo.data.length,
-          needsReinitialization: true,
-        }, { status: 400 });
+          needsRetry: true,
+          solana_instruction: {
+            instruction_type: 'create_market',
+            programId: SOLANA_PROGRAM_ID,
+            marketPda: marketPda.toBase58(),
+            instruction_data: instructionData.toString('base64'),
+          },
+          message: 'Retry: Sign to initialize existing market PDA',
+        });
       }
       
       // Market exists and is properly initialized

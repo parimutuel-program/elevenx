@@ -132,6 +132,16 @@ export default function MatchDetail() {
       
       console.log('[MatchDetail] createMarketOnChain response:', response.data);
       
+      // Handle retry case (market PDA exists but needs initialization)
+      if (response.data.needsRetry && response.data.solana_instruction) {
+        console.log('[MatchDetail] Market needs retry initialization');
+        return { 
+          response, 
+          betId: response.data.betId || newBet.id,
+          needsRetry: true,
+        };
+      }
+      
       if (response.data.error) throw new Error(response.data.error);
       if (!response.data.solana_instruction) throw new Error('No solana_instruction returned');
       
