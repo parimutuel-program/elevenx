@@ -235,9 +235,9 @@ Deno.serve(async (req) => {
       wallet_address: walletAddress,
     });
 
-    // Platform config PDA - use the same derivation as initPlatformConfig
+    // Platform config PDA - MUST match Solana program seeds [b"platform"]
     const [platformConfigPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('platform_config')],
+      [Buffer.from('platform')],
       programId
     );
 
