@@ -244,12 +244,15 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
       )}
 
       {instruction ? (
-        <SolanaTransactionSigner
-          instruction={instruction}
-          amount={instruction.instruction_type === 'create_market' ? 0 : amount}
-          onSuccess={handleTransactionSuccess}
-          onError={(err) => setError(err.message)}
-        />
+        <>
+          {console.log('[ProvideLiquidityPanel] Rendering SolanaTransactionSigner with instruction:', instruction)}
+          <SolanaTransactionSigner
+            instruction={instruction}
+            amount={instruction.instruction_type === 'create_market' ? 0 : amount}
+            onSuccess={handleTransactionSuccess}
+            onError={(err) => setError(err.message)}
+          />
+        </>
       ) : (
         <Button
           className="w-full"
