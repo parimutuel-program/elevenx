@@ -10,7 +10,7 @@ import { Zap, AlertCircle, Clock } from 'lucide-react';
  */
 export default function BetSlip({ bet, selectedOutcome, onPlaceBet, isPlacing }) {
   const [amount, setAmount] = useState('');
-  const quickAmounts = [0.1, 0.25, 0.5, 1, 2];
+  const quickAmounts = [0.01, 0.05, 0.1, 0.25, 0.5];
 
   // Oracle odds for this outcome (in bps, e.g. 210 = 2.10x)
   const oddsField = selectedOutcome === 'a' ? 'oracle_odds_a' : selectedOutcome === 'b' ? 'oracle_odds_b' : 'oracle_odds_draw';
