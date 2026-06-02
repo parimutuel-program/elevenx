@@ -582,7 +582,8 @@ function AdminBetRow({ bet, matches, index }) {
       match_id,
       force_recreate: true,
     }),
-    onSuccess: (data) => {
+    onSuccess: (response) => {
+      const data = response.data;
       console.log('[AdminBetRow] createMarketOnChain response:', data);
       if (data.solana_instruction) {
         console.log('[AdminBetRow] Setting pendingRecreate:', data.solana_instruction);
