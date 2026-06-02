@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-// Admin page — manages matches, markets (with oracle odds), and bet settlement
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -12,6 +11,7 @@ import { Plus, Trophy, Settings, Gavel, RefreshCw, Shield, Radio, CheckCircle2, 
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
+import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
 
 export default function Admin() {
   const { user } = useAuth();
@@ -42,6 +42,7 @@ export default function Admin() {
   });
 
   const [syncResult, setSyncResult] = useState(null);
+  const [pendingPlatformInit, setPendingPlatformInit] = useState(null);
 
   const syncMutation = useMutation({
     mutationFn: async () => {
@@ -67,11 +68,22 @@ export default function Admin() {
       if (data.alreadyExists) {
         alert('Platform config already initialized on-chain');
       } else if (data.solana_instruction) {
-        alert('Platform initialization transaction ready. Please use a wallet to sign.');
-        localStorage.setItem('pending_platform_init', JSON.stringify(data.solana_instruction));
+        setPendingPlatformInit(data.solana_instruction);
       }
     },
   });
+
+  const handlePlatformInitSuccess = (txResult) => {
+    setPendingPlatformInit(null);
+    queryClient.invalidateQueries({ queryKey: ['bets'] });
+    alert('Platform initialized successfully! You can now create markets.');
+  };
+
+  const handlePlatformInitError = (err) => {
+    console.error('Platform init failed:', err);
+    setPendingPlatformInit(null);
+    alert('Platform initialization failed: ' + err.message);
+  };
 
   // Now conditional render after all hooks
   if (user?.role !== 'admin') {
@@ -114,29 +126,56 @@ export default function Admin() {
 
       {/* Platform Initialization */}
       <div className="bg-card border border-primary/20 rounded-xl p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Zap className="w-5 h-5 text-primary" />
-            <div>
-              <p className="text-sm font-bold text-foreground">Platform Config</p>
-              <p className="text-xs text-muted-foreground">Initialize the platform on Solana (one-time setup)</p>
+        {pendingPlatformInit ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <Zap className="w-5 h-5 text-primary" />
+              <div>
+                <p className="text-sm font-bold text-foreground">Sign Platform Initialization</p>
+                <p className="text-xs text-muted-foreground">Sign the transaction with your Phantom wallet</p>
+              </div>
             </div>
+            <SolanaTransactionSigner
+              instruction={pendingPlatformInit}
+              amount={0}
+              isPlatformInit={true}
+              onSuccess={handlePlatformInitSuccess}
+              onError={handlePlatformInitError}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPendingPlatformInit(null)}
+              className="w-full h-8 text-xs rounded-lg"
+            >
+              Cancel
+            </Button>
           </div>
-          <Button
-            onClick={() => initPlatformMutation.mutate()}
-            disabled={initPlatformMutation.isPending}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-heading font-bold rounded-xl h-9"
-          >
-            {initPlatformMutation.isPending ? (
-              <>
-                <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
-                Initializing...
-              </>
-            ) : (
-              'Initialize Platform'
-            )}
-          </Button>
-        </div>
+        ) : (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Zap className="w-5 h-5 text-primary" />
+              <div>
+                <p className="text-sm font-bold text-foreground">Platform Config</p>
+                <p className="text-xs text-muted-foreground">Initialize the platform on Solana (one-time setup)</p>
+              </div>
+            </div>
+            <Button
+              onClick={() => initPlatformMutation.mutate()}
+              disabled={initPlatformMutation.isPending}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-heading font-bold rounded-xl h-9"
+            >
+              {initPlatformMutation.isPending ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
+                  Initializing...
+                </>
+              ) : (
+                'Initialize Platform'
+              )}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Oracle Status Banner */}
