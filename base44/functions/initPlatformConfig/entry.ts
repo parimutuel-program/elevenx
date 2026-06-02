@@ -48,6 +48,7 @@ Deno.serve(async (req) => {
     // Discriminator: SHA256("global:initialize_platform")
     const discriminator = Buffer.from(sha256("global:initialize_platform")).slice(0, 8);
     console.log('Initialize platform discriminator:', discriminator.toString('hex'));
+    console.log('Discriminator length:', discriminator.length);
 
     // Initialize_platform params based on PlatformConfig struct:
     // - default_fee_percent: u16
@@ -64,6 +65,8 @@ Deno.serve(async (req) => {
     offset += 2;
 
     const instructionData = Buffer.concat([discriminator, paramsData]);
+    console.log('Total instruction data length:', instructionData.length);
+    console.log('Params data (hex):', paramsData.toString('hex'));
 
     const adminPubkey = user.id; // We'll need to get the actual Solana pubkey from frontend
     console.log('Platform config PDA:', platformConfigPda.toBase58());
