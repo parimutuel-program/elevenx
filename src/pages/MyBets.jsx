@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { Trophy, TrendingUp, TrendingDown, Clock, ChevronRight, Wallet } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
 
 const statusConfig = {
   active:   { color: 'bg-primary/10 text-primary border-primary/20', icon: Clock },
@@ -137,6 +138,7 @@ export default function MyBets() {
 
 function BetRow({ bet, index, walletAddress }) {
   const queryClient = useQueryClient();
+  const [withdrawInstruction, setWithdrawInstruction] = useState(null);
 
   // For LP bets, fetch the offer to check if it's been matched
   const { data: offer } = useQuery({
@@ -168,9 +170,18 @@ function BetRow({ bet, index, walletAddress }) {
         walletAddress,
       });
       if (response.data.error) throw new Error(response.data.error);
+      if (response.data.solana_instruction) {
+        setWithdrawInstruction({
+          ...response.data.solana_instruction,
+          amount: response.data.amount,
+          userBetId: bet.id,
+        });
+        return null; // Don't complete mutation yet, wait for signing
+      }
       return { amount: response.data.amount, userBetId: bet.id };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (!data) return; // Waiting for signing
       queryClient.invalidateQueries({ queryKey: ['myBets'] });
       alert('Withdrawal successful!');
     },
@@ -225,28 +236,46 @@ function BetRow({ bet, index, walletAddress }) {
               </Button>
             </>
           ) : canWithdraw ? (
-            <>
-              <span className="text-sm font-bold text-yellow-400">◎{bet.amount?.toFixed(4)}</span>
-              <Button
-                size="sm"
-                onClick={() => {
-                  if (confirm('Withdraw your unmatched LP offer? Your funds will be refunded.')) {
-                    withdrawMutation.mutate();
-                  }
-                }}
-                disabled={withdrawMutation.isPending}
-                className="h-8 text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 font-bold rounded-lg border border-yellow-500/30"
-              >
-                {withdrawMutation.isPending ? (
-                  <div className="w-3 h-3 border-2 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <Wallet className="w-3 h-3 mr-1" />
-                    Withdraw
-                  </>
-                )}
-              </Button>
-            </>
+            withdrawInstruction ? (
+              <div className="flex-1">
+                <SolanaTransactionSigner
+                  instruction={withdrawInstruction}
+                  amount={withdrawInstruction.amount}
+                  userBetId={withdrawInstruction.userBetId}
+                  onSuccess={() => {
+                    setWithdrawInstruction(null);
+                    queryClient.invalidateQueries({ queryKey: ['myBets'] });
+                    alert('Withdrawal successful!');
+                  }}
+                  onError={() => {
+                    setWithdrawInstruction(null);
+                  }}
+                />
+              </div>
+            ) : (
+              <>
+                <span className="text-sm font-bold text-yellow-400">◎{bet.amount?.toFixed(4)}</span>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    if (confirm('Withdraw your unmatched LP offer? Your funds will be refunded.')) {
+                      withdrawMutation.mutate();
+                    }
+                  }}
+                  disabled={withdrawMutation.isPending}
+                  className="h-8 text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 font-bold rounded-lg border border-yellow-500/30"
+                >
+                  {withdrawMutation.isPending ? (
+                    <div className="w-3 h-3 border-2 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Wallet className="w-3 h-3 mr-1" />
+                      Withdraw
+                    </>
+                  )}
+                </Button>
+              </>
+            )
           ) : (
             <>
               {(bet.status === 'won' || bet.status === 'claimed') && (
