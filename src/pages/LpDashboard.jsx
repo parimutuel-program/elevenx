@@ -179,7 +179,7 @@ export default function LpDashboard() {
                   <>
                     {/* Outcome selector */}
                     <div>
-                      <label className="text-xs text-muted-foreground mb-1.5 block">Back Outcome (you profit if this wins)</label>
+                      <label className="text-xs text-muted-foreground mb-1.5 block">Select Outcome to Cover (act as the house)</label>
                       <div className="grid grid-cols-3 gap-2">
                         {[
                           { key: 'a', label: selectedBet.outcome_a, odds: selectedBet.odds_a || selectedBet.oracle_odds_a },
@@ -211,12 +211,25 @@ export default function LpDashboard() {
                     </div>
 
                     {/* LP exposure explainer */}
-                    <div className="bg-secondary/40 rounded-xl p-3 text-xs space-y-1">
-                      <p className="font-bold text-foreground">How LP works:</p>
-                      <p className="text-muted-foreground">• You commit ◎ to cover bettors who pick <span className="text-foreground font-medium">{selectedOutcome === 'a' ? selectedBet.outcome_a : selectedOutcome === 'b' ? selectedBet.outcome_b : 'Draw'}</span></p>
-                      <p className="text-muted-foreground">• If that outcome wins → bettors claim fixed-odds payout from your pool</p>
-                      <p className="text-muted-foreground">• If that outcome loses → you keep all matched bettor stakes</p>
-                      <p className="text-muted-foreground">• Unmatched SOL is refunded when you withdraw</p>
+                    <div className="bg-secondary/40 rounded-xl p-3 text-xs space-y-1.5">
+                      <p className="font-bold text-foreground">How Providing Liquidity Works:</p>
+                      <div className="space-y-1">
+                        <p className="text-muted-foreground">
+                          <span className="text-accent font-bold">Your Role:</span> You're acting as the "house" for bettors who want to bet on <span className="text-foreground font-medium">{selectedOutcome === 'a' ? selectedBet.outcome_a : selectedOutcome === 'b' ? selectedBet.outcome_b : 'Draw'}</span>.
+                        </p>
+                        <p className="text-muted-foreground">
+                          <span className="text-accent font-bold">You Commit:</span> ◎{amount || '0'} SOL that gets locked in the market escrow.
+                        </p>
+                        <p className="text-muted-foreground">
+                          <span className="text-green-400 font-bold">You Profit When:</span> Bettors who pick <span className="text-foreground font-medium">{selectedOutcome === 'a' ? selectedBet.outcome_a : selectedOutcome === 'b' ? selectedBet.outcome_b : 'Draw'}</span> <span className="text-destructive font-bold">LOSE</span> → You keep their entire stake as profit.
+                        </p>
+                        <p className="text-muted-foreground">
+                          <span className="text-destructive font-bold">You Lose When:</span> Those bettors <span className="text-green-400 font-bold">WIN</span> → Their fixed-odds payout comes from YOUR committed SOL.
+                        </p>
+                        <p className="text-muted-foreground">
+                          <span className="text-yellow-400 font-bold">Safety Net:</span> Any unmatched SOL is 100% refundable when you withdraw.
+                        </p>
+                      </div>
                     </div>
 
                     {/* Amount */}
