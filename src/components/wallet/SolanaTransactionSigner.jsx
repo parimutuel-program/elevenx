@@ -6,6 +6,13 @@ import { motion } from 'framer-motion';
 import { Buffer } from 'buffer';
 import { Connection, PublicKey, SystemProgram, Transaction, TransactionInstruction } from '@solana/web3.js';
 
+// Compute Anchor 8-byte discriminator: SHA256("global:<name>").slice(0, 8)
+async function anchorDiscriminator(name) {
+  const msg = new TextEncoder().encode(`global:${name}`);
+  const hash = await crypto.subtle.digest('SHA-256', msg);
+  return Buffer.from(new Uint8Array(hash).slice(0, 8));
+}
+
 export default function SolanaTransactionSigner({ instruction, amount, userBetId, offerId, isOffer, isPlatformInit, onSuccess, onError }) {
   // userBetId, offerId, isOffer, isPlatformInit are optional - used for tracking DB records or flow control after transaction
   const { isConnected, connect } = useWallet();
@@ -173,17 +180,14 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
           { pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false }, // system_program
         ];
         
-        // Use borsh serialization for Anchor compatibility
-        // Discriminator (8 bytes) + outcome (u8) + amount (u64 LE)
+        // Anchor discriminator (8 bytes) + outcome (u8) + amount (u64 LE) = 17 bytes
+        const disc = await anchorDiscriminator('provide_liquidity');
         const data = Buffer.alloc(17);
-        // Anchor discriminator for provide_liquidity
-        data.writeBigUInt64LE(BigInt("7006049193013063754"), 0); // SHA256("global:provide_liquidity").slice(0,8) as u64
-        // Params
+        disc.copy(data, 0);
         data.writeUInt8(instruction.outcome, 8);
         data.writeBigUInt64LE(BigInt(instruction.amountLamports), 9);
-        
-        console.log('[SolanaTransactionSigner] provide_liquidity instruction data:', data.toString('hex'));
-        console.log('[SolanaTransactionSigner] Discriminant (first 8 bytes):', data.slice(0, 8).toString('hex'));
+        console.log('[SolanaTransactionSigner] provide_liquidity discriminator:', disc.toString('hex'));
+        console.log('[SolanaTransactionSigner] full data:', data.toString('hex'));
         
         const provideIx = new TransactionInstruction({
           keys,
@@ -241,12 +245,7 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
           { pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false }, // system_program
         ];
         
-        // Anchor 8-byte discriminator for withdraw_liquidity (instruction index 5)
-        // Discriminator = first 8 bytes of SHA256("account:WithdrawLiquidity")
-        // For simplicity, use Anchor's standard format: [0, 0, 0, 0, 0, 0, 0, 5]
-        const data = Buffer.alloc(8);
-        data.writeUInt32LE(5, 0); // instruction index
-        data.writeUInt32LE(0, 4); // padding
+        const data = await anchorDiscriminator('withdraw_liquidity');
         
         const withdrawIx = new TransactionInstruction({
           keys,
@@ -267,10 +266,7 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
           { pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false }, // system_program
         ];
         
-        // Anchor 8-byte discriminator for refund (instruction index 10)
-        const data = Buffer.alloc(8);
-        data.writeUInt32LE(10, 0);
-        data.writeUInt32LE(0, 4);
+        const data = await anchorDiscriminator('refund');
         
         const refundIx = new TransactionInstruction({
           keys,
@@ -291,11 +287,11 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
           { pubkey: new PublicKey(instruction.lpWalletPubkey), isSigner: false, isWritable: true },
         ];
         
-        // Create instruction data for withdraw_lp_winnings (discriminator + amount parameter)
-        // withdraw_lp_winnings is instruction #6 in the program (takes amount as u64 parameter)
-        const data = Buffer.alloc(9);
-        data.writeUInt8(6, 0); // withdraw_lp_winnings discriminator
-        data.writeBigUInt64LE(BigInt(instruction.withdrawAmountLamports || 0), 1);
+        // Anchor discriminator (8 bytes) + amount (u64 LE) = 16 bytes
+        const wlwDisc = await anchorDiscriminator('withdraw_lp_winnings');
+        const data = Buffer.alloc(16);
+        wlwDisc.copy(data, 0);
+        data.writeBigUInt64LE(BigInt(instruction.withdrawAmountLamports || 0), 8);
         
         const withdrawIx = new TransactionInstruction({
           keys,
