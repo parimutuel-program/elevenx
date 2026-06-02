@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Trophy, ArrowRight, Flame, TrendingUp, Zap, Globe, Star, ChevronRight, Clock, Users, DollarSign, Earth } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import MatchCard from '@/components/betting/MatchCard';
+import { getTeamFlag } from '@/utils/flags';
 
 const WC_PHOTOS = [
   'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=800&q=80',
@@ -15,18 +16,11 @@ const WC_PHOTOS = [
 ];
 
 const FEATURED_MATCHES = [
-  { flag_a: '🇲🇽', flag_b: '🇿🇦', team_a: 'Mexico', team_b: 'South Africa', group: 'Group A', date: 'Jun 11', matchId: '6a1e103ff521e27f3cc8935e', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/a1d1835b2_image.png' },
-  { flag_a: '🇰🇷', flag_b: '🇨🇿', team_a: 'South Korea', team_b: 'Czechia', group: 'Group A', date: 'Jun 12', matchId: '6a1e103ff521e27f3cc8935f', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/cf05870f3_image.png' },
-  { flag_a: '🇨🇦', flag_b: '🇧🇦', team_a: 'Canada', team_b: 'Bosnia and Herzegovina', group: 'Group B', date: 'Jun 12', matchId: '6a1e103ff521e27f3cc89360', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/f0e42aabe_image.png' },
-  { flag_a: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', flag_b: '🇯🇲', team_a: 'England', team_b: 'Jamaica', group: 'Group D', date: 'Jun 14', matchId: '6a1e103ff521e27f3cc89365', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/e4dbfaa4c_image.png' },
+  { team_a: 'Mexico', team_b: 'South Africa', group: 'Group A', date: 'Jun 11', matchId: '6a1e103ff521e27f3cc8935e', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/a1d1835b2_image.png' },
+  { team_a: 'South Korea', team_b: 'Czechia', group: 'Group A', date: 'Jun 12', matchId: '6a1e103ff521e27f3cc8935f', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/cf05870f3_image.png' },
+  { team_a: 'Canada', team_b: 'Bosnia and Herzegovina', group: 'Group B', date: 'Jun 12', matchId: '6a1e103ff521e27f3cc89360', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/f0e42aabe_image.png' },
+  { team_a: 'England', team_b: 'Jamaica', group: 'Group D', date: 'Jun 14', matchId: '6a1e103ff521e27f3cc89365', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/e4dbfaa4c_image.png' },
 ];
-
-// Helper to convert country code to emoji flag
-const getFlagEmoji = (countryCode) => {
-  if (!countryCode) return '🏳️';
-  const codePoints = countryCode.toUpperCase().split('').map(char => 127397 + char.charCodeAt());
-  return String.fromCodePoint(...codePoints);
-};
 
 
 
@@ -240,7 +234,7 @@ export default function Home() {
                 {/* Teams */}
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-center flex-1">
-                    <div className="text-2xl mb-1">{fm.flag_a}</div>
+                    <div className="text-2xl mb-1">{getTeamFlag(fm.team_a)}</div>
                     <p className="font-heading font-bold text-xs leading-tight">{fm.team_a}</p>
                   </div>
                   <div className="flex flex-col items-center gap-0.5 px-2">
@@ -248,7 +242,7 @@ export default function Home() {
                     <span className="text-[9px] text-muted-foreground">{fm.date}</span>
                   </div>
                   <div className="text-center flex-1">
-                    <div className="text-2xl mb-1">{fm.flag_b}</div>
+                    <div className="text-2xl mb-1">{getTeamFlag(fm.team_b)}</div>
                     <p className="font-heading font-bold text-xs leading-tight">{fm.team_b}</p>
                   </div>
                 </div>
