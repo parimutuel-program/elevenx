@@ -107,13 +107,14 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
       setAmount('');
       setInstruction(null);
       setShowSigner(false);
+      
+      // Wait a bit for Solana to propagate the change
+      console.log('Waiting 3 seconds for Solana to propagate...');
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
       // Refresh market status after transaction
+      console.log('Checking market status after transaction...');
       await checkMarketStatus();
-      // If this was a market creation, the user might want to provide liquidity
-      if (marketStatus?.status === 'not_created') {
-        // Market was just created, user can now provide liquidity
-        console.log('Market created successfully, ready for liquidity provision');
-      }
     } catch (err) {
       console.error('Failed to finalize:', err);
     }
