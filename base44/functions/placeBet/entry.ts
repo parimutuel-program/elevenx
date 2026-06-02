@@ -2,8 +2,6 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 import { PublicKey } from 'npm:@solana/web3.js@1.98.4';
 import { Buffer } from 'node:buffer';
 
-const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA_PROGRAM_ID') || 'ElevenXProgramID1111111111111111111111111';
-
 /**
  * Bettor places a fixed-odds bet matched against available LP liquidity.
  * Returns the Solana instruction for the frontend to sign.
@@ -16,6 +14,19 @@ const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA_PROGRAM_ID') || 'ElevenXProgramID
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    
+    // Check program ID is configured
+    const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA__PROGRAM_ID');
+    if (!SOLANA_PROGRAM_ID) {
+      return Response.json({ error: 'Solana program ID not configured. Please contact support.' }, { status: 500 });
+    }
+    
+    // Validate program ID format
+    const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+    if (!base58Regex.test(SOLANA_PROGRAM_ID)) {
+      return Response.json({ error: 'Invalid Solana program ID configuration. Please contact support.' }, { status: 500 });
+    }
+    
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -29,7 +40,6 @@ Deno.serve(async (req) => {
     if (amount <= 0) return Response.json({ error: 'Amount must be positive' }, { status: 400 });
 
     // Validate wallet address is a valid Solana base58 address (32-44 chars, valid base58)
-    const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
     if (!base58Regex.test(walletAddress)) {
       return Response.json({ 
         error: 'Invalid wallet address format. Please reconnect your wallet.', 
