@@ -44,6 +44,7 @@ export default function MatchDetail() {
     queryFn: () => base44.entities.Bet.filter({ match_id: matchId }),
     enabled: !!matchId,
     refetchInterval: 20000,
+    refetchOnWindowFocus: true,
   });
   const bet = bets[0] || null;
 
@@ -246,13 +247,19 @@ export default function MatchDetail() {
       )}
 
       {/* ── Admin: Create Market On-Chain ── */}
-      {hasBet && isAdmin && isOpen && !bet.solana_market_created && (
+      {hasBet && isAdmin && isOpen && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           className="bg-card border border-primary/20 rounded-2xl p-5 text-center">
           <Zap className="w-8 h-8 text-primary mx-auto mb-3" />
-          <h3 className="font-heading font-bold mb-1">Create Market On-Chain</h3>
-          <p className="text-xs text-muted-foreground mb-4">Initialize the pari-mutuel market on Solana</p>
-          {!marketCreationTx ? (
+          <h3 className="font-heading font-bold mb-1">
+            {bet.solana_market_created ? 'Market On-Chain ✓' : 'Create Market On-Chain'}
+          </h3>
+          <p className="text-xs text-muted-foreground mb-4">
+            {bet.solana_market_created 
+              ? `Market initialized at ${bet.solana_market_pda?.slice(0, 20)}...`
+              : 'Initialize the pari-mutuel market on Solana'}
+          </p>
+          {!bet.solana_market_created && !marketCreationTx && (
             <Button onClick={async () => {
               const res = await base44.functions.invoke('createMarketOnChain', { bet_id: bet.id, match_id: match.id });
               if (res.data.error) {
@@ -272,7 +279,8 @@ export default function MatchDetail() {
               className="bg-primary hover:bg-primary/90 font-heading font-bold h-11 rounded-xl px-8">
               Prepare Transaction
             </Button>
-          ) : (
+          )}
+          {!bet.solana_market_created && marketCreationTx && (
             <SolanaTransactionSigner
               instruction={marketCreationTx}
               amount={0}
@@ -290,6 +298,29 @@ export default function MatchDetail() {
               onError={(err) => alert('Failed: ' + err.message)}
             />
           )}
+          {bet.solana_market_created ? (
+            <div className="flex items-center justify-center gap-2">
+              <Badge className="bg-accent/20 text-accent text-xs py-2 px-4 rounded-xl">
+                <CheckCircle2 className="w-3 h-3 mr-1" /> Initialized
+              </Badge>
+              <Button size="sm" variant="outline" onClick={async () => {
+                // Check on-chain status and sync if needed
+                const res = await base44.functions.invoke('checkMarketStatus', { match_id: match.id });
+                if (res.data.status === 'initialized') {
+                  await base44.entities.Bet.update(bet.id, {
+                    solana_market_created: true,
+                    solana_market_pda: res.data.marketPda || bet.solana_market_pda,
+                  });
+                  alert('Status synced with blockchain!');
+                  queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
+                } else {
+                  alert('Market not found on-chain. Please create it.');
+                }
+              }} className="h-8 text-xs rounded-lg">
+                Sync Status
+              </Button>
+            </div>
+          ) : null}
         </motion.div>
       )}
 
@@ -297,31 +328,6 @@ export default function MatchDetail() {
         <div className="text-center py-10 bg-card border border-border/50 rounded-2xl">
           <p className="text-muted-foreground text-sm">Betting market not open yet. Check back soon!</p>
         </div>
-      )}
-
-      {/* ── Admin: Create Market On-Chain ── */}
-      {hasBet && isAdmin && isOpen && !bet.solana_market_created && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="bg-card border border-primary/20 rounded-2xl p-5 text-center">
-          <Zap className="w-8 h-8 text-primary mx-auto mb-3" />
-          <h3 className="font-heading font-bold mb-1">Create Market On-Chain</h3>
-          <p className="text-xs text-muted-foreground mb-4">Initialize the pari-mutuel market on Solana</p>
-          <Button onClick={async () => {
-            const res = await base44.functions.invoke('createMarketOnChain', { bet_id: bet.id, match_id: match.id });
-            if (res.data.error) {
-              alert('Error: ' + res.data.error);
-            } else {
-              // Sign the transaction
-              const { solana_instruction } = res.data;
-              // This will be handled by a transaction signer component
-              alert('Market creation transaction ready! Sign to continue.');
-              // TODO: Add transaction signer here
-            }
-          }}
-            className="bg-primary hover:bg-primary/90 font-heading font-bold h-11 rounded-xl px-8">
-            Create On-Chain
-          </Button>
-        </motion.div>
       )}
 
       {/* ── Admin: Set Stats API ID + Fetch Odds ── */}
