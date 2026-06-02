@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Trophy, Settings, Gavel, RefreshCw, Shield, Radio, CheckCircle2, AlertCircle, Zap, BarChart2 } from 'lucide-react';
+import { Plus, Trophy, Settings, Gavel, RefreshCw, Shield, Radio, CheckCircle2, AlertCircle, Zap, BarChart2, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
@@ -41,6 +41,22 @@ export default function Admin() {
     refetchInterval: 30000,
   });
 
+  const [syncResult, setSyncResult] = useState(null);
+
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      const res = await base44.functions.invoke('syncWorldCupMatches', {});
+      if (res.data.error) throw new Error(res.data.error);
+      return res.data;
+    },
+    onSuccess: (data) => {
+      setSyncResult(data.message);
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
+      queryClient.invalidateQueries({ queryKey: ['bets'] });
+    },
+    onError: (err) => setSyncResult('Error: ' + err.message),
+  });
+
   const initPlatformMutation = useMutation({
     mutationFn: async () => {
       const response = await base44.functions.invoke('initPlatformConfig', {});
@@ -69,6 +85,33 @@ export default function Admin() {
 
   return (
     <div className="space-y-8">
+      {/* Sync World Cup Matches */}
+      <div className="bg-card border border-accent/20 rounded-xl p-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <Download className="w-5 h-5 text-accent" />
+            <div>
+              <p className="text-sm font-bold text-foreground">Sync World Cup 2026 from API</p>
+              <p className="text-xs text-muted-foreground">Imports all matches & sets live odds automatically. Safe to run multiple times.</p>
+            </div>
+          </div>
+          <Button
+            onClick={() => { setSyncResult(null); syncMutation.mutate(); }}
+            disabled={syncMutation.isPending}
+            className="bg-accent hover:bg-accent/90 text-accent-foreground font-heading font-bold rounded-xl h-9"
+          >
+            {syncMutation.isPending ? (
+              <><RefreshCw className="w-4 h-4 animate-spin mr-2" />Syncing...</>
+            ) : (
+              <><Download className="w-4 h-4 mr-2" />Sync Now</>
+            )}
+          </Button>
+        </div>
+        {syncResult && (
+          <p className="mt-3 text-xs text-accent bg-accent/10 rounded-lg px-3 py-2">{syncResult}</p>
+        )}
+      </div>
+
       {/* Platform Initialization */}
       <div className="bg-card border border-primary/20 rounded-xl p-4">
         <div className="flex items-center justify-between">
