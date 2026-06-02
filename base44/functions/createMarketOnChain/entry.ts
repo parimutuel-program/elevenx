@@ -52,10 +52,32 @@ Deno.serve(async (req) => {
           actualSize: accountInfo.data.length,
           expectedSize: expectedMinSize,
         });
+        
+        // Check if there's an existing Bet for this match - if so, return its ID for retry
+        const existingBets = await base44.entities.Bet.filter({ match_id: match_id });
+        if (existingBets && existingBets.length > 0) {
+          const existingBet = existingBets[0];
+          console.log('Found existing bet, returning for retry:', existingBet.id);
+          return Response.json({
+            success: false,
+            error: 'Market exists but needs retry. Attempting to use existing bet.',
+            betId: existingBet.id,
+            marketPda: marketPda.toBase58(),
+            needsRetry: true,
+            solana_instruction: {
+              instruction_type: 'create_market',
+              programId: SOLANA_PROGRAM_ID,
+              marketPda: marketPda.toBase58(),
+              instruction_data: instructionData.toString('base64'),
+            },
+            message: 'Retry: Sign to initialize existing market PDA',
+          });
+        }
+        
         return Response.json({
           success: false,
           error: 'Market account exists but is not properly initialized. The market creation may have failed.',
-          hint: 'The market PDA exists with incorrect size. This may require manual intervention or creating a new bet entity.',
+          hint: 'The market PDA exists with incorrect size. Try creating a new match entity or contact support.',
           marketPda: marketPda.toBase58(),
           actualSize: accountInfo.data.length,
           needsReinitialization: true,

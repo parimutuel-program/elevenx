@@ -139,11 +139,24 @@ export default function MatchDetail() {
     },
     onSuccess: (result) => {
       console.log('[MatchDetail] createMarketMutation onSuccess:', result);
-      if (result.response.data.solana_instruction) {
+      const responseData = result.response.data;
+      
+      // Handle retry case (existing bet found, needs to retry transaction)
+      if (responseData.needsRetry && responseData.solana_instruction) {
+        console.log('[MatchDetail] Retry needed - setting transaction for existing bet');
+        setPendingTransaction({
+          instruction: responseData.solana_instruction,
+          amount: 0,
+          isOffer: false,
+        });
+        return;
+      }
+      
+      if (responseData.solana_instruction) {
         // Need to sign transaction to create market on-chain
         console.log('[MatchDetail] Setting pending transaction for Phantom');
         setPendingTransaction({
-          instruction: result.response.data.solana_instruction,
+          instruction: responseData.solana_instruction,
           amount: 0,
           isOffer: false,
         });
@@ -153,6 +166,20 @@ export default function MatchDetail() {
     onError: (error) => {
       console.error('[MatchDetail] createMarketMutation error:', error);
       const backendError = error.response?.data?.error || error.message || 'Unknown error';
+      
+      // Check if it's a retry case
+      if (error.response?.data?.needsRetry && error.response?.data?.solana_instruction) {
+        console.log('[MatchDetail] Retry case detected, prompting user');
+        if (confirm('Market needs retry initialization. Would you like to retry the transaction?')) {
+          setPendingTransaction({
+            instruction: error.response.data.solana_instruction,
+            amount: 0,
+            isOffer: false,
+          });
+          return;
+        }
+      }
+      
       alert('Failed to create market: ' + backendError);
     },
   });
