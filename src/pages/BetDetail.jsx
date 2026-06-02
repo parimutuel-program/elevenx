@@ -12,6 +12,13 @@ import { motion } from 'framer-motion';
 import OddsBar from '@/components/betting/OddsBar';
 import BetSlip from '@/components/betting/BetSlip';
 
+// Helper to convert country code to flag emoji
+function getFlagEmoji(countryCode) {
+  if (!countryCode) return '🏳️';
+  const code = countryCode.toUpperCase();
+  return code.split('').map(c => String.fromCodePoint(c.charCodeAt(0) + 127397)).join('');
+}
+
 export default function BetDetail() {
   const { betId } = useParams();
   const { user } = useAuth();
@@ -107,7 +114,7 @@ export default function BetDetail() {
 
         <div className="flex items-center justify-between gap-6">
           <div className="flex-1 text-center">
-            <div className="text-4xl mb-2">{match.team_a_flag || '🏳️'}</div>
+            <div className="text-5xl mb-2">{getFlagEmoji(match.team_a_flag)}</div>
             <p className="font-heading font-bold">{match.team_a}</p>
           </div>
           <div className="text-center">
@@ -122,7 +129,7 @@ export default function BetDetail() {
             )}
           </div>
           <div className="flex-1 text-center">
-            <div className="text-4xl mb-2">{match.team_b_flag || '🏳️'}</div>
+            <div className="text-5xl mb-2">{getFlagEmoji(match.team_b_flag)}</div>
             <p className="font-heading font-bold">{match.team_b}</p>
           </div>
         </div>
