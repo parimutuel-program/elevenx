@@ -33,6 +33,12 @@ Deno.serve(async (req) => {
       programId
     );
 
+    // Derive fee vault PDA (seed: "fee_vault")
+    const [feeVaultPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('fee_vault')],
+      programId
+    );
+
     // Check if already exists
     const accountInfo = await connection.getAccountInfo(platformConfigPda);
     if (accountInfo) {
@@ -70,17 +76,20 @@ Deno.serve(async (req) => {
 
     const adminPubkey = user.id; // We'll need to get the actual Solana pubkey from frontend
     console.log('Platform config PDA:', platformConfigPda.toBase58());
+    console.log('Fee vault PDA:', feeVaultPda.toBase58());
     
     return Response.json({
       success: true,
       alreadyExists: false,
       platformConfigPda: platformConfigPda.toBase58(),
+      feeVaultPda: feeVaultPda.toBase58(),
       solana_instruction: {
         instruction_type: 'initialize_platform',
         programId: SOLANA_PROGRAM_ID,
         instruction_data: instructionData.toString('base64'),
         accounts: {
           platformConfig: platformConfigPda.toBase58(),
+          feeVault: feeVaultPda.toBase58(),
           admin: adminPubkey, // Frontend will replace with actual Solana pubkey
           systemProgram: '11111111111111111111111111111111',
         }

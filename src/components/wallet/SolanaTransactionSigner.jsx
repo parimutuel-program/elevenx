@@ -41,16 +41,19 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         // Initialize platform config
         console.log('Creating initialize_platform instruction:', instruction);
         console.log('Platform config PDA:', instruction.accounts?.platformConfig);
+        console.log('Fee vault PDA:', instruction.accounts?.feeVault);
         console.log('Program ID:', instruction.programId);
         console.log('Admin signer:', provider.publicKey.toBase58());
         
         try {
           const programId = new PublicKey(instruction.programId);
           const platformPda = new PublicKey(instruction.accounts.platformConfig);
+          const feeVaultPda = new PublicKey(instruction.accounts.feeVault);
           
           const keys = [
-            { pubkey: platformPda, isSigner: false, isWritable: true },
-            { pubkey: provider.publicKey, isSigner: true, isWritable: true }, // admin
+            { pubkey: platformPda, isSigner: false, isWritable: true }, // platform_config
+            { pubkey: feeVaultPda, isSigner: false, isWritable: true }, // fee_vault
+            { pubkey: provider.publicKey, isSigner: true, isWritable: true }, // admin (payer)
             { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
           ];
           
@@ -66,7 +69,7 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
           
           console.log('Instruction created successfully:', {
             programId: initIx.programId.toBase58(),
-            keys: initIx.keys.map(k => k.pubkey.toBase58()),
+            keys: initIx.keys.map(k => ({ pubkey: k.pubkey.toBase58(), isSigner: k.isSigner, isWritable: k.isWritable })),
           });
           
           transaction.add(initIx);
