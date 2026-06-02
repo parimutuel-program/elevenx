@@ -26,9 +26,28 @@ Deno.serve(async (req) => {
     // Validate base58 format
     const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
     if (!base58Regex.test(wallet_address)) {
+      console.error('[createBetOffer] Invalid wallet address:', wallet_address);
+      console.error('[createBetOffer] Failed regex test');
       return Response.json({ 
         error: 'Invalid wallet address format — contains non-base58 characters', 
-        hint: 'Address must be 32-44 base58 characters'
+        hint: 'Address must be 32-44 base58 characters',
+        debug: {
+          address: wallet_address,
+          length: wallet_address.length,
+          passedRegex: base58Regex.test(wallet_address)
+        }
+      }, { status: 400 });
+    }
+
+    // Try to create PublicKey to validate
+    try {
+      new PublicKey(wallet_address);
+    } catch (e) {
+      console.error('[createBetOffer] PublicKey validation failed:', e.message, 'for address:', wallet_address);
+      return Response.json({ 
+        error: 'Invalid Solana wallet address', 
+        hint: e.message,
+        debug: { address: wallet_address }
       }, { status: 400 });
     }
 
