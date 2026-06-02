@@ -35,7 +35,10 @@ Deno.serve(async (req) => {
     const userBet = userBets[0];
     if (!userBet) return Response.json({ error: 'UserBet not found' }, { status: 404 });
     if (userBet.role !== 'lp') return Response.json({ error: 'Not an LP bet' }, { status: 400 });
-    if (userBet.status !== 'pending') return Response.json({ error: 'Bet is not pending' }, { status: 400 });
+    // Allow withdrawal for pending bets OR refunded bets in settled markets (unmatched funds)
+    if (userBet.status !== 'pending' && userBet.status !== 'refunded') {
+      return Response.json({ error: 'Bet is not eligible for withdrawal' }, { status: 400 });
+    }
 
     // Fetch BetOffer to get the unmatched amount
     if (!userBet.offer_id) return Response.json({ error: 'No offer linked' }, { status: 400 });
@@ -62,7 +65,7 @@ Deno.serve(async (req) => {
     const bet = bets[0];
     if (!bet) return Response.json({ error: 'Bet not found' }, { status: 400 });
     
-    // Allow withdrawal if bet is open OR settled (for unmatched funds in settled markets)
+    // Allow withdrawal if market is open OR settled (for unmatched funds)
     if (bet.status !== 'open' && bet.status !== 'settled') {
       return Response.json({ error: 'Cannot withdraw from this market' }, { status: 400 });
     }

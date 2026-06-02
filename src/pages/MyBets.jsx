@@ -248,11 +248,7 @@ function BetRow({ bet, index, walletAddress }) {
 
   const isWonAndClaimable = bet.status === 'won';
   
-  // Check if this is an unmatched LP bet that can be withdrawn
-  const canWithdraw = bet.role === 'lp' && bet.status === 'pending';
-  const canClaimRefund = bet.status === 'refunded';
-  
-  // For LP bets: check the offer to determine withdrawal type
+  // For LP bets: check the offer and bet to determine withdrawal type
   const { data: betForLpCheck } = useQuery({
     queryKey: ['bet', bet.bet_id],
     queryFn: () => base44.entities.Bet.list().then(bets => bets.find(b => b.id === bet.bet_id)),
@@ -268,8 +264,11 @@ function BetRow({ bet, index, walletAddress }) {
   // Show "Withdraw Winnings" only if LP has matched funds AND market settled AND LP won
   const canWithdrawLpWinnings = bet.role === 'lp' && isMarketSettled && lpWon && hasMatchedFunds;
   
-  // Show "Withdraw" for unmatched funds (even in settled markets)
-  const canWithdrawUnmatched = bet.role === 'lp' && hasUnmatchedFunds && (bet.status === 'pending' || (isMarketSettled && !hasMatchedFunds));
+  // Show "Withdraw" for unmatched funds (pending LP offers OR settled markets with unmatched funds)
+  const canWithdrawUnmatched = bet.role === 'lp' && hasUnmatchedFunds && (bet.status === 'pending' || bet.status === 'refunded');
+  
+  // Show "Claim Refund" for regular bettors (non-LP) with refunded status
+  const canClaimRefund = bet.role !== 'lp' && bet.status === 'refunded';
 
   return (
     <motion.div
@@ -310,7 +309,7 @@ function BetRow({ bet, index, walletAddress }) {
                 )}
               </Button>
             </>
-          ) : canWithdraw || canWithdrawUnmatched ? (
+          ) : canWithdrawUnmatched ? (
             withdrawInstruction ? (
               <div className="flex-1">
                 <SolanaTransactionSigner
