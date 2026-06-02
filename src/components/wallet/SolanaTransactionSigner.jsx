@@ -190,7 +190,7 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         let onChainErr = confirmError.value?.err || confirmError.err;
         
         // If error is nested differently, try to find it
-        if (!onChainErr && confirmError.message.includes('Custom')) {
+        if (!onChainErr && confirmError.message && confirmError.message.includes('Custom')) {
           const match = confirmError.message.match(/Custom["\s:]*(\d+)/);
           if (match) {
             throw new Error(`On-chain program error code ${match[1]}. Check your Solana program.`);
