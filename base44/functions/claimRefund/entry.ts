@@ -86,13 +86,12 @@ Deno.serve(async (req) => {
       refundAmount: userBet.amount,
       userBetId,
       solana_instruction: {
-        instruction_type: 'claim_winnings',
+        instruction_type: 'claim_refund',
         programId: SOLANA_PROGRAM_ID,
         marketPda: marketPda.toBase58(),
         positionPda: positionPda.toBase58(),
-        feeVaultPda: feeVaultPda.toBase58(),
         bettorPubkey: userPubkey.toBase58(),
-        netPayoutLamports: Math.round(userBet.amount * 1_000_000_000),
+        refundAmountLamports: Math.round(userBet.amount * 1_000_000_000),
       },
       message: `Sign to claim your refund of ◎${userBet.amount}`,
     });
