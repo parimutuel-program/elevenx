@@ -202,12 +202,12 @@ Deno.serve(async (req) => {
     // Fetch market account to check on-chain oracle_odds (reuse existing marketAccountInfo)
     if (marketAccountInfo) {
       const data = marketAccountInfo.data;
-      // BetMarket layout: discriminator(8) + match_id(32) + vote_tally(32) + open_until(8) + settle_after(8) + 
-      // fee_percent(2) + outcome_count(1) + oracle_odds[3](24) + ... + bump(1)
-      // oracle_odds starts at offset: 8+32+32+8+8+2+1 = 91
-      const oracleOddsA = data.readBigUInt64LE(91);
-      const oracleOddsB = data.readBigUInt64LE(99);
-      const oracleOddsDraw = data.readBigUInt64LE(107);
+      // BetMarket layout per Rust: discriminator(8) + match_id(32) + outcome_names(96) + open_until(8) + 
+      // settle_after(8) + fee_percent(2) + outcome_count(1) + winning_outcome(1) + oracle_odds[3](24) + ...
+      // oracle_odds starts at offset: 8+32+96+8+8+2+1+1 = 156
+      const oracleOddsA = data.readBigUInt64LE(156);
+      const oracleOddsB = data.readBigUInt64LE(164);
+      const oracleOddsDraw = data.readBigUInt64LE(172);
       console.log('On-chain oracle_odds (bps):', {
         a: Number(oracleOddsA) / 100,
         b: Number(oracleOddsB) / 100,
