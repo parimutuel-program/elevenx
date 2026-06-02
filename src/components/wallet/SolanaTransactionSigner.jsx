@@ -42,14 +42,33 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         console.log('Creating create_market program instruction:', instruction);
         
         const programId = new PublicKey(instruction.programId);
-        const keys = [
-          { pubkey: new PublicKey(instruction.marketPda), isSigner: false, isWritable: true },
-          { pubkey: provider.publicKey, isSigner: true, isWritable: true }, // payer
-          { pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false }, // system_program
-        ];
         
-        // Use the instruction_data from backend (base64 encoded)
+        // Decode the instruction data from base64
         const data = Buffer.from(instruction.instruction_data, 'base64');
+        console.log('[SolanaTransactionSigner] Decoded instruction data length:', data.length);
+        console.log('[SolanaTransactionSigner] First 8 bytes (discriminator):', data.slice(0, 8).toString('hex'));
+        
+        // Build keys from accounts object if provided
+        const keys = [];
+        if (instruction.accounts) {
+          const accounts = instruction.accounts;
+          keys.push({ pubkey: new PublicKey(accounts.market), isSigner: false, isWritable: true });
+          keys.push({ pubkey: provider.publicKey, isSigner: true, isWritable: true }); // payer
+          keys.push({ pubkey: SystemProgram.programId, isSigner: false, isWritable: false });
+          if (accounts.voteTally) {
+            keys.push({ pubkey: new PublicKey(accounts.voteTally), isSigner: false, isWritable: true });
+          }
+          if (accounts.platformConfig) {
+            keys.push({ pubkey: new PublicKey(accounts.platformConfig), isSigner: false, isWritable: true });
+          }
+        } else {
+          // Fallback for legacy format
+          keys.push({ pubkey: new PublicKey(instruction.marketPda), isSigner: false, isWritable: true });
+          keys.push({ pubkey: provider.publicKey, isSigner: true, isWritable: true });
+          keys.push({ pubkey: SystemProgram.programId, isSigner: false, isWritable: false });
+        }
+        
+        console.log('[SolanaTransactionSigner] create_market keys:', keys.map(k => k.pubkey.toBase58()));
         
         const createMarketIx = new TransactionInstruction({
           keys,

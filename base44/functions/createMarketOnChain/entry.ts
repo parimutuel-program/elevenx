@@ -114,14 +114,13 @@ Deno.serve(async (req) => {
     }
 
     // Prepare create_market instruction
-    // Anchor discriminator for create_market (first 8 bytes of SHA256("global:create_market"))
-    // Pre-computed: [0x17, 0x88, 0x06, 0x4f, 0x3b, 0x87, 0x70, 0x14]
+    // Anchor discriminator for create_market (first 8 bytes of SHA256("account:CreateMarket"))
+    // Using Anchor's instruction discriminator format
     const discriminator = Buffer.from([0x17, 0x88, 0x06, 0x4f, 0x3b, 0x87, 0x70, 0x14]);
 
     // Prepare params for create_market
-    // This needs to match the CreateMarketParams struct in the Solana program
     const openUntil = bet.open_until ? Math.floor(new Date(bet.open_until).getTime() / 1000) : Math.floor(Date.now() / 1000) + 86400;
-    const settleAfter = openUntil + 3600; // 1 hour after betting closes
+    const settleAfter = openUntil + 3600;
 
     // Convert outcome names to 32-byte arrays
     const outcomeNames = [
@@ -133,17 +132,14 @@ Deno.serve(async (req) => {
     Buffer.from(bet.outcome_b || 'B').copy(outcomeNames[1], 0, 0, Math.min(bet.outcome_b?.length || 1, 32));
     Buffer.from(bet.outcome_draw || 'Draw').copy(outcomeNames[2], 0, 0, Math.min(bet.outcome_draw?.length || 4, 32));
 
-    // Oracle odds in basis points
     const oracleOdds = [
-      bet.oracle_odds_a || 200,
-      bet.oracle_odds_b || 300,
-      bet.oracle_odds_draw || 320,
+      BigInt(bet.oracle_odds_a || 200),
+      BigInt(bet.oracle_odds_b || 300),
+      BigInt(bet.oracle_odds_draw || 320),
     ];
 
-    // Additional data for create_market instruction
-    // Format: discriminator (8) + params
-    // Total size needed: 32 (match_id) + 96 (outcome_names) + 8 + 8 + 2 + 1 + 24 = 171 bytes
-    const paramsData = Buffer.alloc(200); // Sufficient buffer
+    // Build instruction data: discriminator + serialized CreateMarketParams
+    const paramsData = Buffer.alloc(171);
     let offset = 0;
     
     // match_id (32 bytes)
@@ -166,29 +162,37 @@ Deno.serve(async (req) => {
     paramsData.writeBigInt64LE(BigInt(settleAfter), offset);
     offset += 8;
     
-    // fee_percent (u16 = 2 bytes)
+    // fee_percent_override (u16 = 2 bytes)
     paramsData.writeUInt16LE(bet.fee_percent || 200, offset);
     offset += 2;
     
-    // outcome_count (u8 = 1 byte) - 3 for football with draw
+    // outcome_count (u8 = 1 byte)
     paramsData.writeUInt8(3, offset);
     offset += 1;
     
     // oracle_odds (3 x u64 = 24 bytes)
-    paramsData.writeBigUInt64LE(BigInt(oracleOdds[0]), offset);
+    paramsData.writeBigUInt64LE(oracleOdds[0], offset);
     offset += 8;
-    paramsData.writeBigUInt64LE(BigInt(oracleOdds[1]), offset);
+    paramsData.writeBigUInt64LE(oracleOdds[1], offset);
     offset += 8;
-    paramsData.writeBigUInt64LE(BigInt(oracleOdds[2]), offset);
+    paramsData.writeBigUInt64LE(oracleOdds[2], offset);
     offset += 8;
 
-    const instructionData = Buffer.concat([discriminator, paramsData.slice(0, offset)]);
+    const instructionData = Buffer.concat([discriminator, paramsData]);
 
-    const keys = [
-      { pubkey: marketPda, isSigner: false, isWritable: true },
-      { pubkey: programId, isSigner: false, isWritable: false },
-      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-    ];
+    console.log('Market PDA derived:', marketPda.toBase58());
+    console.log('Instruction data length:', instructionData.length);
+
+    // Derive additional PDAs needed for create_market
+    const [voteTallyPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('vote_tally'), marketPda.toBuffer()],
+      programId
+    );
+    
+    const [platformConfigPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('platform_config')],
+      programId
+    );
 
     return Response.json({
       success: true,
@@ -199,6 +203,14 @@ Deno.serve(async (req) => {
         programId: SOLANA_PROGRAM_ID,
         marketPda: marketPda.toBase58(),
         instruction_data: instructionData.toString('base64'),
+        // Include all accounts needed for create_market instruction
+        accounts: {
+          market: marketPda.toBase58(),
+          payer: '', // Will be filled by frontend with signer's public key
+          systemProgram: '11111111111111111111111111111111',
+          voteTally: voteTallyPda.toBase58(),
+          platformConfig: platformConfigPda.toBase58(),
+        }
       },
       message: 'Sign to create market on-chain',
     });
