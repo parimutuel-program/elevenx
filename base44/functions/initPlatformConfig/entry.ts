@@ -11,7 +11,7 @@ const SOLANA_RPC_URL = 'https://api.devnet.solana.com';
  */
 Deno.serve(async (req) => {
   try {
-    const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA__PROGRAM_ID');
+    const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA_PROGRAM_ID') || Deno.env.get('SOLANA__PROGRAM_ID');
     if (!SOLANA_PROGRAM_ID) {
       return Response.json({ error: 'SOLANA__PROGRAM_ID not configured' }, { status: 500 });
     }
