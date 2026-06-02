@@ -73,6 +73,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
     console.log('[PlaceBetPanel] handleGetInstruction called:', {
       mode,
       wallet,
+      walletAddress,
       walletSource: walletAddress ? 'context' : 'localStorage',
       walletValid: validateWalletAddress(wallet),
       bet_id: bet?.id,
@@ -81,6 +82,10 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
       selectedOffer: selectedOffer?.id,
       stakeNum,
     });
+    
+    // Debug: show both wallets
+    console.log('[PlaceBetPanel] Context walletAddress:', walletAddress);
+    console.log('[PlaceBetPanel] LocalStorage wallet:', getWalletAddress());
 
     if (!wallet) { setPrepareError('Wallet not connected'); return; }
 
