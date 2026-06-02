@@ -31,12 +31,8 @@ export default function Admin() {
   const { data: oracleStatus } = useQuery({
     queryKey: ['oracleStatus'],
     queryFn: async () => {
-      try {
-        const res = await base44.functions.invoke('oracleService', { matchId: 'test', provider: 'manual' });
-        return res.data.oracleResult || {};
-      } catch {
-        return { provider: 'manual', verified: false };
-      }
+      // Just return mock status - no need to call backend
+      return { provider: 'manual', verified: false };
     },
     refetchInterval: 30000,
   });
