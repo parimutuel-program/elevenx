@@ -424,16 +424,22 @@ export default function MatchDetail() {
                 <p className="text-[10px] text-muted-foreground mt-1">
                   {o.odds !== null ? 'oracle fixed odds' : 'odds not set'}
                 </p>
-                <p className="text-[10px] text-muted-foreground">
-                  ◎{o.totalLp.toFixed(2)} total LP · ◎{Math.max(0, o.available).toFixed(2)} avail.
-                </p>
+                <div className="flex items-center justify-center gap-2 mt-1">
+                  <span className="text-[10px] font-bold text-foreground">◎{o.totalLp.toFixed(2)} LP</span>
+                  {o.available > 0 && (
+                    <span className="text-[10px] text-accent">· ◎{o.available.toFixed(2)} unmatched</span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
 
           {totalPool > 0 && (
-            <div className="text-xs text-muted-foreground text-center">
-              ◎{totalPool.toLocaleString()} total pool · ◎{totalLiquidity.toLocaleString()} available across all outcomes
+            <div className="text-xs text-center">
+              <span className="font-bold text-foreground">◎{totalPool.toFixed(2)} total LP</span>
+              {totalLiquidity > 0 && (
+                <span className="text-muted-foreground"> · <span className="text-accent">◎{totalLiquidity.toFixed(2)} unmatched</span></span>
+              )}
             </div>
           )}
 
