@@ -23,6 +23,15 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Wallet address required' }, { status: 400 });
     }
 
+    // Validate base58 format
+    const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+    if (!base58Regex.test(wallet_address)) {
+      return Response.json({ 
+        error: 'Invalid wallet address format — contains non-base58 characters', 
+        hint: 'Address must be 32-44 base58 characters'
+      }, { status: 400 });
+    }
+
     // Load offer
     const offers = await base44.entities.BetOffer.filter({ id: offer_id });
     const offer = offers[0];

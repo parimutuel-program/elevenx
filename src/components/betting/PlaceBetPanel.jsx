@@ -32,10 +32,17 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
     ? stakeNum + (stakeNum / (selectedOffer.odds_at_creation - 1))
     : 0;
 
+  const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+
   const getWalletAddress = () => {
     const s = localStorage.getItem('elevenx_wallet_session');
     if (!s) return null;
     try { const p = JSON.parse(s); return p.address || p; } catch { return s; }
+  };
+
+  const validateWalletAddress = (addr) => {
+    if (!addr || typeof addr !== 'string') return false;
+    return base58Regex.test(addr);
   };
 
   const [isPreparing, setIsPreparing] = useState(false);
@@ -44,6 +51,11 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
   const handleGetInstruction = async () => {
     const wallet = getWalletAddress();
     if (!wallet) { setPrepareError('Wallet not connected'); return; }
+
+    if (!validateWalletAddress(wallet)) {
+      setPrepareError('Invalid wallet address — please reconnect your wallet');
+      return;
+    }
 
     setIsPreparing(true);
     setPrepareError(null);
