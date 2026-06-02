@@ -507,6 +507,9 @@ function AdminBetRow({ bet, matches, index }) {
       oracle_odds_a: parseInt(oddsForm.a) || 200,
       oracle_odds_draw: parseInt(oddsForm.draw) || 320,
       oracle_odds_b: parseInt(oddsForm.b) || 300,
+      odds_a: (parseInt(oddsForm.a) || 200) / 100,
+      odds_draw: (parseInt(oddsForm.draw) || 320) / 100,
+      odds_b: (parseInt(oddsForm.b) || 300) / 100,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bets'] });
