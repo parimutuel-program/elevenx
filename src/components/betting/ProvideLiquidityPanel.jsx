@@ -25,7 +25,11 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
   const checkMarketStatus = async () => {
     try {
       console.log('[ProvideLiquidityPanel] Checking market status for match:', match_id);
-      const response = await base44.functions.invoke('checkMarketStatus', { match_id });
+      // Add timestamp to prevent caching
+      const response = await base44.functions.invoke('checkMarketStatus', { 
+        match_id,
+        _t: Date.now(), // Cache buster
+      });
       console.log('[ProvideLiquidityPanel] Market status response:', response.data);
       setMarketStatus(response.data);
     } catch (err) {
@@ -126,8 +130,8 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
       
       if (isPlatformInit) {
         setIsInitializingPlatform(false);
-        console.log('Platform initialized, waiting 5 seconds before creating market...');
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        console.log('Platform initialized, waiting 8 seconds before creating market...');
+        await new Promise(resolve => setTimeout(resolve, 8000));
         console.log('Now creating market...');
         setError(null);
         await handleCreateMarket();
@@ -135,22 +139,33 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
       }
       
       // Market creation transaction confirmed
-      console.log('Market creation transaction confirmed, waiting 5 seconds for Solana to propagate...');
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      console.log('Market creation transaction confirmed, waiting 8 seconds for Solana to propagate...');
+      await new Promise(resolve => setTimeout(resolve, 8000));
       
-      // Force a fresh check by calling the backend function directly
-      console.log('Forcing fresh market status check...');
-      const response = await base44.functions.invoke('checkMarketStatus', { match_id });
-      console.log('Fresh market status:', response.data);
+      // Force multiple fresh checks with delays
+      console.log('Checking market status (attempt 1)...');
+      const response = await base44.functions.invoke('checkMarketStatus', { match_id, _t: Date.now() });
+      console.log('Market status:', response.data);
       setMarketStatus(response.data);
       
-      // If still showing not_created or not_initialized, wait more and check again
-      if (response.data.status === 'not_created' || response.data.status === 'not_initialized') {
-        console.log('Market still not ready, waiting additional 5 seconds...');
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        const retryResponse = await base44.functions.invoke('checkMarketStatus', { match_id });
-        console.log('Retry market status:', retryResponse.data);
-        setMarketStatus(retryResponse.data);
+      if (response.data.status === 'initialized') {
+        console.log('SUCCESS: Market is initialized!');
+        return;
+      }
+      
+      // If still not ready, wait more and retry
+      console.log('Market not ready, waiting 5 more seconds...');
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
+      console.log('Checking market status (attempt 2)...');
+      const retryResponse = await base44.functions.invoke('checkMarketStatus', { match_id, _t: Date.now() });
+      console.log('Retry market status:', retryResponse.data);
+      setMarketStatus(retryResponse.data);
+      
+      if (retryResponse.data.status === 'initialized') {
+        console.log('SUCCESS: Market is now initialized!');
+      } else {
+        console.log('Market still not initialized after retry. Check Solana explorer.');
       }
     } catch (err) {
       console.error('Failed to finalize:', err);

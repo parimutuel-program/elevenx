@@ -46,7 +46,13 @@ Deno.serve(async (req) => {
     
     if (accountInfo) {
       // Market PDA exists - check if it's properly initialized
-      const expectedMinSize = 200; // BetMarket struct should be ~215 bytes
+      // BetMarket: 8 (discriminator) + 244 (struct) = 252 bytes
+      const expectedMinSize = 250;
+      console.log('Market exists, checking size:', {
+        actualSize: accountInfo.data.length,
+        expectedMinSize,
+        isInitialized: accountInfo.data.length >= expectedMinSize,
+      });
       if (accountInfo.data.length < expectedMinSize) {
         console.log('Market exists but is not properly initialized:', {
           pda: marketPda.toBase58(),

@@ -53,12 +53,14 @@ Deno.serve(async (req) => {
     });
     
     // Market exists, check if it's properly initialized
-    // BetMarket should be at least 200 bytes (minimum for initialized account)
-    const expectedMinSize = 200;
+    // BetMarket: 8 (discriminator) + 244 (struct) = 252 bytes
+    const expectedMinSize = 250;
     const actualSize = accountInfo.data.length;
     
+    console.log('Account size check:', { actualSize, expectedMinSize, isInitialized: actualSize >= expectedMinSize });
+    
     if (actualSize < expectedMinSize) {
-      console.log('Account too small - status: not_initialized, size:', actualSize);
+      console.log('Account too small - status: not_initialized');
       return Response.json({
         status: 'not_initialized',
         marketPda: marketPda.toBase58(),
