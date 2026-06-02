@@ -9,8 +9,6 @@ import { Buffer } from 'node:buffer';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
     const { offer_id, amount, wallet_address } = body;
@@ -21,6 +19,12 @@ Deno.serve(async (req) => {
 
     if (!wallet_address) {
       return Response.json({ error: 'Wallet address required' }, { status: 400 });
+    }
+
+    // Verify wallet is authenticated (exists in User entity)
+    const users = await base44.asServiceRole.entities.User.filter({ wallet_address: wallet_address.trim() });
+    if (!users || users.length === 0) {
+      return Response.json({ error: 'Wallet not authenticated. Please sign in with your wallet first.' }, { status: 401 });
     }
 
     // Trim whitespace
