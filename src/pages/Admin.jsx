@@ -384,6 +384,7 @@ function CreateMatchDialog() {
 function AdminMatchRow({ match, bets, index }) {
   const queryClient = useQueryClient();
   const existingBet = bets.find(b => b.match_id === match.id);
+  const [pendingMarketInit, setPendingMarketInit] = useState(null);
 
   // Check on-chain market status
   const { data: marketStatus } = useQuery({
@@ -399,28 +400,60 @@ function AdminMatchRow({ match, bets, index }) {
   const isMarketInitialized = existingBet?.solana_market_created || marketStatus?.status === 'initialized';
 
   const createBetMutation = useMutation({
-    mutationFn: () => base44.entities.Bet.create({
-      match_id: match.id,
-      title: `${match.team_a} vs ${match.team_b}`,
-      outcome_a: match.team_a,
-      outcome_b: match.team_b,
-      outcome_draw: 'Draw',
-      open_until: match.match_time,
-      status: 'open',
-      fee_percent: 0,
-      odds_a: 2.1,
-      odds_b: 2.1,
-      odds_draw: 2.1,
-      oracle_odds_a: 210,
-      oracle_odds_draw: 210,
-      oracle_odds_b: 210,
-      lp_amount_a: 0, lp_amount_b: 0, lp_amount_draw: 0,
-      total_pool: 0, total_bettors: 0,
-    }),
+    mutationFn: async () => {
+      // First create the Bet entity
+      const bet = await base44.entities.Bet.create({
+        match_id: match.id,
+        title: `${match.team_a} vs ${match.team_b}`,
+        outcome_a: match.team_a,
+        outcome_b: match.team_b,
+        outcome_draw: 'Draw',
+        open_until: match.match_time,
+        status: 'open',
+        fee_percent: 0,
+        odds_a: 2.1,
+        odds_b: 2.1,
+        odds_draw: 2.1,
+        oracle_odds_a: 210,
+        oracle_odds_draw: 210,
+        oracle_odds_b: 210,
+        lp_amount_a: 0, lp_amount_b: 0, lp_amount_draw: 0,
+        total_pool: 0, total_bettors: 0,
+      });
+      
+      // Then create the market on-chain
+      const marketRes = await base44.functions.invoke('createMarketOnChain', {
+        bet_id: bet.id,
+        match_id: match.id,
+      });
+      
+      if (marketRes.data.solana_instruction) {
+        setPendingMarketInit({
+          instruction: marketRes.data.solana_instruction,
+          betId: bet.id,
+        });
+      }
+      
+      return bet;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bets'] });
+      queryClient.invalidateQueries({ queryKey: ['marketStatus', match.id] });
     },
   });
+
+  const handleMarketInitSuccess = (txResult) => {
+    setPendingMarketInit(null);
+    queryClient.invalidateQueries({ queryKey: ['bets'] });
+    queryClient.invalidateQueries({ queryKey: ['marketStatus', match.id] });
+    alert('Market initialized on-chain!');
+  };
+
+  const handleMarketInitError = (err) => {
+    console.error('Market init failed:', err);
+    setPendingMarketInit(null);
+    alert('Market initialization failed: ' + err.message);
+  };
 
   const recreateMarketMutation = useMutation({
     mutationFn: ({ bet_id, match_id }) => base44.functions.invoke('createMarketOnChain', {
@@ -475,15 +508,29 @@ function AdminMatchRow({ match, bets, index }) {
             <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
-        {!existingBet && (
+        {!existingBet && !pendingMarketInit && (
           <Button
             size="sm"
             onClick={() => createBetMutation.mutate()}
             disabled={createBetMutation.isPending}
             className="h-8 text-xs bg-primary text-primary-foreground font-heading rounded-lg"
           >
-            <Plus className="w-3 h-3 mr-1" /> Initialize Market
+            {createBetMutation.isPending ? (
+              <><div className="w-3 h-3 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-1" /> Creating...</>
+            ) : (
+              <><Plus className="w-3 h-3 mr-1" /> Initialize Market</>
+            )}
           </Button>
+        )}
+        {pendingMarketInit && (
+          <div className="w-64">
+            <SolanaTransactionSigner
+              instruction={pendingMarketInit.instruction}
+              amount={0}
+              onSuccess={handleMarketInitSuccess}
+              onError={handleMarketInitError}
+            />
+          </div>
         )}
         {existingBet && isMarketInitialized && (
           <Badge className="bg-accent/20 text-accent text-[10px] py-1 px-3 rounded-lg">
