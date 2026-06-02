@@ -39,13 +39,31 @@ Deno.serve(async (req) => {
       programId
     );
 
-    // Check if market already exists on-chain
+    // Check if market already exists on-chain and is properly initialized
     const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
     const accountInfo = await connection.getAccountInfo(marketPda);
     
     if (accountInfo) {
-      // Market already exists, just return the PDA
-      console.log('Market already exists at:', marketPda.toBase58());
+      // Market PDA exists - check if it's properly initialized
+      const expectedMinSize = 200; // BetMarket struct should be ~215 bytes
+      if (accountInfo.data.length < expectedMinSize) {
+        console.log('Market exists but is not properly initialized:', {
+          pda: marketPda.toBase58(),
+          actualSize: accountInfo.data.length,
+          expectedSize: expectedMinSize,
+        });
+        return Response.json({
+          success: false,
+          error: 'Market account exists but is not properly initialized. The market creation may have failed.',
+          hint: 'The market PDA exists with incorrect size. This may require manual intervention or creating a new bet entity.',
+          marketPda: marketPda.toBase58(),
+          actualSize: accountInfo.data.length,
+          needsReinitialization: true,
+        }, { status: 400 });
+      }
+      
+      // Market exists and is properly initialized
+      console.log('Market already exists and is properly initialized at:', marketPda.toBase58());
       return Response.json({
         success: true,
         marketPda: marketPda.toBase58(),
