@@ -26,6 +26,16 @@ Deno.serve(async (req) => {
     const payload = await req.json();
     const { walletAddress, bet_id, match_id, outcome, amount } = payload;
 
+    console.log('=== provideLiquidity Request Payload ===', {
+      walletAddress,
+      bet_id,
+      match_id,
+      outcome,
+      outcome_type: typeof outcome,
+      amount,
+      full_payload: payload,
+    });
+
     if (!walletAddress) return Response.json({ error: 'Wallet not connected' }, { status: 401 });
     if (!bet_id || !match_id || outcome === undefined || !amount) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
@@ -67,8 +77,19 @@ Deno.serve(async (req) => {
     const match = matches[0];
 
     // Derive outcome index (0=a, 1=b, 2=draw) - matches Solana program
+    // Validate outcome value first
+    if (outcome !== 'a' && outcome !== 'b' && outcome !== 'draw') {
+      return Response.json({ 
+        error: 'Invalid outcome value',
+        hint: 'Outcome must be "a", "b", or "draw"',
+        received: outcome,
+      }, { status: 400 });
+    }
+    
     const outcomeIndex = outcome === 'a' ? 0 : outcome === 'b' ? 1 : 2;
     const outcomeLabel = outcome === 'a' ? bet.outcome_a : outcome === 'b' ? bet.outcome_b : 'Draw';
+    
+    console.log('Outcome validation passed:', { outcome, outcomeIndex, outcomeLabel });
 
     // Derive PDAs
     const lpPubkey = new PublicKey(walletAddress);
@@ -137,9 +158,12 @@ Deno.serve(async (req) => {
       ],
     });
 
-    // Get oracle odds from bet entity
-    const oddsField = outcome === 'a' ? 'oracle_odds_a' : outcome === 'b' ? 'oracle_odds_b' : 'oracle_odds_draw';
-    const oddsBps = bet[oddsField] || 200; // fallback to 2.00x
+    // Get odds from bet entity (use odds_* fields, not oracle_odds_*)
+    const oddsField = outcome === 'a' ? 'odds_a' : outcome === 'b' ? 'odds_b' : 'odds_draw';
+    const oddsDecimal = bet[oddsField] || bet[`oracle_${oddsField}`] || 2.0; // fallback to 2.00x
+    const oddsBps = Math.round(oddsDecimal * 100); // Convert to basis points
+    
+    console.log('Odds lookup:', { outcome, oddsField, oddsDecimal, oddsBps });
 
     // Record in BetOffer entity
     const existingOffers = await base44.entities.BetOffer.filter({ bet_id, lp_wallet_address: walletAddress, outcome });

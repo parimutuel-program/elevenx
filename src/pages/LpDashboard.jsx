@@ -51,6 +51,8 @@ export default function LpDashboard() {
         bet_id: selectedBet.id,
         match_id: selectedBet.match_id,
         outcome: selectedOutcome,
+        _debug_outcome_type: typeof selectedOutcome,
+        _debug_outcome_value: selectedOutcome,
         amount: amt,
       });
 
