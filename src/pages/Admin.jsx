@@ -385,7 +385,15 @@ function AdminMatchRow({ match, bets, index }) {
   const queryClient = useQueryClient();
   const existingBet = bets.find(b => b.match_id === match.id);
 
+  // Check on-chain market status
+  const { data: marketStatus } = useQuery({
+    queryKey: ['marketStatus', match.id],
+    queryFn: () => base44.functions.invoke('checkMarketStatus', { match_id: match.id }),
+    enabled: !!existingBet,
+    refetchInterval: 10000,
+  });
 
+  const isMarketInitialized = existingBet?.solana_market_created || marketStatus?.data?.status === 'initialized';
 
   const createBetMutation = useMutation({
     mutationFn: () => base44.entities.Bet.create({
@@ -474,22 +482,12 @@ function AdminMatchRow({ match, bets, index }) {
             <Plus className="w-3 h-3 mr-1" /> Initialize Market
           </Button>
         )}
-        {existingBet && existingBet.solana_market_created && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              if (confirm('Recreate market on-chain? This will update the market with current odds.')) {
-                recreateMarketMutation.mutate({ bet_id: existingBet.id, match_id: match.id });
-              }
-            }}
-            disabled={recreateMarketMutation.isPending}
-            className="h-8 text-xs border-primary/30 text-primary hover:bg-primary/10 rounded-lg"
-          >
-            <RefreshCw className="w-3 h-3 mr-1" /> Recreate
-          </Button>
+        {existingBet && isMarketInitialized && (
+          <Badge className="bg-accent/20 text-accent text-[10px] py-1 px-3 rounded-lg">
+            <CheckCircle2 className="w-3 h-3 mr-1" /> Market Initialized
+          </Badge>
         )}
-        {existingBet && existingBet.solana_market_created && (
+        {existingBet && isMarketInitialized && (
           <Button
             size="sm"
             variant="outline"
@@ -499,7 +497,7 @@ function AdminMatchRow({ match, bets, index }) {
               }
             }}
             disabled={recreateMarketMutation.isPending}
-            className="h-8 text-xs border-destructive/30 text-destructive hover:bg-destructive/10 rounded-lg"
+            className="h-8 text-xs border-primary/30 text-primary hover:bg-primary/10 rounded-lg"
           >
             <RefreshCw className="w-3 h-3 mr-1" /> Recreate
           </Button>
