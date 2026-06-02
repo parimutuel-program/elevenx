@@ -92,6 +92,21 @@ Deno.serve(async (req) => {
       return Response.json({ error: `Maximum stake for this offer is ◎${max_stake.toFixed(4)}` }, { status: 400 });
     }
 
+    // Validate LP wallet address exists
+    if (!offer.lp_wallet_address) {
+      console.error('[matchBet] Offer missing lp_wallet_address:', {
+        offer_id: offer_id,
+        offer,
+      });
+      return Response.json({ 
+        error: 'Invalid offer: LP wallet address missing',
+        hint: 'This offer was created before wallet tracking was enabled. Please delete old offers and create new ones.',
+        offer_id: offer_id,
+        offer_outcome: offer.outcome,
+        offer_status: offer.status,
+      }, { status: 400 });
+    }
+
     // Bettor bets on the SAME outcome as the LP offer
     // LP provides liquidity FOR that outcome - if it wins, LP pays bettor; if it loses, LP keeps bettor's stake
     const bettor_outcome = offer.outcome;
@@ -124,7 +139,17 @@ Deno.serve(async (req) => {
     const amountLamports = Math.round(amount * 1_000_000_000);
 
     // Derive the actual LP offer PDA using the LP's wallet from the offer
-    const lpPubkey = new PublicKey(offer.lp_wallet_address);
+    let lpPubkey;
+    try {
+      lpPubkey = new PublicKey(offer.lp_wallet_address);
+    } catch (e) {
+      return Response.json({ 
+        error: 'Invalid LP wallet address in offer',
+        hint: e.message,
+        lp_wallet_address: offer.lp_wallet_address,
+      }, { status: 500 });
+    }
+    
     const [lpOfferPda] = PublicKey.findProgramAddressSync(
       [Buffer.from('lp_offer'), marketPda.toBuffer(), lpPubkey.toBuffer(), Buffer.from([outcomeIndex])],
       programId
