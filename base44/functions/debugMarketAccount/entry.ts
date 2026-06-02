@@ -19,19 +19,33 @@ Deno.serve(async (req) => {
     const payload = await req.json();
     const { match_id } = payload;
     
-    if (!match_id) {
-      return Response.json({ error: 'Missing match_id' }, { status: 400 });
-    }
-    
     const programId = new PublicKey(SOLANA_PROGRAM_ID);
-    const matchIdBytes = Buffer.alloc(32);
-    Buffer.from(match_id, 'utf-8').copy(matchIdBytes, 0, 0, Math.min(match_id.length, 32));
+    let marketPda;
     
-    // Derive market PDA
-    const [marketPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('market'), matchIdBytes],
-      programId
-    );
+    // Special case: check platform config instead of market
+    if (match_id === 'platform') {
+      const [platformConfigPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from('platform')],
+        programId
+      );
+      marketPda = platformConfigPda;
+      console.log('[debugMarketAccount] Checking platform config PDA:', marketPda.toBase58());
+    } else {
+      if (!match_id) {
+        return Response.json({ error: 'Missing match_id' }, { status: 400 });
+      }
+      
+      const matchIdBytes = Buffer.alloc(32);
+      Buffer.from(match_id, 'utf-8').copy(matchIdBytes, 0, 0, Math.min(match_id.length, 32));
+      
+      // Derive market PDA
+      const [marketPdaDerived] = PublicKey.findProgramAddressSync(
+        [Buffer.from('market'), matchIdBytes],
+        programId
+      );
+      marketPda = marketPdaDerived;
+      console.log('[debugMarketAccount] Checking market PDA:', marketPda.toBase58());
+    }
     
     const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
     console.log('[debugMarketAccount] Checking account at PDA:', marketPda.toBase58());
