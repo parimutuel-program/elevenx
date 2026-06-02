@@ -37,7 +37,32 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
       const transaction = new Transaction();
       
       // Check instruction type and build appropriate transaction
-      if (instruction.instruction_type === 'create_market') {
+      if (instruction.instruction_type === 'initialize_platform') {
+        // Initialize platform config
+        console.log('Creating initialize_platform instruction:', instruction);
+        console.log('Platform config PDA:', instruction.accounts?.platformConfig);
+        console.log('Admin signer:', provider.publicKey.toBase58());
+        
+        const programId = new PublicKey(instruction.programId);
+        const keys = [
+          { pubkey: new PublicKey(instruction.accounts.platformConfig), isSigner: false, isWritable: true },
+          { pubkey: provider.publicKey, isSigner: true, isWritable: true }, // admin
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        ];
+        
+        const initData = Buffer.from(instruction.instruction_data, 'base64');
+        console.log('Init data (hex):', initData.toString('hex'));
+        console.log('Init data length:', initData.length);
+        
+        const initIx = new TransactionInstruction({
+          keys,
+          programId,
+          data: initData,
+        });
+        
+        transaction.add(initIx);
+        
+      } else if (instruction.instruction_type === 'create_market') {
         // create_market - program instruction to initialize a new market
         console.log('Creating create_market program instruction:', instruction);
         

@@ -62,6 +62,9 @@ Deno.serve(async (req) => {
 
     const instructionData = Buffer.concat([discriminator, paramsData]);
 
+    const adminPubkey = user.id; // We'll need to get the actual Solana pubkey from frontend
+    console.log('Platform config PDA:', platformConfigPda.toBase58());
+    
     return Response.json({
       success: true,
       alreadyExists: false,
@@ -72,7 +75,7 @@ Deno.serve(async (req) => {
         instruction_data: instructionData.toString('base64'),
         accounts: {
           platformConfig: platformConfigPda.toBase58(),
-          admin: '', // Will be filled by frontend with signer's public key
+          admin: adminPubkey, // Frontend will replace with actual Solana pubkey
           systemProgram: '11111111111111111111111111111111',
         }
       },
