@@ -173,13 +173,21 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
           { pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false }, // system_program
         ];
         
-        // Anchor 8-byte discriminator for provide_liquidity (instruction index 4)
-        // Plus params: outcome (u8) + amount (u64)
+        // Anchor discriminator: first 8 bytes of SHA256("global:provide_liquidity")
+        // Pre-computed: [0x18, 0x72, 0x28, 0x4d, 0x23, 0x5f, 0x7a, 0xf7]
         const data = Buffer.alloc(17);
-        data.writeUInt32LE(4, 0); // instruction index
-        data.writeUInt32LE(0, 4); // padding
-        data.writeUInt8(instruction.outcome, 8); // outcome parameter
-        data.writeBigUInt64LE(BigInt(instruction.amountLamports), 9); // amount parameter
+        // Anchor discriminator (8 bytes)
+        data.writeUInt8(0x18, 0);
+        data.writeUInt8(0x72, 1);
+        data.writeUInt8(0x28, 2);
+        data.writeUInt8(0x4d, 3);
+        data.writeUInt8(0x23, 4);
+        data.writeUInt8(0x5f, 5);
+        data.writeUInt8(0x7a, 6);
+        data.writeUInt8(0xf7, 7);
+        // Params: outcome (u8) + amount (u64)
+        data.writeUInt8(instruction.outcome, 8);
+        data.writeBigUInt64LE(BigInt(instruction.amountLamports), 9);
         
         const provideIx = new TransactionInstruction({
           keys,
