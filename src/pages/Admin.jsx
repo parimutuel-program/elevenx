@@ -561,6 +561,35 @@ function AdminBetRow({ bet, matches, index }) {
   const queryClient = useQueryClient();
   const match = matches.find(m => m.id === bet.match_id);
 
+  // Check on-chain market status
+  const { data: marketStatus } = useQuery({
+    queryKey: ['marketStatus', match?.id],
+    queryFn: async () => {
+      const res = await base44.functions.invoke('checkMarketStatus', { match_id: match.id });
+      return res.data;
+    },
+    enabled: !!match,
+    refetchInterval: 10000,
+  });
+
+  const isMarketInitialized = bet.solana_market_created || marketStatus?.status === 'initialized';
+
+  const recreateMarketMutation = useMutation({
+    mutationFn: ({ bet_id, match_id }) => base44.functions.invoke('createMarketOnChain', {
+      bet_id,
+      match_id,
+      force_recreate: true,
+    }),
+    onSuccess: (data) => {
+      if (data.solana_instruction) {
+        alert('Market recreation instruction generated. Please sign the transaction in your wallet to complete.');
+      } else {
+        alert(data.message || 'Market recreated');
+      }
+      queryClient.invalidateQueries({ queryKey: ['bets'] });
+      queryClient.invalidateQueries({ queryKey: ['marketStatus', match?.id] });
+    },
+  });
 
   // Use announceWinner backend function for fixed-odds settlement
   const settleMutation = useMutation({
@@ -611,14 +640,34 @@ function AdminBetRow({ bet, matches, index }) {
           <span className="text-accent font-bold">{bet.outcome_b}: 2.10x</span>
         </div>
       </div>
-      <Badge className={`text-[10px] ${
-        bet.status === 'open' ? 'bg-accent/20 text-accent' :
-        bet.status === 'settled' ? 'bg-primary/20 text-primary' :
-        bet.status === 'void' ? 'bg-destructive/20 text-destructive' :
-        'bg-secondary text-secondary-foreground'
-      }`}>
-        {bet.status}
-      </Badge>
+      <div className="flex items-center gap-2">
+        {isMarketInitialized && (
+          <Badge className="bg-accent/20 text-accent text-[10px] py-1 px-3 rounded-lg">
+            <CheckCircle2 className="w-3 h-3 mr-1" /> Market Initialized
+          </Badge>
+        )}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            if (confirm('Recreate market on-chain with updated odds? This will overwrite existing market data.')) {
+              recreateMarketMutation.mutate({ bet_id: bet.id, match_id: bet.match_id });
+            }
+          }}
+          disabled={recreateMarketMutation.isPending}
+          className="h-8 text-xs border-primary/30 text-primary hover:bg-primary/10 rounded-lg"
+        >
+          <RefreshCw className="w-3 h-3 mr-1" /> Recreate
+        </Button>
+        <Badge className={`text-[10px] ${
+          bet.status === 'open' ? 'bg-accent/20 text-accent' :
+          bet.status === 'settled' ? 'bg-primary/20 text-primary' :
+          bet.status === 'void' ? 'bg-destructive/20 text-destructive' :
+          'bg-secondary text-secondary-foreground'
+        }`}>
+          {bet.status}
+        </Badge>
+      </div>
       </div>
 
       {bet.status === 'open' || bet.status === 'closed' ? (
