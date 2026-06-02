@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -41,8 +41,29 @@ export default function Admin() {
     refetchInterval: 30000,
   });
 
+  const { data: platformStatus } = useQuery({
+    queryKey: ['platformStatus'],
+    queryFn: async () => {
+      try {
+        const res = await base44.functions.invoke('initPlatformConfig', {});
+        return res.data;
+      } catch (err) {
+        console.error('Failed to check platform status:', err);
+        return null;
+      }
+    },
+    refetchInterval: 30000,
+  });
+
   const [syncResult, setSyncResult] = useState(null);
   const [pendingPlatformInit, setPendingPlatformInit] = useState(null);
+  const [platformInitialized, setPlatformInitialized] = useState(false);
+
+  useEffect(() => {
+    if (platformStatus) {
+      setPlatformInitialized(platformStatus.alreadyExists || !platformStatus.solana_instruction);
+    }
+  }, [platformStatus]);
 
   const syncMutation = useMutation({
     mutationFn: async () => {
@@ -157,23 +178,31 @@ export default function Admin() {
               <Zap className="w-5 h-5 text-primary" />
               <div>
                 <p className="text-sm font-bold text-foreground">Platform Config</p>
-                <p className="text-xs text-muted-foreground">Initialize the platform on Solana (one-time setup)</p>
+                <p className="text-xs text-muted-foreground">
+                  {platformInitialized ? 'Already initialized on Solana' : 'Initialize the platform on Solana (one-time setup)'}
+                </p>
               </div>
             </div>
-            <Button
-              onClick={() => initPlatformMutation.mutate()}
-              disabled={initPlatformMutation.isPending}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-heading font-bold rounded-xl h-9"
-            >
-              {initPlatformMutation.isPending ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
-                  Initializing...
-                </>
-              ) : (
-                'Initialize Platform'
-              )}
-            </Button>
+            {platformInitialized ? (
+              <Badge className="bg-accent/20 text-accent text-xs py-1 px-3 rounded-lg">
+                <CheckCircle2 className="w-3 h-3 mr-1" /> Initialized
+              </Badge>
+            ) : (
+              <Button
+                onClick={() => initPlatformMutation.mutate()}
+                disabled={initPlatformMutation.isPending}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-heading font-bold rounded-xl h-9"
+              >
+                {initPlatformMutation.isPending ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
+                    Initializing...
+                  </>
+                ) : (
+                  'Initialize Platform'
+                )}
+              </Button>
+            )}
           </div>
         )}
       </div>
