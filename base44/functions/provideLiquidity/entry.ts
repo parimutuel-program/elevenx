@@ -83,6 +83,7 @@ Deno.serve(async (req) => {
       outcomeIndex,
       walletAddress,
       match_id,
+      match_id_bytes: matchIdBytes.toString('hex'),
       marketPda: marketPda.toBase58(),
       lpOfferPda: lpOfferPda.toBase58(),
       seeds_used: [
@@ -99,6 +100,13 @@ Deno.serve(async (req) => {
 
     // Record in BetOffer entity
     const existingOffers = await base44.entities.BetOffer.filter({ bet_id, lp_wallet_address: walletAddress, outcome });
+    if (existingOffers.length > 0) {
+      console.log('Existing BetOffer found with stored PDAs:', {
+        stored_market_pda: existingOffers[0].solana_bet_pool_pda,
+        stored_lp_pda: existingOffers[0].solana_position_pda,
+        matches_current: existingOffers[0].solana_bet_pool_pda === marketPda.toBase58() && existingOffers[0].solana_position_pda === lpOfferPda.toBase58(),
+      });
+    }
     let offer;
     if (existingOffers.length > 0) {
       offer = await base44.entities.BetOffer.update(existingOffers[0].id, {
