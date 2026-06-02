@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
         instruction_type: 'withdraw_liquidity',
         programId: SOLANA_PROGRAM_ID,
         marketPda: marketPda.toBase58(),
-        lpOfferPda: lpOfferPda.toBase58(),
+        lpOfferPda: lpOfferPda, // Already a string from database
       },
       message: `Sign to withdraw ◎${withdrawAmount}`,
     });
