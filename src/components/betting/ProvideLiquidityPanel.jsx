@@ -53,10 +53,13 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
       // Check if platform needs initialization
       if (response.data.needsPlatformInit && response.data.solana_instruction) {
         console.log('[ProvideLiquidityPanel] Platform config not initialized - showing init transaction');
+        console.log('[ProvideLiquidityPanel] Full response:', response.data);
         const instr = {
           ...response.data.solana_instruction,
           needsPlatformInit: true,
+          amount: 0,
         };
+        console.log('[ProvideLiquidityPanel] Instruction set:', instr);
         setInstruction(instr);
         setIsInitializingPlatform(true);
         setShowSigner(true);
