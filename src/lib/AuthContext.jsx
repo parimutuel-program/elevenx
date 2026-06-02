@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
 import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
+import { createClient } from '@base44/sdk';
 import bs58 from 'bs58';
 
 const AuthContext = createContext();
@@ -131,6 +132,17 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(true);
             setIsLoadingAuth(false);
             setAuthChecked(true);
+            
+            // Initialize SDK with auth token for backend function calls
+            const axiosClient = createAxiosClient({
+              baseURL: appParams.apiUrl,
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+              },
+            });
+            const sdkWithAuth = createClient({ axiosClient });
+            window.base44WithAuth = sdkWithAuth;
+            console.log('✓ SDK initialized with auth token for backend calls');
             return;
           } else {
             console.log('Token expired or invalid');

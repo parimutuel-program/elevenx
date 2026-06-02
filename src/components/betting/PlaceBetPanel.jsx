@@ -108,9 +108,12 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
       });
       
       let res;
+      // Use SDK with auth token if available, otherwise fall back to default
+      const sdkToUse = window.base44WithAuth || base44;
+      
       if (mode === 'offer') {
         console.log('[PlaceBetPanel] Calling createBetOffer with wallet:', wallet);
-        res = await base44.functions.invoke('createBetOffer', {
+        res = await sdkToUse.functions.invoke('createBetOffer', {
           bet_id: bet.id,
           match_id: matchId,
           outcome: selectedOutcome,
@@ -120,7 +123,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
         console.log('[PlaceBetPanel] createBetOffer response:', res.data);
       } else {
         console.log('[PlaceBetPanel] Calling matchBet with wallet:', wallet);
-        res = await base44.functions.invoke('matchBet', {
+        res = await sdkToUse.functions.invoke('matchBet', {
           offer_id: selectedOffer.id,
           amount: stakeNum,
           wallet_address: wallet,
