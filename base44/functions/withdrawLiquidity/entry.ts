@@ -42,7 +42,13 @@ Deno.serve(async (req) => {
     const offers = await base44.entities.BetOffer.filter({ id: userBet.offer_id });
     const offer = offers[0];
     if (!offer) return Response.json({ error: 'Offer not found' }, { status: 404 });
-    if (offer.status !== 'open') return Response.json({ error: 'Offer is not open (may be matched or cancelled)' }, { status: 400 });
+    if (offer.status !== 'open' && offer.status !== 'partially_matched') {
+      return Response.json({ error: 'Offer is not open (may be fully matched or cancelled)' }, { status: 400 });
+    }
+    // Verify there's actually unmatched liquidity
+    if (!offer.amount_unmatched || offer.amount_unmatched <= 0) {
+      return Response.json({ error: 'No unmatched liquidity remaining' }, { status: 400 });
+    }
 
     // Fetch Bet and Match
     const bets = await base44.entities.Bet.filter({ id: userBet.bet_id });
