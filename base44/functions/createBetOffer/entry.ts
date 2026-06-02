@@ -22,33 +22,21 @@ Deno.serve(async (req) => {
     }
 
     // Verify wallet is authenticated (exists in User entity)
-    const users = await base44.asServiceRole.entities.User.filter({ wallet_address: wallet_address.trim() });
+    const trimmedWallet = wallet_address.trim();
+    const users = await base44.asServiceRole.entities.User.filter({ wallet_address: trimmedWallet });
     if (!users || users.length === 0) {
       return Response.json({ error: 'Wallet not authenticated. Please sign in with your wallet first.' }, { status: 401 });
     }
 
-    // Trim whitespace
-    const trimmedWallet = wallet_address.trim();
-    
-    // Validate base58 format - check each character
+    // Validate base58 format
     const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
     if (!base58Regex.test(trimmedWallet)) {
       console.error('[createBetOffer] Invalid wallet address:', trimmedWallet);
-      console.error('[createBetOffer] Length:', trimmedWallet.length);
-      
-      // Find invalid characters
-      const invalidChars = [];
-      for (let i = 0; i < trimmedWallet.length; i++) {
-        const char = trimmedWallet[i];
-        if (!/^[1-9A-HJ-NP-Za-km-z]$/.test(char)) {
-          invalidChars.push({ position: i, char: char, code: char.charCodeAt(0) });
-        }
-      }
-      console.error('[createBetOffer] Invalid characters:', invalidChars);
-      
+      const invalidChars = trimmedWallet.split('').filter(c => !/^[1-9A-HJ-NP-Za-km-z]$/.test(c));
+      console.error('[createBetOffer] Invalid characters:', invalidChars.map((c, i) => `pos${i}:'${c}'(code${c.charCodeAt(0)})`).join(', '));
       return Response.json({ 
         error: 'Invalid wallet address format — contains non-base58 characters', 
-        hint: 'Address must be 32-44 base58 characters. Invalid chars: ' + invalidChars.map(c => `'${c.char}'@${c.position}`).join(', '),
+        hint: 'Address must be 32-44 base58 characters. Invalid: ' + invalidChars.map(c => `'${c.char}'@${c.position}`).join(', '),
         debug: {
           address: trimmedWallet,
           length: trimmedWallet.length,
@@ -57,46 +45,22 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
-    // Try to create PublicKey to validate - this catches subtle base58 issues
+    // Try to create PublicKey to validate
     let lpPubkey;
     try {
       lpPubkey = new PublicKey(trimmedWallet);
     } catch (e) {
       console.error('[createBetOffer] PublicKey validation failed:', e.message);
-      console.error('[createBetOffer] Address:', trimmedWallet);
-      console.error('[createBetOffer] Char codes:', trimmedWallet.split('').map((c, i) => `${i}:${c}(${c.charCodeAt(0)})`).join(' '));
       return Response.json({ 
         error: 'Invalid Solana wallet address', 
         hint: e.message,
-        debug: { 
-          address: trimmedWallet,
-          charCodes: trimmedWallet.split('').map((c, i) => `${i}:${c}(${c.charCodeAt(0)})`)
-        }
+        debug: { address: trimmedWallet }
       }, { status: 400 });
     }
 
     // Load the bet/market
-    console.log('[createBetOffer] Fetching bet with ID:', bet_id);
-    console.log('[createBetOffer] Bet ID type:', typeof bet_id);
-    console.log('[createBetOffer] Bet ID length:', bet_id?.length);
-    
-    let bet;
-    try {
-      const bets = await base44.entities.Bet.filter({ id: bet_id });
-      console.log('[createBetOffer] Bet query result:', bets);
-      bet = bets[0];
-    } catch (fetchError) {
-      console.error('[createBetOffer] Failed to fetch bet:', fetchError.message);
-      console.error('[createBetOffer] Error type:', fetchError.constructor.name);
-      console.error('[createBetOffer] Full error:', fetchError);
-      return Response.json({ 
-        error: 'Failed to load bet market', 
-        details: fetchError.message,
-        bet_id: bet_id,
-        bet_id_type: typeof bet_id
-      }, { status: 500 });
-    }
-    
+    const bets = await base44.entities.Bet.filter({ id: bet_id });
+    const bet = bets[0];
     if (!bet) return Response.json({ error: 'Bet market not found' }, { status: 404 });
     if (bet.status !== 'open') return Response.json({ error: 'Market is not open' }, { status: 400 });
 
@@ -114,31 +78,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Solana program ID not configured' }, { status: 500 });
     }
 
-    console.log('[createBetOffer] Program ID:', SOLANA_PROGRAM_ID);
-    console.log('[createBetOffer] Program ID length:', SOLANA_PROGRAM_ID.length);
-    
-    // Validate program ID format (reuse existing regex)
-    if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(SOLANA_PROGRAM_ID)) {
-      console.error('[createBetOffer] Invalid program ID format');
-      console.error('[createBetOffer] Invalid chars:', SOLANA_PROGRAM_ID.split('').filter(c => !/^[1-9A-HJ-NP-Za-km-z]$/.test(c)));
-      return Response.json({ 
-        error: 'Invalid Solana program ID configuration',
-        hint: 'Program ID contains non-base58 characters'
-      }, { status: 500 });
-    }
-
     // Derive PDAs for provide_liquidity instruction
-    let programId;
-    try {
-      programId = new PublicKey(SOLANA_PROGRAM_ID);
-      console.log('[createBetOffer] PublicKey created successfully:', programId.toBase58());
-    } catch (e) {
-      console.error('[createBetOffer] PublicKey constructor failed:', e.message);
-      return Response.json({ 
-        error: 'Invalid Solana program ID',
-        details: e.message
-      }, { status: 500 });
-    }
+    const programId = new PublicKey(SOLANA_PROGRAM_ID);
     const matchIdBytes = Buffer.alloc(32);
     Buffer.from(match_id, 'utf-8').copy(matchIdBytes, 0, 0, Math.min(match_id.length, 32));
 
@@ -148,7 +89,6 @@ Deno.serve(async (req) => {
     );
 
     const outcomeIndex = outcome === 'a' ? 0 : outcome === 'draw' ? 1 : 2;
-    // lpPubkey already declared above in validation
 
     const [lpOfferPda] = PublicKey.findProgramAddressSync(
       [Buffer.from('lp_offer'), marketPda.toBuffer(), lpPubkey.toBuffer(), Buffer.from([outcomeIndex])],
@@ -156,8 +96,6 @@ Deno.serve(async (req) => {
     );
 
     const amountLamports = Math.round(amount * 1_000_000_000);
-
-    // Max payout the offer creator could win = amount * odds
     const max_liability = parseFloat((amount * (odds - 1)).toFixed(6));
 
     // Derive platform_config PDA
@@ -185,13 +123,7 @@ Deno.serve(async (req) => {
       message: `Sign transaction to provide ◎${amount} liquidity on ${outcome === 'a' ? bet.outcome_a : outcome === 'b' ? bet.outcome_b : 'Draw'}`,
     });
   } catch (error) {
-    console.error('[createBetOffer] Top-level catch:', error.message);
-    console.error('[createBetOffer] Error stack:', error.stack);
-    console.error('[createBetOffer] Error constructor:', error.constructor.name);
-    return Response.json({ 
-      error: error.message,
-      error_type: error.constructor.name,
-      stack: error.stack
-    }, { status: 500 });
+    console.error('[createBetOffer] Error:', error.message);
+    return Response.json({ error: error.message }, { status: 500 });
   }
 });

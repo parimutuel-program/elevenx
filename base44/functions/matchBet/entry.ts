@@ -22,14 +22,12 @@ Deno.serve(async (req) => {
     }
 
     // Verify wallet is authenticated (exists in User entity)
-    const users = await base44.asServiceRole.entities.User.filter({ wallet_address: wallet_address.trim() });
+    const trimmedWallet = wallet_address.trim();
+    const users = await base44.asServiceRole.entities.User.filter({ wallet_address: trimmedWallet });
     if (!users || users.length === 0) {
       return Response.json({ error: 'Wallet not authenticated. Please sign in with your wallet first.' }, { status: 401 });
     }
 
-    // Trim whitespace
-    const trimmedWallet = wallet_address.trim();
-    
     // Validate base58 format
     const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
     if (!base58Regex.test(trimmedWallet)) {
@@ -38,12 +36,11 @@ Deno.serve(async (req) => {
       console.error('[matchBet] Invalid characters:', invalidChars.map((c, i) => `pos${i}:'${c}'(code${c.charCodeAt(0)})`).join(', '));
       return Response.json({ 
         error: 'Invalid wallet address format — contains non-base58 characters', 
-        hint: 'Address must be 32-44 base58 characters. Invalid: ' + invalidChars.join(', '),
+        hint: 'Address must be 32-44 base58 characters. Invalid: ' + invalidChars.map(c => `'${c.char}'@${c.position}`).join(', '),
         debug: {
           address: trimmedWallet,
           length: trimmedWallet.length,
-          passedRegex: base58Regex.test(trimmedWallet),
-          invalidCharacters: invalidChars.map((c, i) => ({ position: i, char: c, code: c.charCodeAt(0) }))
+          invalidCharacters: invalidChars
         }
       }, { status: 400 });
     }
@@ -52,7 +49,7 @@ Deno.serve(async (req) => {
     try {
       new PublicKey(trimmedWallet);
     } catch (e) {
-      console.error('[matchBet] PublicKey validation failed:', e.message, 'for address:', trimmedWallet);
+      console.error('[matchBet] PublicKey validation failed:', e.message);
       return Response.json({ 
         error: 'Invalid Solana wallet address', 
         hint: e.message,
