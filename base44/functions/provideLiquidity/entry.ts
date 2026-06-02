@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
-import { PublicKey } from 'npm:@solana/web3.js@1.98.4';
+import { PublicKey, Connection } from 'npm:@solana/web3.js@1.98.4';
 import { Buffer } from 'node:buffer';
 
 /**
@@ -44,6 +44,17 @@ Deno.serve(async (req) => {
     const bet = bets[0];
     if (!bet || bet.status !== 'open') return Response.json({ error: 'Bet not open' }, { status: 400 });
 
+    // Check if market exists on-chain
+    const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+    const marketInfo = await connection.getAccountInfo(marketPda);
+    if (!marketInfo) {
+      return Response.json({ 
+        error: 'Market account does not exist on-chain. The market must be created before providing liquidity.',
+        marketPda: marketPda.toBase58()
+      }, { status: 400 });
+    }
+    console.log('Market account exists on-chain, size:', marketInfo.data.length);
+
     // Fetch match for display title
     const matches = await base44.entities.Match.filter({ id: match_id });
     const match = matches[0];
@@ -66,6 +77,21 @@ Deno.serve(async (req) => {
       [Buffer.from('lp_offer'), marketPda.toBuffer(), lpPubkey.toBuffer(), Buffer.from([outcomeIndex])],
       programId
     );
+
+    console.log('=== provideLiquidity PDA Debug ===', {
+      outcome,
+      outcomeIndex,
+      walletAddress,
+      match_id,
+      marketPda: marketPda.toBase58(),
+      lpOfferPda: lpOfferPda.toBase58(),
+      seeds_used: [
+        'lp_offer',
+        marketPda.toBase58(),
+        lpPubkey.toBase58(),
+        outcomeIndex,
+      ],
+    });
 
     // Get oracle odds from bet entity
     const oddsField = outcome === 'a' ? 'oracle_odds_a' : outcome === 'b' ? 'oracle_odds_b' : 'oracle_odds_draw';
