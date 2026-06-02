@@ -6,8 +6,8 @@ import { motion } from 'framer-motion';
 import { Buffer } from 'buffer';
 import { Connection, PublicKey, SystemProgram, Transaction, TransactionInstruction } from '@solana/web3.js';
 
-export default function SolanaTransactionSigner({ instruction, amount, userBetId, offerId, isOffer, onSuccess, onError }) {
-  // userBetId, offerId, isOffer are optional - used for tracking DB records after transaction
+export default function SolanaTransactionSigner({ instruction, amount, userBetId, offerId, isOffer, isPlatformInit, onSuccess, onError }) {
+  // userBetId, offerId, isOffer, isPlatformInit are optional - used for tracking DB records or flow control after transaction
   const { isConnected, connect } = useWallet();
   const [isSigning, setIsSigning] = useState(false);
   const [signature, setSignature] = useState(null);
@@ -352,7 +352,7 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
       }
 
       console.log('Transaction confirmed on-chain!');
-      onSuccess({ signature: sig, status: 'confirmed', userBetId, offerId });
+      onSuccess({ signature: sig, status: 'confirmed', userBetId, offerId, isPlatformInit: isPlatformInit || false });
     } catch (err) {
       console.error('[SolanaTransactionSigner] Transaction error:', err);
       console.error('[SolanaTransactionSigner] Error stack:', err.stack);

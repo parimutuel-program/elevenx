@@ -16,6 +16,7 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
   const [instruction, setInstruction] = useState(null);
   const [showSigner, setShowSigner] = useState(false);
   const [createMarketMutation, setCreateMarketMutation] = useState({ isPending: false });
+  const [initPlatformMutation, setInitPlatformMutation] = useState({ isPending: false });
 
   useEffect(() => {
     checkMarketStatus();
@@ -36,7 +37,13 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
       // Check if platform needs initialization
       if (response.data.needsPlatformInit) {
         console.log('[ProvideLiquidityPanel] Platform config not initialized');
-        setError('Platform not initialized. Admin must initialize platform first using the Admin panel.');
+        // Store the platform init instruction for signing
+        if (response.data.solana_instruction) {
+          setInstruction(response.data.solana_instruction);
+          setShowSigner(true);
+        } else {
+          setError('Platform not initialized. Admin must initialize platform first.');
+        }
         setCreateMarketMutation({ isPending: false });
         return;
       }
@@ -123,16 +130,22 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
     }
   };
 
-  const handleTransactionSuccess = async ({ signature, status }) => {
+  const handleTransactionSuccess = async ({ signature, status, isPlatformInit }) => {
     try {
-      console.log('Transaction successful:', signature);
-      setAmount('');
+      console.log('Transaction successful:', signature, 'isPlatformInit:', isPlatformInit);
       setInstruction(null);
       setShowSigner(false);
       
       // Wait a bit for Solana to propagate the change
       console.log('Waiting 3 seconds for Solana to propagate...');
       await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // If platform was just initialized, proceed to create market
+      if (isPlatformInit) {
+        console.log('Platform initialized, now creating market...');
+        await handleCreateMarket();
+        return;
+      }
       
       // Refresh market status after transaction
       console.log('Checking market status after transaction...');
@@ -166,15 +179,13 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
         </Alert>
         
         {showSigner && instruction ? (
-          <>
-            {console.log('[ProvideLiquidityPanel] Rendering SolanaTransactionSigner for market creation:', instruction)}
-            <SolanaTransactionSigner
-              instruction={instruction}
-              amount={0}
-              onSuccess={handleTransactionSuccess}
-              onError={(err) => setError(err.message)}
-            />
-          </>
+          <SolanaTransactionSigner
+            instruction={instruction}
+            amount={0}
+            isPlatformInit={instruction.needsPlatformInit || false}
+            onSuccess={handleTransactionSuccess}
+            onError={(err) => setError(err.message)}
+          />
         ) : (
           <Button
             onClick={handleCreateMarket}
