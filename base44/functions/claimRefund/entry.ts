@@ -57,7 +57,6 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Invalid wallet address format' }, { status: 400 });
     }
 
-    // Derive PDAs
     const userPubkey = new PublicKey(walletAddress);
     const programId = new PublicKey(SOLANA_PROGRAM_ID);
     const matchIdBytes = Buffer.alloc(32);
@@ -68,12 +67,25 @@ Deno.serve(async (req) => {
       programId
     );
 
-    // Derive position PDA for this user
-    const outcomeIndex = userBet.outcome === 'a' ? 0 : userBet.outcome === 'draw' ? 1 : 2;
-    const [positionPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('position'), marketPda.toBuffer(), userPubkey.toBuffer(), Buffer.from([outcomeIndex])],
-      programId
-    );
+    let positionPda;
+    
+    // For LP offers, use the stored solana_position_pda from BetOffer
+    if (userBet.role === 'lp' && userBet.offer_id) {
+      const offers = await base44.entities.BetOffer.filter({ id: userBet.offer_id });
+      const offer = offers[0];
+      if (!offer || !offer.solana_position_pda) {
+        return Response.json({ error: 'LP offer not found or missing PDA' }, { status: 400 });
+      }
+      positionPda = new PublicKey(offer.solana_position_pda);
+    } else {
+      // For regular bettors, derive position PDA
+      const outcomeIndex = userBet.outcome === 'a' ? 0 : userBet.outcome === 'draw' ? 1 : 2;
+      const [derivedPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from('position'), marketPda.toBuffer(), userPubkey.toBuffer(), Buffer.from([outcomeIndex])],
+        programId
+      );
+      positionPda = derivedPda;
+    }
 
     // Fee vault PDA
     const [feeVaultPda] = PublicKey.findProgramAddressSync(
