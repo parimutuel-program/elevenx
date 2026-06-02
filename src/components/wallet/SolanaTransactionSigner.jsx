@@ -151,6 +151,31 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         });
         
         transaction.add(refundIx);
+      } else if (instruction.instruction_type === 'withdraw_lp_winnings') {
+        // withdraw_lp_winnings — program instruction for LPs to withdraw from settled winning markets
+        console.log('Creating withdraw_lp_winnings program instruction:', instruction);
+        
+        const programId = new PublicKey(instruction.programId);
+        const keys = [
+          { pubkey: new PublicKey(instruction.marketPda), isSigner: false, isWritable: true },
+          { pubkey: new PublicKey(instruction.lpOfferPda), isSigner: false, isWritable: true },
+          { pubkey: new PublicKey(instruction.feeVaultPda), isSigner: false, isWritable: true },
+          { pubkey: new PublicKey(instruction.lpWalletPubkey), isSigner: false, isWritable: true },
+        ];
+        
+        // Create instruction data for withdraw_lp_winnings (discriminator 8 + amount + outcome)
+        const data = Buffer.alloc(17);
+        data.writeUInt8(8, 0); // withdraw_lp_winnings discriminator
+        data.writeBigUInt64LE(BigInt(instruction.withdrawAmountLamports || 0), 1);
+        data.writeUInt8(instruction.outcome || 0, 9);
+        
+        const withdrawIx = new TransactionInstruction({
+          keys,
+          programId,
+          data,
+        });
+        
+        transaction.add(withdrawIx);
       }
 
       // Get recent blockhash for transaction
