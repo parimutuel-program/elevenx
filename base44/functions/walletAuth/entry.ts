@@ -38,11 +38,19 @@ Deno.serve(async (req) => {
     let user = null;
     try {
       console.log('Looking up user by wallet:', walletAddress?.slice(0, 8));
-      const users = await serviceRole.entities.User.filter({ wallet_address: walletAddress });
-      console.log('User lookup - found:', users?.length || 0, 'users');
+      // First try direct wallet_address field (new format)
+      let users = await serviceRole.entities.User.filter({ wallet_address: walletAddress });
+      console.log('User lookup (direct) - found:', users?.length || 0, 'users');
+      
+      // If not found, try data.wallet_address (legacy format)
+      if (!users || users.length === 0) {
+        users = await serviceRole.entities.User.filter({ 'data.wallet_address': walletAddress });
+        console.log('User lookup (data.*) - found:', users?.length || 0, 'users');
+      }
+      
       if (users && users.length > 0) {
         user = users[0];
-        console.log('✓ Found user - id:', user.id, 'wallet:', user.wallet_address);
+        console.log('✓ Found user - id:', user.id, 'wallet:', user.wallet_address || user.data?.wallet_address);
       }
     } catch (err) {
       console.log('User lookup failed:', err.message);
@@ -80,9 +88,10 @@ Deno.serve(async (req) => {
 
     // Generate a JWT-like token for wallet-based auth
     // This token will be stored in localStorage and used for auth
+    const userWallet = user.wallet_address || user.data?.wallet_address;
     const tokenPayload = {
       userId: user.id,
-      walletAddress: user.wallet_address,
+      walletAddress: userWallet,
       role: user.role,
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 days
