@@ -187,7 +187,7 @@ function BetRow({ bet, index, walletAddress }) {
     },
   });
 
-  const handleTransactionSuccess = async () => {
+  const handleTransactionSuccess = async (result) => {
     // Update database records after successful transaction
     if (pendingTx?.userBetId) {
       const ub = await base44.entities.UserBet.list().then(bets => bets.find(b => b.id === pendingTx.userBetId));
