@@ -170,13 +170,20 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
     );
   }
 
+  // Debug info
+  console.log('[ProvideLiquidityPanel] Current market status:', marketStatus);
+
   if (marketStatus.status === 'not_created') {
     return (
       <div className="space-y-4">
+        <div className="text-xs text-muted-foreground bg-secondary/30 rounded-lg p-3">
+          <p className="font-bold mb-1">Market Status: Not Created</p>
+          <p>PDA: {marketStatus.marketPda?.slice(0, 40)}...</p>
+        </div>
         <Alert className="border-yellow-500/50 bg-yellow-500/10">
           <AlertCircle className="w-4 h-4 text-yellow-500" />
           <AlertDescription className="text-sm text-yellow-500">
-            Market not created on-chain. The market must be initialized before liquidity can be provided.
+            Market not created on-chain. Click below to initialize.
           </AlertDescription>
         </Alert>
         
@@ -214,19 +221,48 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
   if (marketStatus.status === 'not_initialized') {
     return (
       <div className="space-y-4">
+        <div className="text-xs text-muted-foreground bg-secondary/30 rounded-lg p-3">
+          <p className="font-bold mb-1">Market Status: Not Initialized</p>
+          <p>PDA: {marketStatus.marketPda?.slice(0, 40)}...</p>
+          <p>Size: {marketStatus.actualSize} bytes (expected: {marketStatus.expectedMinSize})</p>
+          <p>Owner: {marketStatus.owner?.slice(0, 30)}...</p>
+        </div>
         <Alert variant="destructive">
           <AlertCircle className="w-4 h-4" />
           <AlertDescription className="text-sm">
-            Market account exists but is not properly initialized. This may be due to a failed transaction.
-            <br />
-            <span className="text-xs text-muted-foreground">
-              Market PDA: {marketStatus.marketPda?.slice(0, 30)}...
-            </span>
+            Market account exists but is not properly initialized.
           </AlertDescription>
         </Alert>
         <p className="text-sm text-muted-foreground">
-          Please contact support with the market PDA address to resolve this issue.
+          This may be due to a failed transaction. Please try creating the market again.
         </p>
+        {showSigner && instruction ? (
+          <SolanaTransactionSigner
+            instruction={instruction}
+            amount={0}
+            isPlatformInit={isInitializingPlatform}
+            onSuccess={handleTransactionSuccess}
+            onError={(err) => setError(err.message)}
+          />
+        ) : (
+          <Button
+            onClick={handleCreateMarket}
+            disabled={createMarketMutation.isPending}
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-heading font-bold rounded-xl"
+          >
+            {createMarketMutation.isPending ? (
+              <>
+                <Loader className="w-4 h-4 mr-2 animate-spin" />
+                Retrying...
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4 mr-2" />
+                Retry Create Market
+              </>
+            )}
+          </Button>
+        )}
       </div>
     );
   }
@@ -234,9 +270,10 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
   return (
     <div className="space-y-4">
       {marketStatus.status === 'initialized' && (
-        <div className="flex items-center gap-2 text-accent text-sm">
-          <CheckCircle className="w-4 h-4" />
-          <span>Market active on-chain</span>
+        <div className="text-xs text-muted-foreground bg-secondary/30 rounded-lg p-3">
+          <p className="font-bold text-accent mb-1">✓ Market Active On-Chain</p>
+          <p>PDA: {marketStatus.marketPda?.slice(0, 40)}...</p>
+          <p>Size: {marketStatus.size} bytes</p>
         </div>
       )}
 

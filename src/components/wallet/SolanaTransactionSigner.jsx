@@ -262,7 +262,7 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
       let sig;
       try {
         const result = await provider.signAndSendTransaction(transaction, {
-          skipPreflight: true, // Skip preflight for faster signing
+          skipPreflight: false, // Don't skip preflight - we want to catch errors early
           preflightCommitment: 'confirmed'
         });
         sig = result.signature;
@@ -271,8 +271,6 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         console.error('[SolanaTransactionSigner] Sign error:', signError);
         throw new Error(signError.message || 'Failed to sign transaction');
       }
-      
-      setSignature(sig);
 
       console.log('Waiting for confirmation...');
       let confirmation;
@@ -285,72 +283,74 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         // Extract on-chain error code from various possible locations
         let customCode = null;
         
-        // Check confirmError directly for InstructionError
         if (confirmError.InstructionError) {
           customCode = confirmError.InstructionError[1]?.Custom;
         }
         
-        // Check nested in value
         if (!customCode && confirmError.value?.InstructionError) {
           customCode = confirmError.value.InstructionError[1]?.Custom;
         }
         
-        // Check nested in err
         if (!customCode && confirmError.err?.InstructionError) {
           customCode = confirmError.err.InstructionError[1]?.Custom;
         }
         
-        // Try parsing from message
         if (!customCode && confirmError.message) {
-        const match = confirmError.message.match(/Custom["\s:]*(\d+)/);
-        if (match) {
-          customCode = parseInt(match[1]);
-        }
+          const match = confirmError.message.match(/Custom["\s:]*(\d+)/);
+          if (match) {
+            customCode = parseInt(match[1]);
+          }
         }
 
         if (customCode !== null) {
-        // Anchor error codes - check both BettingError and standard Anchor errors
-        const errorMessages = {
-          // BettingError codes (0-17)
-          0: 'Betting window has closed for this market',
-          1: 'Market has already been settled',
-          2: 'Market has been voided',
-          3: 'Stake amount must be greater than zero',
-          4: 'Invalid outcome index',
-          5: 'Too early to settle this market',
-          6: 'Market is paused',
-          7: 'Fee percentage exceeds maximum (5%)',
-          8: 'Invalid market timeline',
-          9: 'Nothing to claim (or already withdrawn)',
-          10: 'Nothing to refund',
-          11: 'Market is not voided',
-          12: 'Oracle has already voted',
-          13: 'Insufficient oracle consensus',
-          14: 'Invalid outcome count',
-          15: 'Market is already initialized',
-          16: 'Arithmetic overflow',
-          17: 'Unauthorized',
-          // Anchor/Account errors (3000+)
-          3007: 'Platform config not initialized - admin must initialize platform first',
-        };
-        const errorMsg = errorMessages[customCode] || `Program error code ${customCode}`;
-        throw new Error(`On-chain error ${customCode}: ${errorMsg}`);
+          const errorMessages = {
+            0: 'Betting window has closed',
+            1: 'Market already settled',
+            2: 'Market voided',
+            3: 'Stake must be > 0',
+            4: 'Invalid outcome',
+            5: 'Too early to settle',
+            6: 'Market paused',
+            7: 'Fee exceeds 5%',
+            8: 'Invalid timeline',
+            9: 'Nothing to claim',
+            10: 'Nothing to refund',
+            11: 'Market not voided',
+            12: 'Oracle already voted',
+            13: 'Insufficient consensus',
+            14: 'Invalid outcome count',
+            15: 'Market already initialized',
+            16: 'Arithmetic overflow',
+            17: 'Unauthorized',
+            3007: 'Platform not initialized',
+          };
+          const errorMsg = errorMessages[customCode] || `Program error ${customCode}`;
+          throw new Error(`On-chain error ${customCode}: ${errorMsg}`);
         }
         
-        throw new Error('Transaction confirmation failed: ' + (confirmError.message || 'Unknown error'));
+        throw new Error('Confirmation failed: ' + (confirmError.message || 'Unknown'));
       }
 
-      // Check for on-chain errors
+      // Check for on-chain errors BEFORE setting signature
       if (confirmation.value.err) {
         console.error('Transaction failed on-chain:', confirmation.value.err);
         const onChainErr = confirmation.value.err;
         if (onChainErr.InstructionError && onChainErr.InstructionError[1]?.Custom !== undefined) {
           const customCode = onChainErr.InstructionError[1].Custom;
-          throw new Error(`On-chain program error code ${customCode}. Check your Solana program.`);
+          const errorMessages = {
+            0: 'Betting window closed',
+            1: 'Market settled',
+            15: 'Market already initialized',
+            3007: 'Platform not initialized',
+          };
+          const errorMsg = errorMessages[customCode] || `Error ${customCode}`;
+          throw new Error(`Transaction failed: ${errorMsg}`);
         }
-        throw new Error('On-chain error: ' + JSON.stringify(onChainErr));
+        throw new Error('Transaction failed on-chain');
       }
 
+      // Only set signature after successful confirmation
+      setSignature(sig);
       console.log('Transaction confirmed on-chain!');
       onSuccess({ signature: sig, status: 'confirmed', userBetId, offerId, isPlatformInit: isPlatformInit || false });
     } catch (err) {

@@ -35,15 +35,22 @@ Deno.serve(async (req) => {
     );
     
     const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
+    console.log('Checking account at PDA:', marketPda.toBase58());
     const accountInfo = await connection.getAccountInfo(marketPda);
     
     if (!accountInfo) {
-      // Market doesn't exist on-chain
+      console.log('Account not found - status: not_created');
       return Response.json({
         status: 'not_created',
         marketPda: marketPda.toBase58(),
       });
     }
+    
+    console.log('Account found:', {
+      size: accountInfo.data.length,
+      lamports: accountInfo.lamports,
+      owner: accountInfo.owner.toBase58(),
+    });
     
     // Market exists, check if it's properly initialized
     // BetMarket should be at least 200 bytes (minimum for initialized account)
@@ -51,7 +58,7 @@ Deno.serve(async (req) => {
     const actualSize = accountInfo.data.length;
     
     if (actualSize < expectedMinSize) {
-      // Account exists but is not properly initialized (size 0 or too small)
+      console.log('Account too small - status: not_initialized, size:', actualSize);
       return Response.json({
         status: 'not_initialized',
         marketPda: marketPda.toBase58(),
@@ -62,13 +69,13 @@ Deno.serve(async (req) => {
       });
     }
     
-    // Try to deserialize the account data to verify it's a valid BetMarket
-    // For now, just check the size - if it's large enough, assume it's initialized
+    console.log('Account properly initialized - status: initialized, size:', actualSize);
     return Response.json({
       status: 'initialized',
       marketPda: marketPda.toBase58(),
       size: actualSize,
       lamports: accountInfo.lamports,
+      owner: accountInfo.owner.toBase58(),
     });
     
   } catch (error) {
