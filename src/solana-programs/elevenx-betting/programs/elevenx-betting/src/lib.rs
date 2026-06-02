@@ -52,11 +52,6 @@ pub mod elevenx_betting {
         instructions::liquidity::withdraw_liquidity(ctx)
     }
 
-    /// LP withdraws winnings from a settled market (winning outcome).
-    pub fn withdraw_lp_winnings(ctx: Context<WithdrawLpWinnings>, amount: u64) -> Result<()> {
-        instructions::claims::withdraw_lp_winnings(ctx, amount)
-    }
-
     // ── Betting ─────────────────────────────────────────────────────────────
 
     /// Place a bet on a specific outcome (0, 1, or 2) at the oracle fixed odds.
