@@ -158,6 +158,11 @@ export const AuthProvider = ({ children }) => {
         console.log('📥 walletAuth response:', response.data);
         
         if (response.data.success) {
+          // Store auth token for future requests
+          if (response.data.authToken) {
+            localStorage.setItem('elevenx_auth_token', response.data.authToken);
+            console.log('✓ Auth token stored');
+          }
           // Build user object from response (handle both direct fields and nested user.*)
           const userData = {
             id: response.data.userId || response.data.user?.id,
