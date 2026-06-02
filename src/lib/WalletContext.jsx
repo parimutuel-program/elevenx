@@ -13,21 +13,28 @@ export function WalletProvider({ children }) {
   useEffect(() => {
     const saved = localStorage.getItem(WALLET_SESSION_KEY);
     if (saved) {
+      console.log('[WalletContext] Restoring session:', saved);
       try {
         const parsed = JSON.parse(saved);
         const address = parsed.address || parsed;
+        console.log('[WalletContext] Parsed address:', address);
+        console.log('[WalletContext] Address length:', address?.length);
         // Validate Solana address format (base58, 32-44 chars)
         const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-        if (address && base58Regex.test(address)) {
+        const isValid = address && base58Regex.test(address);
+        console.log('[WalletContext] Regex test result:', isValid);
+        if (isValid) {
+          console.log('[WalletContext] Setting wallet as connected:', address.slice(0, 8) + '...');
           setWalletAddress(address);
           setIsConnected(true);
         } else {
           // Clear corrupted address
-          console.error('Corrupted wallet address in localStorage, clearing');
+          console.error('[WalletContext] Invalid address format, clearing');
+          console.error('[WalletContext] Invalid chars:', address?.split('').filter(c => !/^[1-9A-HJ-NP-Za-km-z]$/.test(c)));
           localStorage.removeItem(WALLET_SESSION_KEY);
         }
       } catch (err) {
-        console.error('Failed to parse wallet session:', err);
+        console.error('[WalletContext] Failed to parse wallet session:', err);
         localStorage.removeItem(WALLET_SESSION_KEY);
       }
     }
