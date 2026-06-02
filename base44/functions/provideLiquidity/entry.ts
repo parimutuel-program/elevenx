@@ -44,6 +44,24 @@ Deno.serve(async (req) => {
     const bet = bets[0];
     if (!bet || bet.status !== 'open') return Response.json({ error: 'Bet not open' }, { status: 400 });
 
+    // Check if market is properly initialized on-chain
+    const marketCheck = await base44.functions.invoke('checkMarketStatus', { match_id });
+    if (marketCheck.data.status === 'not_created') {
+      return Response.json({ 
+        error: 'Market not created on-chain',
+        hint: 'Please create the market on-chain first before providing liquidity',
+        marketPda: marketCheck.data.marketPda,
+      }, { status: 400 });
+    }
+    if (marketCheck.data.status === 'not_initialized') {
+      return Response.json({ 
+        error: 'Market account exists but is not properly initialized. The market creation may have failed.',
+        hint: 'Please contact support. Market PDA: ' + marketCheck.data.marketPda,
+        marketPda: marketCheck.data.marketPda,
+        actualSize: marketCheck.data.actualSize,
+      }, { status: 400 });
+    }
+
     // Fetch match for display title
     const matches = await base44.entities.Match.filter({ id: match_id });
     const match = matches[0];

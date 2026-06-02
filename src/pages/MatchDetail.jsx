@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
+import ProvideLiquidityPanel from '@/components/betting/ProvideLiquidityPanel';
 
 // Convert country code to emoji flag
 const getFlagEmoji = (countryCode) => {
