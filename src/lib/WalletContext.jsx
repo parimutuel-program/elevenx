@@ -88,15 +88,24 @@ export function WalletProvider({ children }) {
       setIsConnected(true);
       localStorage.setItem(WALLET_SESSION_KEY, JSON.stringify({ address, connectedAt: Date.now() }));
       
-      // Save to backend user profile only if user is authenticated
+      // Auto-register wallet with backend (creates user if doesn't exist)
       try {
         const { base44 } = await import('@/api/base44Client');
-        const isAuthenticated = await base44.auth.isAuthenticated();
-        if (isAuthenticated) {
-          await base44.functions.invoke('saveWalletAddress', { walletAddress: address });
+        console.log('[WalletContext] Calling walletAuth to register/check user...');
+        const authRes = await base44.functions.invoke('walletAuth', {
+          walletAddress: address,
+          register: true,
+        });
+        console.log('[WalletContext] walletAuth response:', authRes.data);
+        
+        if (authRes.data.isNewUser) {
+          console.log('[WalletContext] New user registered:', authRes.data.userId);
+        } else {
+          console.log('[WalletContext] Existing user:', authRes.data.userId);
         }
       } catch (err) {
-        console.error('Failed to save wallet to profile:', err);
+        console.error('[WalletContext] walletAuth failed:', err);
+        // Don't block connection - user can still bet, just won't have DB record
       }
     } catch (err) {
       console.error('Wallet connect failed:', err);
