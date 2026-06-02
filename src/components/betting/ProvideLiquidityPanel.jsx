@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useWallet } from '@/lib/WalletContext';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader, CheckCircle, AlertCircle, Plus } from 'lucide-react';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
 
 export default function ProvideLiquidityPanel({ bet, match, match_id }) {
@@ -14,10 +14,35 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [instruction, setInstruction] = useState(null);
+  const [createMarketMutation, setCreateMarketMutation] = useState({ isPending: false });
 
   useEffect(() => {
     checkMarketStatus();
   }, [match_id]);
+
+  const handleCreateMarket = async () => {
+    setCreateMarketMutation({ isPending: true });
+    try {
+      const response = await base44.functions.invoke('createMarketOnChain', {
+        bet_id: bet.id,
+        match_id,
+      });
+      
+      if (response.data.error) {
+        setError(response.data.error);
+      } else if (response.data.solana_instruction) {
+        // Need to sign transaction to create market
+        setInstruction(response.data.solana_instruction);
+      } else {
+        // Market already exists
+        await checkMarketStatus();
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setCreateMarketMutation({ isPending: false });
+    }
+  };
 
   const checkMarketStatus = async () => {
     try {
@@ -62,13 +87,11 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
   };
 
   const handleTransactionSuccess = async ({ signature, status }) => {
-    // Update the UserBet status to 'active' on-chain confirmation
     try {
-      // The backend should have already created the UserBet, just need to confirm
-      console.log('Liquidity provided successfully:', signature);
+      console.log('Transaction successful:', signature);
       setAmount('');
       setInstruction(null);
-      // Refresh market status
+      // Refresh market status after transaction
       await checkMarketStatus();
     } catch (err) {
       console.error('Failed to finalize:', err);
@@ -90,12 +113,31 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
 
   if (marketStatus.status === 'not_created') {
     return (
-      <Alert className="border-yellow-500/50 bg-yellow-500/10">
-        <AlertCircle className="w-4 h-4 text-yellow-500" />
-        <AlertDescription className="text-sm text-yellow-500">
-          Market not created on-chain. The market must be initialized before liquidity can be provided.
-        </AlertDescription>
-      </Alert>
+      <div className="space-y-4">
+        <Alert className="border-yellow-500/50 bg-yellow-500/10">
+          <AlertCircle className="w-4 h-4 text-yellow-500" />
+          <AlertDescription className="text-sm text-yellow-500">
+            Market not created on-chain. The market must be initialized before liquidity can be provided.
+          </AlertDescription>
+        </Alert>
+        <Button
+          onClick={handleCreateMarket}
+          disabled={createMarketMutation.isPending}
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-heading font-bold rounded-xl"
+        >
+          {createMarketMutation.isPending ? (
+            <>
+              <Loader className="w-4 h-4 mr-2 animate-spin" />
+              Creating Market...
+            </>
+          ) : (
+            <>
+              <Plus className="w-4 h-4 mr-2" />
+              Create Market On-Chain
+            </>
+          )}
+        </Button>
+      </div>
     );
   }
 
