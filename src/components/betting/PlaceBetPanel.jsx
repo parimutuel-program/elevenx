@@ -50,6 +50,17 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
 
   const handleGetInstruction = async () => {
     const wallet = getWalletAddress();
+    console.log('[PlaceBetPanel] handleGetInstruction called:', {
+      mode,
+      wallet,
+      walletValid: validateWalletAddress(wallet),
+      bet_id: bet?.id,
+      matchId,
+      selectedOutcome,
+      selectedOffer: selectedOffer?.id,
+      stakeNum,
+    });
+
     if (!wallet) { setPrepareError('Wallet not connected'); return; }
 
     if (!validateWalletAddress(wallet)) {
@@ -62,6 +73,13 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
     try {
       let res;
       if (mode === 'offer') {
+        console.log('[PlaceBetPanel] Calling createBetOffer:', {
+          bet_id: bet.id,
+          match_id: matchId,
+          outcome: selectedOutcome,
+          amount: stakeNum,
+          wallet_address: wallet?.slice(0, 8) + '...',
+        });
         res = await base44.functions.invoke('createBetOffer', {
           bet_id: bet.id,
           match_id: matchId,
@@ -69,16 +87,24 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
           amount: stakeNum,
           wallet_address: wallet,
         });
+        console.log('[PlaceBetPanel] createBetOffer response:', res.data);
       } else {
+        console.log('[PlaceBetPanel] Calling matchBet:', {
+          offer_id: selectedOffer.id,
+          amount: stakeNum,
+          wallet_address: wallet?.slice(0, 8) + '...',
+        });
         res = await base44.functions.invoke('matchBet', {
           offer_id: selectedOffer.id,
           amount: stakeNum,
           wallet_address: wallet,
         });
+        console.log('[PlaceBetPanel] matchBet response:', res.data);
       }
       if (res.data?.error) throw new Error(res.data.error);
       setInstruction(res.data.solana_instruction);
     } catch (err) {
+      console.error('[PlaceBetPanel] Error in handleGetInstruction:', err);
       const msg = err.response?.data?.error || err.message || 'Failed to prepare transaction';
       setPrepareError(msg);
     } finally {
