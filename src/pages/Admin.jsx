@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Trophy, Settings, Gavel, RefreshCw, Shield, Radio, CheckCircle2, Zap, Download } from 'lucide-react';
+import { Plus, Trophy, Settings, Gavel, RefreshCw, Shield, Radio, CheckCircle2, Zap, Download, BarChart3, List } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
@@ -124,145 +125,184 @@ export default function Admin() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Sync World Cup Matches */}
-      <div className="bg-card border border-accent/20 rounded-xl p-4">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <Download className="w-5 h-5 text-accent" />
-            <div>
-              <p className="text-sm font-bold text-foreground">Sync World Cup 2026 from API</p>
-              <p className="text-xs text-muted-foreground">Imports all matches & sets live odds automatically. Safe to run multiple times.</p>
-            </div>
-          </div>
-          <Button
-            onClick={() => { setSyncResult(null); syncMutation.mutate(); }}
-            disabled={syncMutation.isPending}
-            className="bg-accent hover:bg-accent/90 text-accent-foreground font-heading font-bold rounded-xl h-9"
-          >
-            {syncMutation.isPending ? (
-              <><RefreshCw className="w-4 h-4 animate-spin mr-2" />Syncing...</>
-            ) : (
-              <><Download className="w-4 h-4 mr-2" />Sync Now</>
-            )}
-          </Button>
-        </div>
-        {syncResult && (
-          <p className="mt-3 text-xs text-accent bg-accent/10 rounded-lg px-3 py-2">{syncResult}</p>
-        )}
-      </div>
-
-      {/* Platform Initialization */}
-      <div className="bg-card border border-primary/20 rounded-xl p-4">
-        {pendingPlatformInit ? (
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <Zap className="w-5 h-5 text-primary" />
-              <div>
-                <p className="text-sm font-bold text-foreground">Sign Platform Initialization</p>
-                <p className="text-xs text-muted-foreground">Sign the transaction with your Phantom wallet</p>
-              </div>
-            </div>
-            <SolanaTransactionSigner
-              instruction={pendingPlatformInit}
-              amount={0}
-              isPlatformInit={true}
-              onSuccess={handlePlatformInitSuccess}
-              onError={handlePlatformInitError}
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPendingPlatformInit(null)}
-              className="w-full h-8 text-xs rounded-lg"
-            >
-              Cancel
-            </Button>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Zap className="w-5 h-5 text-primary" />
-              <div>
-                <p className="text-sm font-bold text-foreground">Platform Config</p>
-                <p className="text-xs text-muted-foreground">
-                  {platformInitialized ? 'Already initialized on Solana' : 'Initialize the platform on Solana (one-time setup)'}
-                </p>
-              </div>
-            </div>
-            {platformInitialized ? (
-              <Badge className="bg-accent/20 text-accent text-xs py-1 px-3 rounded-lg">
-                <CheckCircle2 className="w-3 h-3 mr-1" /> Initialized
-              </Badge>
-            ) : (
-              <Button
-                onClick={() => initPlatformMutation.mutate()}
-                disabled={initPlatformMutation.isPending}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-heading font-bold rounded-xl h-9"
-              >
-                {initPlatformMutation.isPending ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
-                    Initializing...
-                  </>
-                ) : (
-                  'Initialize Platform'
-                )}
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Oracle Status Banner */}
-      <div className="bg-card border border-border/50 rounded-xl p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className={`w-2 h-2 rounded-full ${oracleStatus?.provider === 'manual' ? 'bg-yellow-400' : 'bg-green-500'} animate-pulse`} />
-          <div>
-            <p className="text-sm font-bold text-foreground">Oracle Status: {oracleStatus?.provider === 'manual' ? 'Manual Verification' : 'Auto Settlement'}</p>
-            <p className="text-xs text-muted-foreground">
-              {oracleStatus?.verified ? 'Oracle verified' : oracleStatus?.message || 'Admin verification required'}
-            </p>
-          </div>
-        </div>
-        <Radio className={`w-5 h-5 ${oracleStatus?.provider === 'manual' ? 'text-yellow-400' : 'text-green-500'}`} />
-      </div>
-
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-heading font-black text-2xl">Admin Panel</h1>
-          <p className="text-sm text-muted-foreground">Manage matches, bets, and settlements</p>
+          <p className="text-sm text-muted-foreground">Manage matches, bets, and platform settings</p>
         </div>
         <div className="flex gap-2">
           <CreateMatchDialog />
         </div>
       </div>
 
-      {/* Matches management */}
-      <section>
-        <h2 className="font-heading font-bold text-lg mb-4 flex items-center gap-2">
-          <Trophy className="w-5 h-5 text-primary" />
-          Matches ({matches.length})
-        </h2>
-        <div className="space-y-2">
-          {matches.map((match, i) => (
-            <AdminMatchRow key={match.id} match={match} bets={bets} index={i} />
-          ))}
-        </div>
-      </section>
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid grid-cols-3 w-full max-w-md bg-secondary/50 border border-border/50 rounded-xl">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-heading font-bold text-xs rounded-lg">
+            <BarChart3 className="w-3.5 h-3.5 mr-1.5" /> Overview
+          </TabsTrigger>
+          <TabsTrigger value="matches" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-heading font-bold text-xs rounded-lg">
+            <Trophy className="w-3.5 h-3.5 mr-1.5" /> Matches
+          </TabsTrigger>
+          <TabsTrigger value="bets" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-heading font-bold text-xs rounded-lg">
+            <List className="w-3.5 h-3.5 mr-1.5" /> Bets
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Bets management */}
-      <section>
-        <h2 className="font-heading font-bold text-lg mb-4 flex items-center gap-2">
-          <Gavel className="w-5 h-5 text-primary" />
-          Bets ({bets.length})
-        </h2>
-        <div className="space-y-2">
-          {bets.map((bet, i) => (
-            <AdminBetRow key={bet.id} bet={bet} matches={matches} index={i} />
-          ))}
-        </div>
-      </section>
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-4">
+          {/* Sync World Cup Matches */}
+          <div className="bg-card border border-accent/20 rounded-xl p-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <Download className="w-5 h-5 text-accent" />
+                <div>
+                  <p className="text-sm font-bold text-foreground">Sync World Cup 2026 from API</p>
+                  <p className="text-xs text-muted-foreground">Imports all matches & sets live odds automatically. Safe to run multiple times.</p>
+                </div>
+              </div>
+              <Button
+                onClick={() => { setSyncResult(null); syncMutation.mutate(); }}
+                disabled={syncMutation.isPending}
+                className="bg-accent hover:bg-accent/90 text-accent-foreground font-heading font-bold rounded-xl h-9"
+              >
+                {syncMutation.isPending ? (
+                  <><RefreshCw className="w-4 h-4 animate-spin mr-2" />Syncing...</>
+                ) : (
+                  <><Download className="w-4 h-4 mr-2" />Sync Now</>
+                )}
+              </Button>
+            </div>
+            {syncResult && (
+              <p className="mt-3 text-xs text-accent bg-accent/10 rounded-lg px-3 py-2">{syncResult}</p>
+            )}
+          </div>
+
+          {/* Platform Initialization */}
+          <div className="bg-card border border-primary/20 rounded-xl p-4">
+            {pendingPlatformInit ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <Zap className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Sign Platform Initialization</p>
+                    <p className="text-xs text-muted-foreground">Sign the transaction with your Phantom wallet</p>
+                  </div>
+                </div>
+                <SolanaTransactionSigner
+                  instruction={pendingPlatformInit}
+                  amount={0}
+                  isPlatformInit={true}
+                  onSuccess={handlePlatformInitSuccess}
+                  onError={handlePlatformInitError}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPendingPlatformInit(null)}
+                  className="w-full h-8 text-xs rounded-lg"
+                >
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Zap className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Platform Config</p>
+                    <p className="text-xs text-muted-foreground">
+                      {platformInitialized ? 'Already initialized on Solana' : 'Initialize the platform on Solana (one-time setup)'}
+                    </p>
+                  </div>
+                </div>
+                {platformInitialized ? (
+                  <Badge className="bg-accent/20 text-accent text-xs py-1 px-3 rounded-lg">
+                    <CheckCircle2 className="w-3 h-3 mr-1" /> Initialized
+                  </Badge>
+                ) : (
+                  <Button
+                    onClick={() => initPlatformMutation.mutate()}
+                    disabled={initPlatformMutation.isPending}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-heading font-bold rounded-xl h-9"
+                  >
+                    {initPlatformMutation.isPending ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
+                        Initializing...
+                      </>
+                    ) : (
+                      'Initialize Platform'
+                    )}
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Oracle Status Banner */}
+          <div className="bg-card border border-border/50 rounded-xl p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`w-2 h-2 rounded-full ${oracleStatus?.provider === 'manual' ? 'bg-yellow-400' : 'bg-green-500'} animate-pulse`} />
+              <div>
+                <p className="text-sm font-bold text-foreground">Oracle Status: {oracleStatus?.provider === 'manual' ? 'Manual Verification' : 'Auto Settlement'}</p>
+                <p className="text-xs text-muted-foreground">
+                  {oracleStatus?.verified ? 'Oracle verified' : oracleStatus?.message || 'Admin verification required'}
+                </p>
+              </div>
+            </div>
+            <Radio className={`w-5 h-5 ${oracleStatus?.provider === 'manual' ? 'text-yellow-400' : 'text-green-500'}`} />
+          </div>
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-card border border-border/50 rounded-xl p-4">
+              <div className="flex items-center gap-3">
+                <Trophy className="w-8 h-8 text-primary" />
+                <div>
+                  <p className="text-2xl font-heading font-bold text-foreground">{matches.length}</p>
+                  <p className="text-xs text-muted-foreground">Total Matches</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-card border border-border/50 rounded-xl p-4">
+              <div className="flex items-center gap-3">
+                <Gavel className="w-8 h-8 text-accent" />
+                <div>
+                  <p className="text-2xl font-heading font-bold text-foreground">{bets.length}</p>
+                  <p className="text-xs text-muted-foreground">Active Markets</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Matches Tab */}
+        <TabsContent value="matches" className="space-y-4">
+          <h2 className="font-heading font-bold text-lg flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-primary" />
+            Matches ({matches.length})
+          </h2>
+          <div className="space-y-2">
+            {matches.map((match, i) => (
+              <AdminMatchRow key={match.id} match={match} bets={bets} index={i} />
+            ))}
+          </div>
+        </TabsContent>
+
+        {/* Bets Tab */}
+        <TabsContent value="bets" className="space-y-4">
+          <h2 className="font-heading font-bold text-lg flex items-center gap-2">
+            <Gavel className="w-5 h-5 text-primary" />
+            Bets ({bets.length})
+          </h2>
+          <div className="space-y-2">
+            {bets.map((bet, i) => (
+              <AdminBetRow key={bet.id} bet={bet} matches={matches} index={i} />
+            ))}
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
