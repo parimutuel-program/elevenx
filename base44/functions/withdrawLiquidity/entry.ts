@@ -45,12 +45,18 @@ Deno.serve(async (req) => {
     
     console.log('Withdraw check - Offer status:', offer.status, 'amount_unmatched:', offer.amount_unmatched, 'userBet.status:', userBet.status);
     
-    // Check if offer is in a terminal state
-    if (offer.status === 'cancelled' || offer.status === 'settled') {
-      return Response.json({ error: 'Offer is ' + offer.status + ', cannot withdraw' }, { status: 400 });
+    // If offer is cancelled/settled but UserBet is still pending, allow withdrawal of the original amount
+    // This handles the case where DB wasn't updated after on-chain withdrawal
+    let withdrawAmount = offer.amount_unmatched || 0;
+    if ((offer.status === 'cancelled' || offer.status === 'settled') && userBet.status === 'pending') {
+      // Use the UserBet amount since offer was cancelled but funds weren't returned
+      withdrawAmount = userBet.amount || 0;
+      console.log('Allowing withdrawal for cancelled offer with pending UserBet, amount:', withdrawAmount);
+    } else if (offer.status === 'cancelled' || offer.status === 'settled') {
+      return Response.json({ error: 'Offer is ' + offer.status + ' and UserBet is ' + userBet.status + ', cannot withdraw' }, { status: 400 });
     }
+    
     // Verify there's unmatched liquidity
-    const withdrawAmount = offer.amount_unmatched || 0;
     if (withdrawAmount <= 0) {
       return Response.json({ error: 'No unmatched liquidity remaining (offer may be fully matched)' }, { status: 400 });
     }
