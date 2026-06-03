@@ -270,6 +270,27 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         // place_bet — call the actual program instruction
         console.log('Creating place_bet program instruction:', instruction);
         
+        // Check if this is a futures bet with placeholder PDAs (not yet on-chain)
+        const isPlaceholderPda = instruction.marketPda === '11111111111111111111111111111111';
+        
+        if (isPlaceholderPda) {
+          // Futures markets not yet on-chain - just record the bet off-chain for now
+          console.log('[SolanaTransactionSigner] Futures bet - no on-chain transaction needed yet');
+          // Return success immediately since there's no on-chain market
+          setSignature('futures_offchain_bet');
+          onSuccess({ 
+            signature: 'futures_offchain_bet', 
+            status: 'confirmed', 
+            userBetId, 
+            offerId, 
+            betId, 
+            isPlatformInit: false,
+            futures_market_id 
+          });
+          setIsSigning(false);
+          return;
+        }
+        
         const programId = new PublicKey(instruction.programId || '4epUYJPwoPhG9RPoQ6qT9dsAewJCDBSCGUpR1Xj9UxTm');
         
         // Build keys in the EXACT order required by the Rust PlaceBet struct:

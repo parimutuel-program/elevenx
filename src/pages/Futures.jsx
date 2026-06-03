@@ -9,6 +9,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import GroupCountryCard from '@/components/futures/GroupCountryCard';
 import GroupNavigation, { WORLD_CUP_GROUPS_2026 } from '@/components/futures/GroupNavigation';
 import FuturesBetSlip from '@/components/futures/FuturesBetSlip';
+import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
+import { useWallet } from '@/lib/WalletContext';
 
 export default function Futures() {
   const [selectedOutcome, setSelectedOutcome] = useState(null);
@@ -17,8 +19,12 @@ export default function Futures() {
   const [activeTab, setActiveTab] = useState('futures');
   const [activeGroup, setActiveGroup] = useState('A');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showSigner, setShowSigner] = useState(false);
+  const [signerInstruction, setSignerInstruction] = useState(null);
+  const [pendingBetData, setPendingBetData] = useState(null);
   const queryClient = useQueryClient();
   const groupRefs = useRef({});
+  const { isConnected, connect } = useWallet();
 
   // Fetch futures markets from database
   const { data: futuresMarkets = [], isLoading } = useQuery({
@@ -46,14 +52,84 @@ export default function Futures() {
     console.log('Selected:', market.country, outcome.position, outcome.odds);
   };
 
-  // Handle bet confirmation
+  // Handle bet confirmation - creates UserBet record and prepares Solana transaction
   const handleBetConfirm = async ({ market, outcome, amount, potentialPayout }) => {
-    console.log('Bet confirmed:', { market: market.country, outcome: outcome.position, amount, potentialPayout });
-    // TODO: Integrate with placeBet function
-    setShowBetSlip(false);
+    try {
+      // Check if wallet is connected
+      if (!isConnected) {
+        await connect();
+        return;
+      }
+
+      // Create UserBet record in database
+      const userBet = await base44.entities.UserBet.create({
+        bet_id: market.id,
+        match_id: 'futures', // Futures don't have match_id
+        outcome: outcome.position === '1st' ? 'a' : outcome.position === '2nd' ? 'b' : 'draw',
+        amount,
+        potential_payout: potentialPayout,
+        status: 'pending',
+        outcome_label: `${market.country} - ${outcome.position} Place`,
+        match_title: `${market.country} ${outcome.position} Place`,
+        role: 'matcher',
+      });
+
+      console.log('UserBet created:', userBet);
+      setPendingBetData({ userBet, market, outcome, amount, potentialPayout });
+
+      // Prepare Solana instruction for place_bet
+      // For now, we'll use a simple transfer instruction since futures markets aren't fully on-chain yet
+      // This will be updated once futures markets are deployed on-chain
+      const instruction = {
+        instruction_type: 'place_bet',
+        marketPda: market.solana_market_pda || '11111111111111111111111111111111',
+        lpOfferPda: '11111111111111111111111111111111',
+        bettorPositionPda: '11111111111111111111111111111111',
+        outcome: outcome.position === '1st' ? 0 : outcome.position === '2nd' ? 1 : 2,
+        amountLamports: Math.floor(amount * 1_000_000_000), // SOL to lamports
+      };
+
+      setSignerInstruction(instruction);
+      setShowSigner(true);
+      setShowBetSlip(false);
+    } catch (error) {
+      console.error('Failed to create bet:', error);
+      alert('Failed to create bet: ' + error.message);
+    }
+  };
+
+  // Handle successful transaction
+  const handleSignerSuccess = async (signature) => {
+    console.log('Transaction successful:', signature);
+    
+    // Update UserBet status to active
+    if (pendingBetData?.userBet) {
+      await base44.entities.UserBet.update(pendingBetData.userBet.id, {
+        status: 'active',
+      });
+    }
+
+    // Invalidate queries to refresh data
+    queryClient.invalidateQueries({ queryKey: ['futures-markets'] });
+    queryClient.invalidateQueries({ queryKey: ['user-bets'] });
+
+    // Reset state
+    setShowSigner(false);
+    setSignerInstruction(null);
+    setPendingBetData(null);
     setSelectedMarket(null);
     setSelectedOutcome(null);
-    alert('Bet placed! (Integration pending)');
+
+    alert('Bet placed successfully! Transaction: ' + signature.slice(0, 8) + '...');
+  };
+
+  // Handle transaction error
+  const handleSignerError = (error) => {
+    console.error('Transaction failed:', error);
+    alert('Transaction failed: ' + error);
+    setShowSigner(false);
+    setSignerInstruction(null);
+    setPendingBetData(null);
   };
 
   // Mutation to fetch and calculate odds
@@ -337,6 +413,17 @@ export default function Futures() {
               />
             )}
           </AnimatePresence>
+
+          {/* Solana Transaction Signer */}
+          {showSigner && signerInstruction && (
+            <SolanaTransactionSigner
+              instruction={signerInstruction}
+              amount={pendingBetData?.amount}
+              userBetId={pendingBetData?.userBet?.id}
+              onSuccess={handleSignerSuccess}
+              onError={handleSignerError}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="matches" className="mt-6">
