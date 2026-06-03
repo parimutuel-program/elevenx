@@ -35,20 +35,26 @@ export default function Admin() {
     refetchInterval: 30000,
   });
 
-  const { data: platformStatus } = useQuery({
+  const { data: platformStatus, refetch: refetchPlatformStatus } = useQuery({
     queryKey: ['platformStatus'],
     queryFn: async () => {
       try {
         // Get wallet address from localStorage (set by WalletContext after Phantom connects)
         const walletSession = localStorage.getItem('walletSession');
         const walletAddress = walletSession ? JSON.parse(walletSession).address : null;
+        if (!walletAddress) {
+          console.log('[Admin] No wallet connected yet');
+          return null;
+        }
         const res = await base44.functions.invoke('initPlatformConfig', { walletAddress });
         return res.data;
       } catch (err) {
+        console.error('[Admin] initPlatformConfig error:', err);
         return null;
       }
     },
     refetchInterval: 30000,
+    enabled: false, // Only call when user clicks button
   });
 
   const { data: platformConfigDetails, refetch: refetchPlatformConfig } = useQuery({
@@ -67,6 +73,14 @@ export default function Admin() {
   const [syncResult, setSyncResult] = useState(null);
   const [pendingPlatformInit, setPendingPlatformInit] = useState(null);
   const [platformInitialized, setPlatformInitialized] = useState(false);
+
+  useEffect(() => {
+    // Check if wallet is connected on mount
+    const walletSession = localStorage.getItem('walletSession');
+    if (walletSession) {
+      refetchPlatformStatus();
+    }
+  }, []);
 
   useEffect(() => {
     if (platformStatus) {
@@ -92,6 +106,9 @@ export default function Admin() {
       // Get wallet address from localStorage (set by WalletContext after Phantom connects)
       const walletSession = localStorage.getItem('walletSession');
       const walletAddress = walletSession ? JSON.parse(walletSession).address : null;
+      if (!walletAddress) {
+        throw new Error('Wallet not connected. Please connect Phantom first.');
+      }
       const response = await base44.functions.invoke('initPlatformConfig', { walletAddress });
       if (response.data.error) throw new Error(response.data.error);
       return response.data;
@@ -99,9 +116,11 @@ export default function Admin() {
     onSuccess: (data) => {
       if (data.alreadyExists) {
         alert('Platform config already initialized on-chain');
+        setPlatformInitialized(true);
       } else if (data.solana_instruction) {
         setPendingPlatformInit(data.solana_instruction);
       }
+      refetchPlatformStatus();
     },
     onError: (err) => alert('Failed: ' + err.message),
   });
