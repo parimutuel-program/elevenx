@@ -767,25 +767,47 @@ function AdminBetRow({ bet, matches, index }) {
               {bet.winning_outcome === 'a' ? bet.outcome_a : bet.winning_outcome === 'b' ? bet.outcome_b : 'Draw'}
             </span>
           </p>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={async () => {
-              if (!confirm('Mark all won bets as claimed? This updates the database only (no on-chain transaction).')) return;
-              try {
-                const res = await base44.functions.invoke('adminMarkAsClaimed', { bet_id: bet.id });
-                if (res.data.error) throw new Error(res.data.error);
-                alert(`✓ Marked ${res.data.claimed_bet_ids.length} bet(s) as claimed`);
-                queryClient.invalidateQueries({ queryKey: ['bets'] });
-                queryClient.invalidateQueries({ queryKey: ['myBets'] });
-              } catch (err) {
-                alert('Failed: ' + err.message);
-              }
-            }}
-            className="h-8 text-xs bg-accent/20 text-accent hover:bg-accent/30 rounded-lg w-full"
-          >
-            <CheckCircle className="w-3 h-3 mr-1" /> Mark as Claimed (DB Only)
-          </Button>
+          {!isMarketInitialized || !marketStatus?.settled ? (
+            pendingSettle ? (
+              <div className="w-full">
+                <SolanaTransactionSigner
+                  instruction={pendingSettle}
+                  amount={0}
+                  onSuccess={handleSettleSuccess}
+                  onError={handleSettleError}
+                />
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => settleMutation.mutate(bet.winning_outcome)}
+                disabled={settleMutation.isPending}
+                className="h-8 text-xs bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg w-full font-bold"
+              >
+                <Gavel className="w-3 h-3 mr-1" /> Settle On-Chain (Enable Claims)
+              </Button>
+            )
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                if (!confirm('Mark all won bets as claimed? This updates the database only (no on-chain transaction).')) return;
+                try {
+                  const res = await base44.functions.invoke('adminMarkAsClaimed', { bet_id: bet.id });
+                  if (res.data.error) throw new Error(res.data.error);
+                  alert(`✓ Marked ${res.data.claimed_bet_ids.length} bet(s) as claimed`);
+                  queryClient.invalidateQueries({ queryKey: ['bets'] });
+                  queryClient.invalidateQueries({ queryKey: ['myBets'] });
+                } catch (err) {
+                  alert('Failed: ' + err.message);
+                }
+              }}
+              className="h-8 text-xs bg-accent/20 text-accent hover:bg-accent/30 rounded-lg w-full"
+            >
+              <CheckCircle className="w-3 h-3 mr-1" /> Mark as Claimed (DB Only)
+            </Button>
+          )}
         </div>
       ) : null}
     </motion.div>
