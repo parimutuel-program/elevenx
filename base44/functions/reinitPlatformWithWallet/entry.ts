@@ -19,8 +19,8 @@ Deno.serve(async (req) => {
     }
     
     // Verify user is admin by checking WalletUser entity
-    const walletUsers = await serviceRole.entities.WalletUser.filter({ wallet_address: walletAddress });
-    const walletUser = walletUsers[0];
+    const allWalletUsers = await serviceRole.entities.WalletUser.list();
+    const walletUser = allWalletUsers.find(wu => wu.wallet_address === walletAddress);
     
     if (!walletUser || walletUser.role !== 'admin') {
       return Response.json({ error: 'Admin only - this wallet is not registered as admin' }, { status: 403 });
