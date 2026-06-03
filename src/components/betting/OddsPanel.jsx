@@ -1,9 +1,65 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { TrendingUp, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { base44 } from '@/api/base44Client';
 
 export default function OddsPanel({ bet, match, onSelectOutcome, selectedOutcome, onRefreshOdds, isRefreshingOdds }) {
+  const [loadingLiveOdds, setLoadingLiveOdds] = useState(false);
+  
+  // Auto-fetch live odds from The Odds API on mount
+  useEffect(() => {
+    if (!match?.team_a || !match?.team_b || loadingLiveOdds) return;
+    
+    const fetchLiveOdds = async () => {
+      try {
+        setLoadingLiveOdds(true);
+        console.log('🔍 Fetching live odds for:', match.team_a, 'vs', match.team_b);
+        const res = await base44.functions.invoke('fetchTheOddsApi', {});
+        const matches = res.data.matches || [];
+        console.log('📊 API returned', matches.length, 'matches');
+        
+        // Find matching teams (flexible matching for name variations)
+        const matchedOdds = matches.find(m => {
+          const home = m.home_team.toLowerCase();
+          const away = m.away_team.toLowerCase();
+          const teamA = match.team_a.toLowerCase();
+          const teamB = match.team_b.toLowerCase();
+          
+          // Try exact match first
+          if (home === teamA && away === teamB) return true;
+          
+          // Try partial match (e.g. "Czech Republic" vs "Czechia")
+          if (home.includes(teamA) || teamA.includes(home)) {
+            if (away.includes(teamB) || teamB.includes(away)) return true;
+          }
+          
+          return false;
+        });
+        
+        if (matchedOdds) {
+          console.log('✅ Found live odds:', matchedOdds.odds);
+          // Update bet entity with live odds
+          await base44.entities.Bet.update(bet.id, {
+            odds_a: matchedOdds.odds.home,
+            odds_b: matchedOdds.odds.away,
+            odds_draw: matchedOdds.odds.draw,
+            odds_bookmaker: 'Pinnacle',
+            odds_updated_at: new Date().toISOString(),
+          });
+        } else {
+          console.log('❌ No matching odds found');
+        }
+      } catch (err) {
+        console.error('Failed to fetch live odds:', err);
+      } finally {
+        setLoadingLiveOdds(false);
+      }
+    };
+
+    fetchLiveOdds();
+  }, [match?.team_a, match?.team_b, bet?.id]);
+  
   // Use odds_a/b/draw first, fallback to oracle_odds (convert from basis points to decimal)
   const oddsA = bet?.odds_a || (bet?.oracle_odds_a ? bet.oracle_odds_a / 100 : 0);
   const oddsB = bet?.odds_b || (bet?.oracle_odds_b ? bet.oracle_odds_b / 100 : 0);
@@ -41,7 +97,10 @@ export default function OddsPanel({ bet, match, onSelectOutcome, selectedOutcome
         <h3 className="font-heading font-bold text-sm flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-primary" />
           Fixed Odds
-          {bet?.odds_bookmaker && (
+          {loadingLiveOdds && (
+            <span className="text-[9px] text-primary animate-pulse">Fetching live...</span>
+          )}
+          {bet?.odds_bookmaker && !loadingLiveOdds && (
             <span className="text-[10px] text-muted-foreground font-normal">via {bet.odds_bookmaker}</span>
           )}
         </h3>
