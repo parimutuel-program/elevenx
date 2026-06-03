@@ -107,6 +107,11 @@ Deno.serve(async (req) => {
     // Generate a JWT-like token for wallet-based auth
     // This token will be stored in localStorage and used for auth
     const userWallet = user.wallet_address || user.data?.wallet_address;
+    
+    // Ensure user has username set (for display)
+    if (!user.username && userWallet) {
+      user.username = user.full_name || `User_${userWallet.slice(0, 8)}`;
+    }
     const tokenPayload = {
       userId: user.id,
       walletAddress: userWallet,
