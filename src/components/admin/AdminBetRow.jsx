@@ -113,11 +113,36 @@ export default function AdminBetRow({ bet, matches, index }) {
     },
   });
 
-  const handleSettleSuccess = () => {
+  const handleSettleSuccess = async (result) => {
     setPendingSettle(null);
+    
+    // Commit settlement to database
+    try {
+      const commitRes = await base44.functions.invoke('commitSettlement', {
+        signature: result.signature,
+        commit_data: {
+          bet_id: bet.id,
+          match_id: bet.match_id,
+          winning_outcome: pendingSettle.instruction_data ? 
+            (parseInt(atob(pendingSettle.instruction_data).slice(8), 16) === 0 ? 'a' : 
+             parseInt(atob(pendingSettle.instruction_data).slice(8), 16) === 1 ? 'b' : 'draw') 
+            : bet.winning_outcome,
+        },
+      });
+      
+      if (commitRes.data.error) {
+        console.error('[AdminBetRow] Commit failed:', commitRes.data.error);
+      } else {
+        console.log('[AdminBetRow] Commit successful:', commitRes.data);
+        alert(commitRes.data.message || '✓ Market settled! Winners can claim.');
+      }
+    } catch (commitErr) {
+      console.error('[AdminBetRow] Commit error:', commitErr);
+      alert('Settlement on-chain succeeded, but database update failed. Please contact admin.');
+    }
+    
     queryClient.invalidateQueries({ queryKey: ['bets'] });
     queryClient.invalidateQueries({ queryKey: ['myBets'] });
-    alert('✓ Market settled on-chain! Players can now claim winnings.');
   };
 
   const handleSettleError = (err) => {

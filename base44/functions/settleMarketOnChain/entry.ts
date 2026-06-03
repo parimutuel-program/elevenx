@@ -10,6 +10,7 @@ const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA__PROGRAM_ID') || 'PMut11111111111
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const serviceRole = base44.asServiceRole;
     
     const user = await base44.auth.me();
     
@@ -64,6 +65,12 @@ Deno.serve(async (req) => {
     discriminator.copy(data, 0);
     data.writeUInt8(outcomeIndex, 8);
 
+    // Get all active bets for this market to update after settlement
+    const allBets = await serviceRole.entities.Bet.filter({ match_id: bet.match_id });
+    
+    // Calculate winning bets and update UserBet statuses
+    const outcomeLabel = winning_outcome === 'a' ? bet.outcome_a : winning_outcome === 'b' ? bet.outcome_b : 'Draw';
+    
     return Response.json({
       success: true,
       message: `Settle market on-chain for ${match.team_a} vs ${match.team_b}`,
@@ -78,6 +85,14 @@ Deno.serve(async (req) => {
           { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false },
         ],
         instruction_data: data.toString('base64'),
+      },
+      // Data to commit after transaction succeeds
+      commit_data: {
+        bet_id: bet.id,
+        match_id: bet.match_id,
+        winning_outcome: winning_outcome,
+        outcome_label: outcomeLabel,
+        all_bet_ids: allBets.map(b => b.id),
       },
     });
 
