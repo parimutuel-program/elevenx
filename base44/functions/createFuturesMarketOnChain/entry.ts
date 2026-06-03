@@ -97,6 +97,8 @@ Deno.serve(async (req) => {
     let offset = 0;
     
     // match_id (32 bytes) - use futures market ID
+    const matchIdBytes = Buffer.alloc(32);
+    Buffer.from(futures_market_id, 'utf-8').copy(matchIdBytes, 0, 0, Math.min(futures_market_id.length, 32));
     matchIdBytes.copy(paramsData, offset);
     offset += 32;
     
