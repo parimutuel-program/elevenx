@@ -63,11 +63,16 @@ export default function AdminBetRow({ bet, matches, index }) {
   }, [marketStatus, marketError, bet.match_id]);
 
   const recreateMarketMutation = useMutation({
-    mutationFn: ({ bet_id, match_id }) => base44.functions.invoke('recreateMarketWithValidDates', {
-      bet_id,
-      match_id,
-      admin_wallet: walletAddress,
-    }),
+    mutationFn: ({ bet_id, match_id }) => {
+      if (!walletAddress) {
+        throw new Error('Wallet not connected. Please connect Phantom wallet first.');
+      }
+      return base44.functions.invoke('recreateMarketWithValidDates', {
+        bet_id,
+        match_id,
+        admin_wallet: walletAddress,
+      });
+    },
     onSuccess: (response) => {
       const data = response.data;
       if (data.solana_instruction) {
@@ -250,11 +255,15 @@ export default function AdminBetRow({ bet, matches, index }) {
                 size="sm"
                 variant="outline"
                 onClick={() => {
+                  if (!isConnected) {
+                    alert('Please connect your Phantom wallet first');
+                    return;
+                  }
                   if (confirm('Recreate market with timestamps in the past to allow immediate settlement. Continue?')) {
                     recreateMarketMutation.mutate({ bet_id: bet.id, match_id: bet.match_id });
                   }
                 }}
-                disabled={recreateMarketMutation.isPending}
+                disabled={recreateMarketMutation.isPending || !isConnected}
                 className="h-8 text-xs border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10 rounded-lg"
               >
                 ⚡ Test Mode
