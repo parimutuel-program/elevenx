@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { useWallet } from '@/lib/WalletContext';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Wallet, TrendingUp, DollarSign, ArrowRight, Plus, Clock, CheckCircle2, AlertCircle, ExternalLink } from 'lucide-react';
+import { Wallet, TrendingUp, DollarSign, ArrowRight, Plus, Clock, CheckCircle2, AlertCircle, ExternalLink, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -299,9 +299,18 @@ export default function LpDashboard() {
         isWithdraw={true}
       />
       
-      <div>
-        <h1 className="font-heading font-black text-2xl mb-1">LP Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Provide liquidity and earn from losing bets</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-heading font-black text-2xl mb-1">LP Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Provide liquidity for live matches</p>
+        </div>
+        <button
+          onClick={() => window.location.href = '/futures'}
+          className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-xl transition-all"
+        >
+          <Trophy className="w-4 h-4 text-primary" />
+          <span className="text-xs font-bold text-primary">Futures LP</span>
+        </button>
       </div>
 
       {/* Connect wallet gate */}

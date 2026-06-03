@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Flame, TrendingUp, Clock, ChevronRight, Lock } from 'lucide-react';
+import { Flame, TrendingUp, Clock, ChevronRight, Lock, Trophy, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import FuturesCard from '@/components/futures/FuturesCard';
 
 // All 48 World Cup 2026 qualified teams (based on current qualifications + projections)
@@ -112,6 +113,7 @@ const FUTURES_MARKETS = [
 
 export default function Futures() {
   const [selected, setSelected] = useState(null);
+  const [activeTab, setActiveTab] = useState('futures');
 
   const openMarkets = FUTURES_MARKETS.filter(m => m.status === 'open');
   const comingMarkets = FUTURES_MARKETS.filter(m => m.status === 'coming_soon');
@@ -123,7 +125,28 @@ export default function Futures() {
     sum + m.outcomes.reduce((s, o) => s + (o.lp_offers || 0), 0), 0);
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Tab Navigation */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 bg-secondary/50 border border-border/50 rounded-xl p-1">
+          <TabsTrigger 
+            value="futures" 
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold rounded-lg transition-all flex items-center gap-2"
+          >
+            <Trophy className="w-4 h-4" />
+            Futures LP
+          </TabsTrigger>
+          <TabsTrigger 
+            value="matches" 
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold rounded-lg transition-all flex items-center gap-2"
+            onClick={() => window.location.href = '/lp'}
+          >
+            <Calendar className="w-4 h-4" />
+            Live Match LP
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="futures" className="mt-6">
       {/* Hero */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }} 
@@ -236,9 +259,27 @@ export default function Futures() {
           className="border-accent/40 text-accent hover:bg-accent/10 rounded-xl text-xs font-bold shrink-0"
           onClick={() => window.location.href = '/lp'}
         >
-          Go to LP <ChevronRight className="w-3 h-3 ml-1" />
+          Go to Match LP <ChevronRight className="w-3 h-3 ml-1" />
         </Button>
       </motion.div>
+        </TabsContent>
+
+        <TabsContent value="matches" className="mt-6">
+          <div className="text-center py-12">
+            <Calendar className="w-12 h-12 text-primary mx-auto mb-4" />
+            <h3 className="font-heading font-bold text-lg mb-2">Live Match LP</h3>
+            <p className="text-muted-foreground text-sm mb-4">
+              Provide liquidity for individual match markets with fixed odds.
+            </p>
+            <Button 
+              onClick={() => window.location.href = '/lp'}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              Go to Match LP Dashboard
+            </Button>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
