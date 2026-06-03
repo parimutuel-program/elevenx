@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
       stats_api_match_id: m.id,
       venue: m.venue?.name || '',
     }));
-    await base44.asServiceRole.entities.Match.bulkCreate(matchPayloads);
+    const createdMatches = await base44.asServiceRole.entities.Match.bulkCreate(matchPayloads);
 
     return Response.json({
       success: true,
