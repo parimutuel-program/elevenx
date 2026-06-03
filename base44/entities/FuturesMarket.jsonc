@@ -1,0 +1,87 @@
+{
+  "name": "FuturesMarket",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Market title (e.g. 'World Cup 2026 Winner')"
+    },
+    "subtitle": {
+      "type": "string",
+      "description": "Market subtitle (e.g. 'Who will lift the trophy?')"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "tournament",
+        "player",
+        "special"
+      ],
+      "description": "Market category"
+    },
+    "icon": {
+      "type": "string",
+      "description": "Emoji icon for the market"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "closed",
+        "settled",
+        "coming_soon"
+      ],
+      "default": "coming_soon"
+    },
+    "open_until": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When betting closes"
+    },
+    "outcomes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "flag": {
+            "type": "string"
+          },
+          "odds": {
+            "type": "number"
+          },
+          "pool": {
+            "type": "number",
+            "default": 0
+          },
+          "lp_offers": {
+            "type": "number",
+            "default": 0
+          }
+        }
+      },
+      "description": "Array of possible outcomes with odds"
+    },
+    "total_volume": {
+      "type": "number",
+      "default": 0,
+      "description": "Total SOL volume across all outcomes"
+    },
+    "solana_market_pda": {
+      "type": "string",
+      "description": "Solana PDA for the futures market"
+    },
+    "solana_market_created": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "title",
+    "subtitle",
+    "category",
+    "outcomes"
+  ]
+}
