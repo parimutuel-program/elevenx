@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, TrendingUp, Clock, ChevronRight, Lock, Trophy, Calendar, Loader, RefreshCcw, Sparkles, Globe } from 'lucide-react';
+import { Flame, TrendingUp, Clock, ChevronRight, Lock, Trophy, Calendar, Loader, RefreshCcw, Sparkles, Globe, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,6 +16,7 @@ export default function Futures() {
   const [showBetSlip, setShowBetSlip] = useState(false);
   const [activeTab, setActiveTab] = useState('futures');
   const [activeGroup, setActiveGroup] = useState('A');
+  const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
   const groupRefs = useRef({});
 
@@ -67,8 +68,16 @@ export default function Futures() {
     },
   });
 
-  const openMarkets = futuresMarkets.filter((m) => m.status === 'open');
-  const comingMarkets = futuresMarkets.filter((m) => m.status === 'coming_soon');
+  // Filter markets by search query
+  const filteredMarkets = searchQuery
+    ? futuresMarkets.filter(m => 
+        m.country?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.title?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : futuresMarkets;
+
+  const openMarkets = filteredMarkets.filter((m) => m.status === 'open');
+  const comingMarkets = filteredMarkets.filter((m) => m.status === 'coming_soon');
 
   // Calculate totals for hero
   const totalPool = openMarkets.reduce((sum, m) =>
@@ -149,13 +158,33 @@ export default function Futures() {
             </div>
           </motion.div>
 
+          {/* Search Bar */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search country (e.g. Brazil, Argentina)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-card border border-border/50 rounded-xl pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <span className="text-xs font-bold">Clear</span>
+              </button>
+            )}
+          </div>
+
           {/* Quick-Jump Group Navigation */}
           <GroupNavigation onGroupClick={scrollToGroup} activeGroup={activeGroup} />
 
           {/* Group-by-Group Markets */}
           {Object.entries(WORLD_CUP_GROUPS_2026).map(([groupName, teams]) => {
-            // Filter for country-specific markets (not tournament-wide)
-            const groupMarkets = futuresMarkets.filter(m => 
+            // Filter for country-specific markets (not tournament-wide) that match search
+            const groupMarkets = filteredMarkets.filter(m => 
               m.country && teams.some(t => t.name === m.country)
             );
             const hasMarkets = groupMarkets.length > 0;
@@ -223,8 +252,6 @@ export default function Futures() {
               </section>
             );
           })}
-
-
 
           {/* Info banner - country markets status */}
           <motion.div
