@@ -20,11 +20,23 @@ Deno.serve(async (req) => {
     const payload = await req.json();
     const { walletAddress, marketId, outcome, amount } = payload;
     
+    console.log('[placeFuturesBet] Payload received:', {
+      walletAddress,
+      marketId,
+      outcome,
+      amount,
+    });
+    
     if (!walletAddress) {
+      console.error('[placeFuturesBet] Wallet not connected');
       return Response.json({ error: 'Wallet not connected' }, { status: 401 });
     }
     if (!marketId || !outcome || !amount || amount <= 0) {
-      return Response.json({ error: 'Invalid input' }, { status: 400 });
+      console.error('[placeFuturesBet] Invalid input:', { marketId, outcome, amount });
+      return Response.json({ 
+        error: 'Invalid input',
+        details: { marketId: !!marketId, outcome: !!outcome, amount: amount },
+      }, { status: 400 });
     }
 
     const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -44,9 +56,17 @@ Deno.serve(async (req) => {
 
     // CRITICAL: Market MUST be deployed on-chain first
     if (!market.solana_market_created || !market.solana_market_pda) {
+      console.error('[placeFuturesBet] Market not deployed:', {
+        marketId: market.id,
+        country: market.country,
+        solana_market_created: market.solana_market_created,
+        solana_market_pda: market.solana_market_pda,
+      });
       return Response.json({
-        error: 'This market is not deployed on-chain yet. Admin must deploy it first.',
-        hint: 'Go to Admin panel and deploy this country market to Solana.',
+        error: `Market for ${market.country} is not deployed on-chain yet.`,
+        hint: 'Admin must deploy this market first. Go to Admin panel → Futures tab → Click "Deploy" on this country.',
+        marketId: market.id,
+        country: market.country,
       }, { status: 400 });
     }
 

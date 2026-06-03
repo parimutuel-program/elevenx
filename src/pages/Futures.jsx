@@ -48,11 +48,23 @@ export default function Futures() {
   };
 
   // Handle bet confirmation - initiates on-chain transaction
-  const handleBetConfirm = async ({ market, outcome, amount, potentialPayout }) => {
+  const handleBetConfirm = async ({ market, outcome, amount, potentialPayout, walletAddress, prepareOnly, commitOnly, signature, commit_data }) => {
+    console.log('[Futures] handleBetConfirm called with:', {
+      marketId: market?.id,
+      outcome,
+      amount,
+      walletAddress,
+      prepareOnly,
+      commitOnly,
+      signature,
+    });
+    
     try {
-      // Get wallet address from localStorage
-      const walletSession = localStorage.getItem('elevenx_wallet_session');
-      const walletAddress = walletSession ? JSON.parse(walletSession).address : null;
+      // Get wallet address from localStorage if not provided
+      if (!walletAddress) {
+        const walletSession = localStorage.getItem('elevenx_wallet_session');
+        walletAddress = walletSession ? JSON.parse(walletSession).address : null;
+      }
       
       if (!walletAddress) {
         alert('Please connect your Phantom wallet first');
@@ -62,13 +74,16 @@ export default function Futures() {
       // Call backend to get Solana transaction instructions
       const res = await base44.functions.invoke('placeFuturesBet', {
         walletAddress,
-        marketId: market.id,
-        outcome: { position: outcome.position },
+        marketId: market?.id,
+        outcome,
         amount,
       });
 
       if (res.data.error) {
-        throw new Error(res.data.error);
+        const err = new Error(res.data.error);
+        err.marketId = res.data.marketId;
+        err.country = res.data.country;
+        throw err;
       }
 
       // Store commit data for after transaction succeeds
@@ -89,8 +104,10 @@ export default function Futures() {
     } catch (error) {
       console.error('Failed to prepare bet:', error);
       const errorMsg = error.message || 'Unknown error';
+      const country = error.country || 'this country';
+      
       if (errorMsg.includes('not deployed on-chain') || errorMsg.includes('Admin must deploy')) {
-        alert('⚠️ This market must be deployed on-chain first.\n\nGo to Admin panel → Futures tab → Click "Deploy" on this country market.\n\nOnce deployed, you can place bets with your Phantom wallet.');
+        alert(`⚠️ ${country} market is not deployed on-chain yet.\n\nGo to Admin panel → Futures tab → Click "Deploy" on ${country}.\n\nOnce deployed, you can place bets with your Phantom wallet.`);
       } else {
         alert('Failed to prepare bet: ' + errorMsg);
       }

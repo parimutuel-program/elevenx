@@ -25,6 +25,14 @@ export default function FuturesBetSlip({ market, outcome, onClose, onConfirm }) 
       return;
     }
     
+    console.log('[FuturesBetSlip] Preparing bet:', {
+      marketId: market?.id,
+      market,
+      outcome,
+      amount: numericAmount,
+      walletAddress,
+    });
+    
     setIsPreparing(true);
     try {
       // Call backend to prepare bet and get Solana instruction
@@ -34,8 +42,9 @@ export default function FuturesBetSlip({ market, outcome, onClose, onConfirm }) 
         amount: numericAmount,
         potentialPayout,
         walletAddress,
-        prepareOnly: true,
       });
+      
+      console.log('[FuturesBetSlip] Backend response:', res);
       
       if (res?.solana_instruction) {
         setInstruction(res.solana_instruction);
@@ -51,6 +60,9 @@ export default function FuturesBetSlip({ market, outcome, onClose, onConfirm }) 
       } else if (res?.error) {
         alert('Error: ' + res.error);
       }
+    } catch (error) {
+      console.error('[FuturesBetSlip] Prepare bet error:', error);
+      alert('Failed to prepare bet: ' + error.message);
     } finally {
       setIsPreparing(false);
     }
