@@ -37,10 +37,13 @@ Deno.serve(async (req) => {
       const payloadBytes = bs58.decode(parts[1]);
       const payload = JSON.parse(new TextDecoder().decode(payloadBytes));
       
+      console.log('[initPlatformConfig] Decoded token payload:', payload);
+      
       if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) {
         throw new Error('Token expired');
       }
       
+      // Verify signature - re-create signature and compare
       const secretKey = Deno.env.get('BASE44_APP_ID') || 'elevenx-secret';
       const keyData = encoder.encode(secretKey);
       const key = await subtle.importKey(
@@ -48,18 +51,24 @@ Deno.serve(async (req) => {
         keyData,
         { name: 'HMAC', hash: 'SHA-256' },
         false,
-        ['verify']
+        ['sign']
       );
       
-      const signatureData = bs58.decode(parts[2]);
-      const valid = await subtle.verify(
+      const expectedSignature = await subtle.sign(
         'HMAC',
         key,
-        signatureData,
         encoder.encode(`${parts[0]}.${parts[1]}`)
       );
       
+      const actualSignature = bs58.decode(parts[2]);
+      
+      // Compare signatures
+      const expectedArray = new Uint8Array(expectedSignature);
+      const valid = expectedArray.length === actualSignature.length &&
+        expectedArray.every((byte, i) => byte === actualSignature[i]);
+      
       if (!valid) {
+        console.error('[initPlatformConfig] Signature mismatch');
         throw new Error('Invalid token signature');
       }
       
