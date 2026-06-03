@@ -10,7 +10,7 @@ import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner
 
 export default function AdminBetRow({ bet, matches, index }) {
   const queryClient = useQueryClient();
-  const { address: walletAddress } = useWallet();
+  const { walletAddress } = useWallet();
   const match = matches.find(m => m.id === bet.match_id);
   const [pendingRecreate, setPendingRecreate] = useState(null);
   const [pendingSettle, setPendingSettle] = useState(null);
