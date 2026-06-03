@@ -128,23 +128,23 @@ export default function Futures() {
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-secondary/50 border border-border/50 rounded-xl p-1 hidden">
-          <TabsTrigger
-            value="futures"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold rounded-lg transition-all flex items-center gap-2 hidden">
-            
-            <Trophy className="w-4 h-4" />
-            Futures LP
-          </TabsTrigger>
-          <TabsTrigger
-            value="matches"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold rounded-lg transition-all flex items-center gap-2 hidden"
-            onClick={() => window.location.href = '/lp'}>
-            
-            <Calendar className="w-4 h-4" />
-            Live Match LP
-          </TabsTrigger>
-        </TabsList>
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
 
         <TabsContent value="futures" className="mt-6">
       {/* Hero */}
