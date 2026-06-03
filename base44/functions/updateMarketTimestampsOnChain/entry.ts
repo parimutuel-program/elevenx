@@ -42,6 +42,8 @@ Deno.serve(async (req) => {
     if (!match) return Response.json({ error: 'Match not found' }, { status: 404 });
 
     const programId = new PublicKey(SOLANA_PROGRAM_ID);
+    console.log('[updateMarketTimestampsOnChain] Program ID:', SOLANA_PROGRAM_ID);
+    
     const matchIdBytes = Buffer.alloc(32);
     Buffer.from(match_id, 'utf-8').copy(matchIdBytes, 0, 0, Math.min(match_id.length, 32));
 
@@ -55,23 +57,34 @@ Deno.serve(async (req) => {
       programId
     );
 
-    // Calculate timestamps
+    // Calculate timestamps - CRITICAL: open_until MUST be < settle_after
     const now = Math.floor(Date.now() / 1000);
     let openUntil, settleAfter;
     
     if (mode === 'test') {
-      // Test mode: set to 2 hours ago and 1 hour ago (open_until < settle_after)
-      openUntil = now - 7200;
-      settleAfter = now - 3600;
+      // Test mode: open_until = 1 hour ago, settle_after = now (allows immediate settlement)
+      openUntil = now - 3600;
+      settleAfter = now;
     } else {
       // Normal mode: set to future times based on match
       openUntil = Math.floor(new Date(bet.open_until).getTime() / 1000);
       settleAfter = openUntil + 7200; // 2 hours after betting closes
     }
+    
+    console.log('[updateMarketTimestampsOnChain] Calculated timestamps:', {
+      now,
+      openUntil,
+      settleAfter,
+      openUntilIso: new Date(openUntil * 1000).toISOString(),
+      settleAfterIso: new Date(settleAfter * 1000).toISOString(),
+    });
 
-    // Build instruction data for update_market_timestamps
+    // Build instruction data for update_market_timestamps (Anchor discriminator)
+    // Note: This instruction must be deployed in the Solana program
     const { sha256: sha256fn } = await import('npm:@noble/hashes@1.4.0/sha256');
     const discriminator = Buffer.from(sha256fn('global:update_market_timestamps')).slice(0, 8);
+    console.log('[updateMarketTimestampsOnChain] Discriminator (hex):', discriminator.toString('hex'));
+    console.log('[updateMarketTimestampsOnChain] Instruction name: global:update_market_timestamps');
     
     const data = Buffer.alloc(24);
     discriminator.copy(data, 0);

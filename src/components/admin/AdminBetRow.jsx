@@ -16,7 +16,6 @@ export default function AdminBetRow({ bet, matches, index }) {
   const ADMIN_WALLET = 'BfN3J2JGFpHkfSNKP1yhC3JUKDX878RsHZuNBQjXbXDi';
   const isCorrectAdmin = isConnected && walletAddress === ADMIN_WALLET;
   const [pendingRecreate, setPendingRecreate] = useState(null);
-  const [pendingUpdateTimestamps, setPendingUpdateTimestamps] = useState(null);
   const [pendingSettle, setPendingSettle] = useState(null);
   const [pendingSettleOutcome, setPendingSettleOutcome] = useState(null);
   const [dbSettleOutcome, setDbSettleOutcome] = useState('a');
@@ -96,35 +95,6 @@ export default function AdminBetRow({ bet, matches, index }) {
   const handleRecreateError = (err) => {
     setPendingRecreate(null);
     alert('Market recreation failed: ' + err.message);
-  };
-
-  const updateTimestampsMutation = useMutation({
-    mutationFn: () => base44.functions.invoke('updateMarketTimestampsOnChain', {
-      bet_id: bet.id,
-      match_id: bet.match_id,
-      admin_wallet: walletAddress,
-      mode: 'test',
-    }),
-    onSuccess: (response) => {
-      const data = response.data;
-      if (data.solana_instruction) {
-        setPendingUpdateTimestamps(data.solana_instruction);
-      }
-      queryClient.invalidateQueries({ queryKey: ['bets'] });
-      queryClient.invalidateQueries({ queryKey: ['marketStatus', match?.id] });
-    },
-  });
-
-  const handleUpdateTimestampsSuccess = () => {
-    setPendingUpdateTimestamps(null);
-    queryClient.invalidateQueries({ queryKey: ['bets'] });
-    queryClient.invalidateQueries({ queryKey: ['marketStatus', match?.id] });
-    alert('✓ Timestamps updated! Now you can settle.');
-  };
-
-  const handleUpdateTimestampsError = (err) => {
-    setPendingUpdateTimestamps(null);
-    alert('Update timestamps failed: ' + err.message);
   };
 
   const settleOnChainMutation = useMutation({
@@ -271,34 +241,6 @@ export default function AdminBetRow({ bet, matches, index }) {
             </Badge>
           )}
           <div className="flex gap-2">
-            {pendingUpdateTimestamps ? (
-              <div className="w-64">
-                <SolanaTransactionSigner
-                  instruction={pendingUpdateTimestamps}
-                  amount={0}
-                  onSuccess={handleUpdateTimestampsSuccess}
-                  onError={handleUpdateTimestampsError}
-                />
-              </div>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  if (!isConnected) {
-                    alert('Please connect your Phantom wallet first');
-                    return;
-                  }
-                  if (confirm('Update market timestamps to allow immediate settlement?')) {
-                    updateTimestampsMutation.mutate();
-                  }
-                }}
-                disabled={updateTimestampsMutation.isPending || !isConnected}
-                className="h-8 text-xs border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 rounded-lg"
-              >
-                🕐 Update Timestamps
-              </Button>
-            )}
             {pendingRecreate ? (
               <div className="w-64">
                 <SolanaTransactionSigner
