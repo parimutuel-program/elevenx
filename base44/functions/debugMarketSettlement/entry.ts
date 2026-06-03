@@ -68,6 +68,16 @@ Deno.serve(async (req) => {
     const clock = Math.floor(Date.now() / 1000);
     const canSettle = clock >= Number(settleAfter);
     
+    // Extract admin pubkey from account data (bytes 40-72 based on CreateMarket struct)
+    const adminBytes = data.slice(40, 72);
+    const adminPubkey = new PublicKey(adminBytes);
+    
+    // Safe date conversion
+    const safeDate = (ns: number) => {
+      if (!ns || ns <= 0 || ns > BigInt('9999999999999')) return 'Invalid timestamp';
+      return new Date(Number(ns) * 1000).toISOString();
+    };
+    
     return Response.json({
       success: true,
       market_pda: marketPda.toBase58(),
@@ -78,8 +88,9 @@ Deno.serve(async (req) => {
       stored_match_id: storedMatchId,
       db_match_id: match.id,
       match_ids_match: storedMatchId === match.id,
-      open_until: new Date(Number(openUntil) * 1000).toISOString(),
-      settle_after: new Date(Number(settleAfter) * 1000).toISOString(),
+      admin_pubkey: adminPubkey.toBase58(),
+      open_until: safeDate(Number(openUntil)),
+      settle_after: safeDate(Number(settleAfter)),
       current_time: new Date(clock * 1000).toISOString(),
       can_settle: canSettle,
       settled: settled,
