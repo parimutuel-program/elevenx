@@ -235,26 +235,24 @@ export default function AdminBetRow({ bet, matches, index }) {
               </Button>
             )}
             <>
-              {bet.status === 'open' && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={async () => {
-                    if (confirm('Set market times to 1 hour ago for testing? This will close betting and allow immediate settlement.')) {
-                      try {
-                        const res = await base44.functions.invoke('updateMarketSettleTime', { bet_id: bet.id });
-                        alert(res.data.message || 'Times updated!');
-                        queryClient.invalidateQueries({ queryKey: ['bets'] });
-                      } catch (err) {
-                        alert('Error: ' + err.message);
-                      }
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  if (confirm('Set market times to 1 hour ago for testing? This will close betting and allow immediate settlement.')) {
+                    try {
+                      const res = await base44.functions.invoke('updateMarketSettleTime', { bet_id: bet.id });
+                      alert(res.data.message || 'Times updated!');
+                      queryClient.invalidateQueries({ queryKey: ['bets'] });
+                    } catch (err) {
+                      alert('Error: ' + err.message);
                     }
-                  }}
-                  className="h-8 text-xs border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10 rounded-lg"
-                >
-                  ⚡ Test Mode
-                </Button>
-              )}
+                  }
+                }}
+                className="h-8 text-xs border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10 rounded-lg"
+              >
+                ⚡ Test Mode
+              </Button>
               <Button
                 size="sm"
                 variant="outline"
