@@ -5,8 +5,9 @@ import { useWallet } from '@/lib/WalletContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
-import { Trophy, CheckCircle2, Gavel } from 'lucide-react';
+import { Trophy, CheckCircle2, Gavel, Database } from 'lucide-react';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function AdminBetRow({ bet, matches, index }) {
   const queryClient = useQueryClient();
@@ -17,6 +18,8 @@ export default function AdminBetRow({ bet, matches, index }) {
   const [pendingRecreate, setPendingRecreate] = useState(null);
   const [pendingSettle, setPendingSettle] = useState(null);
   const [pendingSettleOutcome, setPendingSettleOutcome] = useState(null);
+  const [dbSettleOutcome, setDbSettleOutcome] = useState('a');
+  const [showDbSettle, setShowDbSettle] = useState(false);
 
 
   // Debug: Log wallet state on mount and when it changes
@@ -162,6 +165,28 @@ export default function AdminBetRow({ bet, matches, index }) {
     alert('Settlement failed: ' + err.message);
   };
 
+  const dbSettleMutation = useMutation({
+    mutationFn: async (winningOutcome) => {
+      const res = await base44.functions.invoke('commitSettlement', {
+        signature: 'db-override-' + Date.now(),
+        commit_data: {
+          bet_id: bet.id,
+          match_id: bet.match_id,
+          winning_outcome: winningOutcome,
+        },
+      });
+      if (res.data.error) throw new Error(res.data.error);
+      return res.data;
+    },
+    onSuccess: (data) => {
+      setShowDbSettle(false);
+      alert(data.message || '✓ DB settled! Winners can claim.');
+      queryClient.invalidateQueries({ queryKey: ['bets'] });
+      queryClient.invalidateQueries({ queryKey: ['myBets'] });
+    },
+    onError: (err) => alert('DB settle failed: ' + err.message),
+  });
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -238,6 +263,14 @@ export default function AdminBetRow({ bet, matches, index }) {
             <Button
               size="sm"
               variant="outline"
+              onClick={() => setShowDbSettle(v => !v)}
+              className="h-8 text-xs border-blue-500/30 text-blue-400 hover:bg-blue-500/10 rounded-lg"
+            >
+              <Database className="w-3 h-3 mr-1" /> DB Override
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
               onClick={async () => {
                 try {
                   const res = await base44.functions.invoke('debugMarketSettlement', { bet_id: bet.id, match_id: bet.match_id });
@@ -261,6 +294,36 @@ export default function AdminBetRow({ bet, matches, index }) {
           </Badge>
         </div>
       </div>
+
+      {showDbSettle && (
+        <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+          <p className="text-xs text-blue-400 font-bold mb-2">⚠️ DB Override — skips on-chain tx, commits settlement directly to database</p>
+          <div className="flex gap-2 items-center">
+            <Select value={dbSettleOutcome} onValueChange={setDbSettleOutcome}>
+              <SelectTrigger className="h-8 text-xs w-36">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="a">{bet.outcome_a}</SelectItem>
+                <SelectItem value="draw">Draw</SelectItem>
+                <SelectItem value="b">{bet.outcome_b}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              size="sm"
+              onClick={() => {
+                if (confirm(`Force settle DB as "${dbSettleOutcome}" winner? This skips on-chain verification.`)) {
+                  dbSettleMutation.mutate(dbSettleOutcome);
+                }
+              }}
+              disabled={dbSettleMutation.isPending}
+              className="h-8 text-xs bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded-lg"
+            >
+              <Database className="w-3 h-3 mr-1" /> Force Settle DB
+            </Button>
+          </div>
+        </div>
+      )}
 
       {bet.status === 'open' || bet.status === 'closed' ? (
         <div className="space-y-2 mt-2">
