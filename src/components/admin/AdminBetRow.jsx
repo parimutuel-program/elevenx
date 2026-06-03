@@ -234,8 +234,8 @@ export default function AdminBetRow({ bet, matches, index }) {
                 <RefreshCw className="w-3 h-3 mr-1" /> Recreate
               </Button>
             )}
-            {bet.status === 'open' && (
-              <>
+            <>
+              {bet.status === 'open' && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -254,23 +254,23 @@ export default function AdminBetRow({ bet, matches, index }) {
                 >
                   ⚡ Test Mode
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      const res = await base44.functions.invoke('debugMarketSettlement', { bet_id: bet.id, match_id: bet.match_id });
-                      alert('Market Debug:\n' + JSON.stringify(res.data, null, 2));
-                    } catch (err) {
-                      alert('Debug error: ' + err.message);
-                    }
-                  }}
-                  className="h-8 text-xs border-muted/30 text-muted-foreground hover:bg-muted/10 rounded-lg"
-                >
-                  🔍 Debug
-                </Button>
-              </>
-            )}
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const res = await base44.functions.invoke('debugMarketSettlement', { bet_id: bet.id, match_id: bet.match_id });
+                    alert('Market Debug:\n' + JSON.stringify(res.data, null, 2));
+                  } catch (err) {
+                    alert('Debug error: ' + err.message);
+                  }
+                }}
+                className="h-8 text-xs border-muted/30 text-muted-foreground hover:bg-muted/10 rounded-lg"
+              >
+                🔍 Debug
+              </Button>
+            </>
           </div>
           <Badge className={`text-[10px] ${
             bet.status === 'open' ? 'bg-accent/20 text-accent' :
