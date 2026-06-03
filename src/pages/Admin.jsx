@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
+import { useWallet } from '@/lib/WalletContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import AdminBetRow from '@/components/admin/AdminBetRow';
 
 export default function Admin() {
   const { user } = useAuth();
+  const { walletAddress, isConnected } = useWallet();
   const queryClient = useQueryClient();
 
   const { data: matches = [] } = useQuery({
@@ -237,9 +239,19 @@ export default function Admin() {
                     Check Platform Config
                   </Button>
                   {platformConfigDetails?.admin && (
-                    <p className="text-[9px] text-muted-foreground mt-2">
-                      ⚠️ Your current wallet must match this admin address to settle markets
-                    </p>
+                    <div className="space-y-1 mt-2">
+                      <p className="text-[9px] text-muted-foreground">
+                        <span className="text-primary font-bold">Your wallet:</span> {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-6)}` : 'Not connected'}
+                      </p>
+                      {walletAddress && walletAddress !== platformConfigDetails.admin && (
+                        <p className="text-[9px] text-destructive">
+                          ⚠️ Mismatch - your wallet must match the admin address to settle markets
+                        </p>
+                      )}
+                      {walletAddress === platformConfigDetails.admin && (
+                        <p className="text-[9px] text-accent font-bold">✓ Wallet matches admin address</p>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

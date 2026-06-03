@@ -10,13 +10,18 @@ import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner
 
 export default function AdminBetRow({ bet, matches, index }) {
   const queryClient = useQueryClient();
-  const { walletAddress } = useWallet();
+  const { walletAddress, isConnected } = useWallet();
   const match = matches.find(m => m.id === bet.match_id);
   const ADMIN_WALLET = 'BfN3J2JGFpHkfSNKP1yhC3JUKDX878RsHZuNBQjXbXDi';
-  const isCorrectAdmin = walletAddress === ADMIN_WALLET;
+  const isCorrectAdmin = isConnected && walletAddress === ADMIN_WALLET;
   const [pendingRecreate, setPendingRecreate] = useState(null);
   const [pendingSettle, setPendingSettle] = useState(null);
   const [pendingSettleOutcome, setPendingSettleOutcome] = useState(null);
+
+  // Debug: Log wallet state on mount and when it changes
+  useEffect(() => {
+    console.log('[AdminBetRow] Wallet state:', { walletAddress, isConnected, matchesAdmin: walletAddress === ADMIN_WALLET });
+  }, [walletAddress, isConnected]);
 
   const { data: marketStatus, error: marketError, isLoading, isFetching } = useQuery({
     queryKey: ['marketStatus', match?.id],
@@ -163,7 +168,13 @@ export default function AdminBetRow({ bet, matches, index }) {
       transition={{ delay: index * 0.03 }}
       className="p-4 bg-card border border-border/50 rounded-xl"
     >
-      {!isCorrectAdmin && (
+      {!isConnected && (
+        <div className="mb-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+          <p className="text-xs text-yellow-500 font-bold">⚠️ Wallet Not Connected</p>
+          <p className="text-[10px] text-yellow-500/80 mt-1">Please connect your Phantom wallet to settle markets.</p>
+        </div>
+      )}
+      {isConnected && !isCorrectAdmin && (
         <div className="mb-3 bg-destructive/10 border border-destructive/30 rounded-lg p-3">
           <p className="text-xs text-destructive font-bold">⚠️ Wrong Wallet Connected</p>
           <p className="text-[10px] text-destructive/80 mt-1">
