@@ -70,6 +70,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
   const [isPreparing, setIsPreparing] = useState(false);
   const [prepareError, setPrepareError] = useState(null);
   const [lastSignature, setLastSignature] = useState(null);
+  const [lastInstruction, setLastInstruction] = useState(null);
 
   const handleReconnect = async () => {
     localStorage.removeItem('elevenx_wallet_session');
@@ -149,8 +150,9 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
 
   const handleTransactionSuccess = (result) => {
     setAmount('');
-    setInstruction(null);
     setLastSignature(result.signature);
+    setLastInstruction(instruction);
+    setInstruction(null);
     onSuccess && onSuccess(result);
   };
 
@@ -285,9 +287,9 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
         <div className="bg-accent/10 border border-accent/30 rounded-xl p-4 text-center">
           <CheckCircle className="w-8 h-8 text-accent mx-auto mb-2" />
           <p className="font-heading font-bold text-sm text-accent">✓ Bet placed successfully!</p>
-          {instruction?.amountLamports && (
+          {lastInstruction?.amountLamports && (
             <p className="font-heading font-bold text-lg text-accent mt-1">
-              ◎{(instruction.amountLamports / 1e9).toFixed(4)} SOL staked
+              ◎{(lastInstruction.amountLamports / 1e9).toFixed(4)} SOL staked
             </p>
           )}
           <p className="font-heading font-bold text-sm text-accent mt-2">Good luck! 🍀</p>
