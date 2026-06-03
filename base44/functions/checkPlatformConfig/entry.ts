@@ -70,14 +70,17 @@ Deno.serve(async (req) => {
     }
     
     // Read fields (Anchor format)
-    const admin = data.slice(8, 40).toString('hex'); // 32 bytes
+    const adminBytes = data.slice(8, 40); // 32 bytes
+    const adminHex = adminBytes.toString('hex');
+    const adminBase58 = new PublicKey(adminBytes).toBase58();
     const feePercent = data.readUInt16LE(40);
     const consensusThreshold = data.readUInt16LE(42);
     
     return Response.json({
       initialized: true,
       platformConfigPda: platformConfigPda.toBase58(),
-      admin: admin,
+      admin: adminBase58,
+      adminHex: adminHex,
       feePercent: feePercent,
       consensusThreshold: consensusThreshold,
       discriminator: discriminator,
