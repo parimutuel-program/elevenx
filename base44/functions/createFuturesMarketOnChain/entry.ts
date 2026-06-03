@@ -33,13 +33,13 @@ Deno.serve(async (req) => {
     Buffer.from(futures_market_id, 'utf-8').copy(marketIdBytes, 0, 0, Math.min(futures_market_id.length, 32));
 
     const [marketPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('futures_market'), marketIdBytes],
+      [Buffer.from('market'), marketIdBytes],
       programId
     );
 
-    // Derive vote tally PDA for this market
+    // Derive vote tally PDA - uses market's public key as seed (not match_id)
     const [voteTallyPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('vote_tally'), marketIdBytes],
+      [Buffer.from('vote_tally'), marketPda.toBuffer()],
       programId
     );
 
