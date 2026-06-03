@@ -14,6 +14,7 @@ export default function AdminBetRow({ bet, matches, index }) {
   const match = matches.find(m => m.id === bet.match_id);
   const [pendingRecreate, setPendingRecreate] = useState(null);
   const [pendingSettle, setPendingSettle] = useState(null);
+  const [pendingSettleOutcome, setPendingSettleOutcome] = useState(null);
 
   const { data: marketStatus, error: marketError, isLoading, isFetching } = useQuery({
     queryKey: ['marketStatus', match?.id],
@@ -96,11 +97,12 @@ export default function AdminBetRow({ bet, matches, index }) {
       const onChainRes = await base44.functions.invoke('settleMarketOnChain', payload);
       console.log('[AdminBetRow] Backend response:', onChainRes.data);
       if (!onChainRes.data.success) throw new Error(onChainRes.data.error || 'On-chain settlement failed');
-      return { solana_instruction: onChainRes.data.solana_instruction };
+      return { solana_instruction: onChainRes.data.solana_instruction, winning_outcome: winningOutcome };
     },
     onSuccess: (data) => {
       if (data.solana_instruction) {
         setPendingSettle(data.solana_instruction);
+        setPendingSettleOutcome(data.winning_outcome);
       } else {
         queryClient.invalidateQueries({ queryKey: ['bets'] });
         queryClient.invalidateQueries({ queryKey: ['myBets'] });
@@ -123,10 +125,7 @@ export default function AdminBetRow({ bet, matches, index }) {
         commit_data: {
           bet_id: bet.id,
           match_id: bet.match_id,
-          winning_outcome: pendingSettle.instruction_data ? 
-            (parseInt(atob(pendingSettle.instruction_data).slice(8), 16) === 0 ? 'a' : 
-             parseInt(atob(pendingSettle.instruction_data).slice(8), 16) === 1 ? 'b' : 'draw') 
-            : bet.winning_outcome,
+          winning_outcome: pendingSettleOutcome,
         },
       });
       
@@ -141,6 +140,7 @@ export default function AdminBetRow({ bet, matches, index }) {
       alert('Settlement on-chain succeeded, but database update failed. Please contact admin.');
     }
     
+    setPendingSettleOutcome(null);
     queryClient.invalidateQueries({ queryKey: ['bets'] });
     queryClient.invalidateQueries({ queryKey: ['myBets'] });
   };
