@@ -1,4 +1,4 @@
-import { createClient } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { PublicKey } from 'npm:@solana/web3.js@1.98.4';
 import { Buffer } from 'node:buffer';
 import bs58 from 'npm:bs58@5.0.0';
@@ -10,18 +10,7 @@ const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA__PROGRAM_ID') || 'PMut11111111111
  */
 Deno.serve(async (req) => {
   try {
-    // Use service role authorization header from platform
-    const serviceAuthHeader = req.headers.get('base44-service-authorization') || '';
-    const serviceToken = serviceAuthHeader.replace('Bearer ', '');
-    
-    // Create service role client using the platform-provided token
-    const base44 = createClient({
-      appId: Deno.env.get('BASE44_APP_ID') || '',
-      token: serviceToken,
-      functionsVersion: 'v1',
-      serverUrl: '',
-      requiresAuth: false,
-    });
+    const base44 = createClientFromRequest(req);
     const serviceRole = base44.asServiceRole;
     
     // Get wallet address from request header (set by frontend after wallet auth)
