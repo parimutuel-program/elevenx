@@ -505,7 +505,7 @@ export default function MyBets() {
                     
                     {hasUnmatched && (
                       <div className="mt-3">
-                        {pendingWithdrawTx?.userBetId === userBetForOffer?.id ? (
+                        {pendingWithdrawTx?.userBetId === userBetForOffer?.id && pendingWithdrawTx?.instruction ? (
                           <SolanaTransactionSigner
                             instruction={pendingWithdrawTx.instruction}
                             amount={pendingWithdrawTx.amount}
