@@ -144,7 +144,7 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         // Claim winnings - program instruction to transfer SOL from pool to user
         console.log('Creating claim_winnings program instruction:', instruction);
         
-        const programId = new PublicKey('4epUYJPwoPhG9RPoQ6qT9dsAewJCDBSCGUpR1Xj9UxTm');
+        const programId = new PublicKey(instruction.programId || '4epUYJPwoPhG9RPoQ6qT9dsAewJCDBSCGUpR1Xj9UxTm');
         const keys = instruction.keys?.map(k => ({
           pubkey: new PublicKey(k.pubkey),
           isSigner: k.isSigner,
@@ -156,10 +156,8 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
           { pubkey: new PublicKey(instruction.bettorPubkey), isSigner: false, isWritable: true },
         ];
         
-        // Create instruction data for claim_winnings (discriminator only - no params needed)
-        // claim_winnings is instruction #10 in the program
-        const data = Buffer.alloc(1);
-        data.writeUInt8(10, 0); // claim_winnings discriminator
+        // Create 8-byte Anchor discriminator for claim_winnings
+        const data = await anchorDiscriminator('claim_winnings');
         
         const claimIx = new TransactionInstruction({
           keys,
