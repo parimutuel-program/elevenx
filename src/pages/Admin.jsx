@@ -8,10 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Trophy, Shield, Radio, CheckCircle2, Zap, Download, BarChart3, List } from 'lucide-react';
+import { Plus, Trophy, Shield, Radio, CheckCircle2, Zap, Download, BarChart3, List, Flame } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
+import { motion } from 'framer-motion';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
 import AdminMatchRow from '@/components/admin/AdminMatchRow';
 import AdminBetRow from '@/components/admin/AdminBetRow';
@@ -29,6 +30,11 @@ export default function Admin() {
   const { data: bets = [] } = useQuery({
     queryKey: ['bets'],
     queryFn: () => base44.entities.Bet.list('-created_date', 100),
+  });
+
+  const { data: futuresMarkets = [] } = useQuery({
+    queryKey: ['futuresMarkets'],
+    queryFn: () => base44.entities.FuturesMarket.list('-created_date', 50),
   });
 
   const { data: oracleStatus } = useQuery({
@@ -153,7 +159,7 @@ export default function Admin() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid grid-cols-3 w-full max-w-md bg-secondary/50 border border-border/50 rounded-xl">
+        <TabsList className="grid grid-cols-4 w-full max-w-lg bg-secondary/50 border border-border/50 rounded-xl">
           <TabsTrigger value="overview" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-heading font-bold text-xs rounded-lg">
             <BarChart3 className="w-3.5 h-3.5 mr-1.5" /> Overview
           </TabsTrigger>
@@ -162,6 +168,9 @@ export default function Admin() {
           </TabsTrigger>
           <TabsTrigger value="bets" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-heading font-bold text-xs rounded-lg">
             <List className="w-3.5 h-3.5 mr-1.5" /> Bets
+          </TabsTrigger>
+          <TabsTrigger value="futures" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-heading font-bold text-xs rounded-lg">
+            <Flame className="w-3.5 h-3.5 mr-1.5" /> Futures
           </TabsTrigger>
         </TabsList>
 
@@ -351,6 +360,104 @@ export default function Admin() {
               <AdminBetRow key={bet.id} bet={bet} matches={matches} index={i} />
             ))}
           </div>
+        </TabsContent>
+
+        <TabsContent value="futures" className="space-y-4">
+          <div className="bg-accent/10 border border-accent/20 rounded-xl p-4">
+            <p className="text-sm font-bold text-accent mb-1">📅 Futures Market Timeline</p>
+            <p className="text-xs text-muted-foreground">
+              • <strong>World Cup Final:</strong> July 19, 2026 at 1:00 PM (Costa Rica Time)<br/>
+              • <strong>Betting Closes:</strong> Final kickoff (1:00 PM)<br/>
+              • <strong>Settlement Available:</strong> 2 hours after final ends (3:00 PM + 2hrs = 5:00 PM)
+            </p>
+          </div>
+          
+          <h2 className="font-heading font-bold text-lg flex items-center gap-2">
+            <Flame className="w-5 h-5 text-primary" />
+            Futures Markets ({futuresMarkets.length})
+          </h2>
+          {futuresMarkets.length === 0 ? (
+            <div className="text-center py-12 bg-card border border-border/50 rounded-xl">
+              <Flame className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-muted-foreground text-sm">No futures markets yet</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">Create futures markets in the database first</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {futuresMarkets.map((futures, i) => {
+                const isInitialized = futures.solana_market_created || futures.solana_market_pda;
+                const isSettled = futures.status === 'settled';
+                
+                return (
+                  <motion.div
+                    key={futures.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.03 }}
+                    className="p-4 bg-card border border-border/50 rounded-xl"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">{futures.icon}</span>
+                          <p className="font-heading font-bold text-sm">{futures.title}</p>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-1">{futures.subtitle}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          {futures.outcomes?.length || 0} outcomes · ◎{(futures.total_volume || 0).toFixed(2)} volume
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isSettled && (
+                          <Badge className="bg-accent/20 text-accent text-[10px] py-1 px-3 rounded-lg">
+                            <CheckCircle2 className="w-3 h-3 mr-1" /> Settled
+                          </Badge>
+                        )}
+                        {isInitialized && !isSettled && (
+                          <Badge className="bg-primary/20 text-primary text-[10px] py-1 px-3 rounded-lg">
+                            <CheckCircle2 className="w-3 h-3 mr-1" /> On-Chain
+                          </Badge>
+                        )}
+                        {!isInitialized && (
+                          <Badge className="bg-secondary text-secondary-foreground text-[10px] py-1 px-3 rounded-lg">
+                            Draft
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2 mt-3">
+                      {!isInitialized ? (
+                        <Button
+                          size="sm"
+                          onClick={async () => {
+                            alert('To initialize this futures market on-chain, use the createFuturesMarketOnChain backend function. This will create the market PDA with proper World Cup 2026 timestamps.');
+                          }}
+                          className="h-8 text-xs bg-primary hover:bg-primary/90 rounded-lg"
+                        >
+                          Initialize on Solana
+                        </Button>
+                      ) : isSettled ? (
+                        <div className="bg-accent/10 border border-accent/30 rounded-lg p-3 text-center flex-1">
+                          <p className="text-xs text-accent font-bold">✓ Market Settled</p>
+                          <p className="text-[10px] text-accent/80 mt-1">Winners can claim payouts</p>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => alert('Settlement will be available after the World Cup Final ends (July 19, 2026 at 3:00 PM Costa Rica Time)')}
+                          className="h-8 text-xs border-accent/30 text-accent hover:bg-accent/10 rounded-lg"
+                        >
+                          <Trophy className="w-3 h-3 mr-1" /> Settle Market
+                        </Button>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
