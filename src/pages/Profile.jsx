@@ -4,8 +4,9 @@ import { useWallet } from '@/lib/WalletContext';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
-import { User, Trophy, TrendingUp, DollarSign, LogOut, Wallet } from 'lucide-react';
+import { User, Trophy, TrendingUp, DollarSign, LogOut, Wallet, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useMutation } from '@tanstack/react-query';
 
 export default function Profile() {
   const { user, refreshUser, logout } = useAuth();
@@ -46,6 +47,14 @@ export default function Profile() {
   const wins = myBets.filter(b => b.status === 'won' || b.status === 'claimed').length;
   const losses = myBets.filter(b => b.status === 'lost').length;
   const winRate = (wins + losses) > 0 ? ((wins / (wins + losses)) * 100).toFixed(0) : 0;
+
+  const reinitMutation = useMutation({
+    mutationFn: async () => {
+      const res = await base44.functions.invoke('reinitPlatformWithWallet', { walletAddress });
+      if (res.data.error) throw new Error(res.data.error);
+      return res.data;
+    },
+  });
 
   // Show connect prompt if wallet not connected
   if (!walletAddress) {
@@ -145,6 +154,38 @@ export default function Profile() {
         <LogOut className="w-4 h-4 mr-2" />
         Sign Out & Disconnect Wallet
       </Button>
+
+      {currentUser?.role === 'admin' && (
+        <div className="bg-card border border-border/50 rounded-2xl p-6 space-y-3">
+          <h2 className="font-heading font-bold text-sm">Admin Platform Config</h2>
+          <p className="text-xs text-muted-foreground">
+            Reinitialize platform config with your current wallet as admin.
+          </p>
+          {reinitMutation.isSuccess && (
+            <div className="bg-accent/10 border border-accent/30 rounded-xl p-3 text-xs text-accent">
+              ✓ Platform instruction ready! Sign the transaction to update admin.
+            </div>
+          )}
+          <Button
+            onClick={() => reinitMutation.mutate()}
+            disabled={reinitMutation.isPending || !isConnected}
+            className="w-full h-11 rounded-xl"
+          >
+            <RefreshCcw className="w-4 h-4 mr-2" />
+            {reinitMutation.isPending ? 'Preparing...' : 'Reinitialize Platform'}
+          </Button>
+          {reinitMutation.isSuccess && reinitMutation.data?.solana_instruction && (
+            <div className="pt-3 border-t border-border/30">
+              <p className="text-[10px] text-muted-foreground mb-2">Sign this transaction:</p>
+              <div className="bg-secondary/30 rounded-lg p-2 max-h-32 overflow-auto">
+                <code className="text-[9px] font-mono break-all">
+                  {JSON.stringify(reinitMutation.data.solana_instruction, null, 2)}
+                </code>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
