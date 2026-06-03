@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -13,18 +13,31 @@ export default function AdminBetRow({ bet, matches, index }) {
   const [pendingRecreate, setPendingRecreate] = useState(null);
   const [pendingSettle, setPendingSettle] = useState(null);
 
-  const { data: marketStatus } = useQuery({
+  const { data: marketStatus, error: marketError } = useQuery({
     queryKey: ['marketStatus', match?.id],
     queryFn: async () => {
+      console.log('[AdminBetRow] Fetching market status for:', match.id);
       const res = await base44.functions.invoke('checkMarketStatus', { match_id: match.id });
+      console.log('[AdminBetRow] Market status response:', res.data);
       return res.data;
     },
     enabled: !!match,
     refetchInterval: 5000,
   });
 
+  console.log('[AdminBetRow] Render:', { match_id: match?.id, marketStatus, marketError });
+
   const isMarketInitialized = bet.solana_market_created || marketStatus?.status === 'initialized' || marketStatus?.status === 'settled';
   const isMarketSettled = marketStatus?.status === 'settled' || marketStatus?.settled === true;
+  
+  React.useEffect(() => {
+    if (marketStatus) {
+      console.log('[AdminBetRow] Market status for', bet.match_id, ':', marketStatus);
+    }
+    if (marketError) {
+      console.error('[AdminBetRow] Market status error:', marketError);
+    }
+  }, [marketStatus, marketError, bet.match_id]);
 
   const recreateMarketMutation = useMutation({
     mutationFn: ({ bet_id, match_id }) => base44.functions.invoke('createMarketOnChain', {
@@ -189,6 +202,12 @@ export default function AdminBetRow({ bet, matches, index }) {
               {bet.winning_outcome === 'a' ? bet.outcome_a : bet.winning_outcome === 'b' ? bet.outcome_b : 'Draw'}
             </span>
           </p>
+          {/* DEBUG: Remove after testing */}
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded p-2 text-[9px] font-mono">
+            <div>marketStatus: {JSON.stringify(marketStatus, null, 2)}</div>
+            <div>isMarketSettled: {String(isMarketSettled)}</div>
+            <div>marketError: {marketError?.message || 'none'}</div>
+          </div>
           {isMarketSettled ? (
             <div className="bg-accent/10 border border-accent/30 rounded-lg p-3 text-center">
               <p className="text-xs text-accent font-bold">✓ Market Settled On-Chain</p>
