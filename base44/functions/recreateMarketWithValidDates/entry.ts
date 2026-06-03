@@ -59,15 +59,18 @@ Deno.serve(async (req) => {
     console.log('[recreateMarketWithValidDates] Time diff:', settleAfter - openUntil, 'seconds');
 
     // Build instruction data: 8-byte discriminator + open_until (i64) + settle_after (i64)
-    // Anchor 0.30 uses "instruction:" namespace for instruction discriminators
-    const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('instruction:update_market_timestamps'));
+    // Match the format used by emergency_settle (which works)
+    const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:update_market_timestamps'));
     const discriminator = Buffer.from(new Uint8Array(discBuffer).slice(0, 8));
-    console.log('[recreateMarketWithValidDates] Using "instruction:" discriminator:', discriminator.toString('hex'));
+    console.log('[recreateMarketWithValidDates] Discriminator:', discriminator.toString('hex'));
     
     const data = Buffer.alloc(24);
     discriminator.copy(data, 0);
     data.writeBigInt64LE(BigInt(openUntil), 8);
     data.writeBigInt64LE(BigInt(settleAfter), 16);
+    
+    console.log('[recreateMarketWithValidDates] Full instruction data (hex):', data.toString('hex'));
+    console.log('[recreateMarketWithValidDates] Data length:', data.length, 'bytes');
 
     console.log('[recreateMarketWithValidDates] Discriminator (hex):', discriminator.toString('hex'));
     console.log('[recreateMarketWithValidDates] Full instruction data (hex):', data.toString('hex'));
@@ -78,11 +81,12 @@ Deno.serve(async (req) => {
       solana_instruction: {
         instruction_type: 'update_market_timestamps',
         programId: SOLANA_PROGRAM_ID,
-        accounts: {
-          market: marketPda.toBase58(),
-          platformConfig: platformConfigPda.toBase58(),
-          admin: admin_wallet,
-        },
+        keys: [
+          { pubkey: marketPda.toBase58(), isSigner: false, isWritable: true },
+          { pubkey: platformConfigPda.toBase58(), isSigner: false, isWritable: false },
+          { pubkey: admin_wallet, isSigner: true, isWritable: false },
+          { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false },
+        ],
         instruction_data: data.toString('base64'),
       },
       message: 'Sign to update market timestamps (settlement enabled)',

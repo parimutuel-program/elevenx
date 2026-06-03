@@ -367,11 +367,17 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         console.log('Creating update_market_timestamps program instruction:', instruction);
         
         const programId = new PublicKey(instruction.programId);
-        const keys = [
+        
+        // Use keys array if provided (new format), otherwise fall back to accounts
+        const keys = instruction.keys?.map(k => ({
+          pubkey: new PublicKey(k.pubkey === 'SIGNER_WALLET' ? provider.publicKey.toBase58() : k.pubkey),
+          isSigner: k.isSigner,
+          isWritable: k.isWritable,
+        })) || [
           { pubkey: new PublicKey(instruction.accounts.market), isSigner: false, isWritable: true },
-          { pubkey: new PublicKey(instruction.accounts.platformConfig), isSigner: false, isWritable: true },
-          { pubkey: provider.publicKey, isSigner: true, isWritable: true }, // admin signer
-          { pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false }, // system_program
+          { pubkey: new PublicKey(instruction.accounts.platformConfig), isSigner: false, isWritable: false },
+          { pubkey: provider.publicKey, isSigner: true, isWritable: false }, // admin signer (not writable)
+          { pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false },
         ];
         
         const data = Buffer.from(instruction.instruction_data, 'base64');
