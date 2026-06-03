@@ -70,8 +70,8 @@ Deno.serve(async (req) => {
     }
 
     // Build instruction data for update_market_timestamps
-    const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:update_market_timestamps'));
-    const discriminator = Buffer.from(new Uint8Array(discBuffer).slice(0, 8));
+    const { sha256: sha256fn } = await import('npm:@noble/hashes@1.4.0/sha256');
+    const discriminator = Buffer.from(sha256fn('global:update_market_timestamps')).slice(0, 8);
     
     const data = Buffer.alloc(24);
     discriminator.copy(data, 0);

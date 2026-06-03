@@ -53,21 +53,43 @@ Deno.serve(async (req) => {
       programId
     );
 
-    // If market already exists on-chain, no need to recreate — just update DB timestamps
-    const connection = new (await import('npm:@solana/web3.js@1.98.4')).Connection('https://api.devnet.solana.com', 'confirmed');
+    // If market already exists on-chain, issue update_market_timestamps to push past timestamps on-chain
+    const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
     const accountInfo = await connection.getAccountInfo(marketPda);
     if (accountInfo && accountInfo.data.length >= 200) {
-      console.log('[recreateMarketWithValidDates] Market already exists, skipping recreate');
-      // Update DB timestamps so admin UI shows it as settleable
+      console.log('[recreateMarketWithValidDates] Market already exists, issuing update_market_timestamps');
+      const now = Math.floor(Date.now() / 1000);
+      const openUntilPast = now - 7200;
+      const settleAfterPast = now - 3600;
+
+      const updateDisc = Buffer.from(sha256('global:update_market_timestamps')).slice(0, 8);
+      const updateData = Buffer.alloc(24);
+      updateDisc.copy(updateData, 0);
+      updateData.writeBigInt64LE(BigInt(openUntilPast), 8);
+      updateData.writeBigInt64LE(BigInt(settleAfterPast), 16);
+
+      // Also update DB
       await base44.asServiceRole.entities.Bet.update(bet_id, {
-        open_until: new Date(Date.now() - 7200000).toISOString(),
+        open_until: new Date(openUntilPast * 1000).toISOString(),
         status: 'closed',
       });
+
       return Response.json({
         success: true,
         marketPda: marketPda.toBase58(),
         alreadyExists: true,
-        message: 'Market already exists on-chain. DB updated — you can now settle directly.',
+        message: 'Market exists — sign to push past timestamps on-chain so you can settle immediately.',
+        solana_instruction: {
+          instruction_type: 'update_market_timestamps',
+          programId: SOLANA_PROGRAM_ID,
+          keys: [
+            { pubkey: marketPda.toBase58(), isSigner: false, isWritable: true },
+            { pubkey: platformConfigPda.toBase58(), isSigner: false, isWritable: false },
+            { pubkey: 'SIGNER_WALLET', isSigner: true, isWritable: false },
+            { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false },
+          ],
+          instruction_data: updateData.toString('base64'),
+        },
       });
     }
 
