@@ -7,15 +7,25 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const body = await req.json();
-    const { stats_api_match_id, action } = body;
+    const { stats_api_match_id, match_id, action } = body;
+    
+    // Support both 'stats_api_match_id' and 'match_id' parameter names
+    const actualMatchId = stats_api_match_id || match_id;
+    
+    console.log('fetchMatchOdds - received payload:', { stats_api_match_id, match_id, action });
+    console.log('Using match ID:', actualMatchId);
 
     const API_KEY = Deno.env.get('THE_STATS_API_KEY');
     if (!API_KEY) return Response.json({ error: 'THE_STATS_API_KEY not set' }, { status: 500 });
 
+    if (!actualMatchId) {
+      return Response.json({ error: 'Missing match_id parameter' }, { status: 400 });
+    }
+
     // action = 'odds' | 'result'
     if (action === 'result') {
       // Fetch match result
-      const res = await fetch(`https://api.thestatsapi.com/api/football/matches/${stats_api_match_id}`, {
+      const res = await fetch(`https://api.thestatsapi.com/api/football/matches/${actualMatchId}`, {
         headers: { Authorization: `Bearer ${API_KEY}` },
       });
       const data = await res.json();
@@ -34,7 +44,7 @@ Deno.serve(async (req) => {
     }
 
     // Default: fetch odds via /odds endpoint
-    const url = `https://api.thestatsapi.com/api/football/matches/${stats_api_match_id}/odds`;
+    const url = `https://api.thestatsapi.com/api/football/matches/${actualMatchId}/odds`;
     console.log('Fetching odds from:', url);
     
     const res = await fetch(url, {
