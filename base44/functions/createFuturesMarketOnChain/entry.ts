@@ -82,18 +82,21 @@ Deno.serve(async (req) => {
     // Prepare create_market instruction
     const discriminator = Buffer.from(sha256("global:create_market")).slice(0, 8);
 
-    // Build outcome names array (limit to 16 outcomes to stay within transaction size limits)
-    const maxOutcomes = Math.min(futuresMarket.outcomes?.length || 0, 16);
-    const outcomeNames = Array.from({ length: maxOutcomes }, () => Buffer.alloc(32));
+    // IMPORTANT: Solana program only supports exactly 3 outcomes (like 1X2 betting)
+    // Futures markets must have exactly 3 outcomes (e.g., "Group A Winner: Team A / Team B / Other")
+    const outcomeNames = [Buffer.alloc(32), Buffer.alloc(32), Buffer.alloc(32)];
     
-    futuresMarket.outcomes?.forEach((outcome, i) => {
-      if (i < maxOutcomes) {
-        Buffer.from(outcome.label || `Outcome ${i}`).copy(outcomeNames[i], 0, 0, Math.min(outcome.label?.length || 1, 32));
+    // Fill in outcome names (pad to 32 bytes each)
+    for (let i = 0; i < 3; i++) {
+      if (futuresMarket.outcomes?.[i]?.label) {
+        Buffer.from(futuresMarket.outcomes[i].label).copy(outcomeNames[i], 0, 0, Math.min(futuresMarket.outcomes[i].label.length, 32));
+      } else {
+        Buffer.from(`Outcome ${i + 1}`).copy(outcomeNames[i], 0, 0, 10);
       }
-    });
+    }
 
-    // Build instruction data
-    const paramsData = Buffer.alloc(32 + (32 * maxOutcomes) + 8 + 8 + 2 + 1 + (8 * maxOutcomes));
+    // Build instruction data (fixed size for 3 outcomes)
+    const paramsData = Buffer.alloc(32 + (32 * 3) + 8 + 8 + 2 + 1 + (8 * 3));
     let offset = 0;
     
     // match_id (32 bytes) - use futures market ID
@@ -102,7 +105,7 @@ Deno.serve(async (req) => {
     matchIdBytes.copy(paramsData, offset);
     offset += 32;
     
-    // outcome_names (32 bytes each)
+    // outcome_names (32 bytes each × 3)
     outcomeNames.forEach(name => {
       name.copy(paramsData, offset);
       offset += 32;
@@ -120,18 +123,16 @@ Deno.serve(async (req) => {
     paramsData.writeUInt16LE(0, offset);
     offset += 2;
     
-    // outcome_count (1 byte)
-    paramsData.writeUInt8(maxOutcomes, offset);
+    // outcome_count (1 byte) - MUST be 3
+    paramsData.writeUInt8(3, offset);
     offset += 1;
     
-    // oracle_odds (8 bytes each) - convert decimal odds to basis points
-    futuresMarket.outcomes?.forEach((outcome, i) => {
-      if (i < maxOutcomes) {
-        const oddsBps = BigInt(Math.round((outcome.odds || 1) * 100));
-        paramsData.writeBigUInt64LE(oddsBps, offset);
-        offset += 8;
-      }
-    });
+    // oracle_odds (8 bytes each × 3) - convert decimal odds to basis points
+    for (let i = 0; i < 3; i++) {
+      const oddsBps = BigInt(Math.round((futuresMarket.outcomes?.[i]?.odds || 1) * 100));
+      paramsData.writeBigUInt64LE(oddsBps, offset);
+      offset += 8;
+    }
 
     const instructionData = Buffer.concat([discriminator, paramsData]);
 
