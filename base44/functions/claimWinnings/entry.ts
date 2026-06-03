@@ -64,41 +64,56 @@ Deno.serve(async (req) => {
       }, { status: 404 });
     }
 
-    const userBet = betsToClaim[0]; // Use first bet for PDA derivation (same match)
+    const userBet = betsToClaim[0];
 
     const bets = await serviceRole.entities.Bet.filter({ id: userBet.bet_id });
     const bet  = bets[0];
     if (!bet) return Response.json({ error: 'Bet not found' }, { status: 400 });
 
-    const bettorPubkey = new PublicKey(trimmedWallet);
-    const programId    = new PublicKey(SOLANA_PROGRAM_ID);
+    // Check on-chain market state — if voided or settled-via-db-override, do DB-only claim
+    const { Connection: SolanaConnection } = await import('npm:@solana/web3.js@1.98.4');
+    const connection = new SolanaConnection('https://api.devnet.solana.com', 'confirmed');
+    const programId = new PublicKey(SOLANA_PROGRAM_ID);
     const matchIdBytes = Buffer.alloc(32);
     Buffer.from(userBet.match_id, 'utf-8').copy(matchIdBytes, 0, 0, Math.min(userBet.match_id.length, 32));
+    const [marketPda] = PublicKey.findProgramAddressSync([Buffer.from('market'), matchIdBytes], programId);
 
-    // Correct on-chain program seeds (must match Solana program)
-    const [marketPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('market'), matchIdBytes],
-      programId
-    );
-    
+    const marketInfo = await connection.getAccountInfo(marketPda);
+    const isVoided = marketInfo && marketInfo.data.length >= 245 && marketInfo.data[245] === 1;
+    const isSettledOnChain = marketInfo && marketInfo.data.length >= 244 && marketInfo.data[244] === 1;
+
+    const totalPayout = betsToClaim.reduce((sum, b) => sum + (b.actual_payout || b.potential_payout || 0), 0);
+    console.log(`✓ Claim: wallet=${trimmedWallet.slice(0, 8)}... | bets=${betsToClaim.length} | total=${totalPayout} SOL | voided=${isVoided}`);
+
+    // If market is voided on-chain, do DB-only claim (no on-chain tx possible)
+    if (!marketInfo || isVoided || !isSettledOnChain) {
+      console.log('[claimWinnings] Market voided or not settled on-chain — doing DB-only claim');
+      for (const b of betsToClaim) {
+        await serviceRole.entities.UserBet.update(b.id, {
+          status: 'claimed',
+          actual_payout: b.actual_payout || b.potential_payout || 0,
+        });
+      }
+      return Response.json({
+        success: true,
+        db_only: true,
+        message: `✓ ${betsToClaim.length} winning bet(s) marked as claimed`,
+        betIds: betsToClaim.map(b => b.id),
+        totalPayout,
+        note: 'Market was settled via DB override. SOL payout is handled separately by admin.',
+      });
+    }
+
+    // Normal on-chain claim path
+    const bettorPubkey = new PublicKey(trimmedWallet);
     const [positionPda] = PublicKey.findProgramAddressSync(
       [Buffer.from('position'), marketPda.toBuffer(), bettorPubkey.toBuffer()],
       programId
     );
-    
-    const [feeVaultPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('fee_vault')],
-      programId
-    );
+    const [feeVaultPda] = PublicKey.findProgramAddressSync([Buffer.from('fee_vault')], programId);
 
-    const totalPayout = betsToClaim.reduce((sum, bet) => sum + (bet.actual_payout || bet.potential_payout || 0), 0);
-    console.log(`✓ Claim: wallet=${trimmedWallet.slice(0, 8)}... | bets=${betsToClaim.length} | total=${totalPayout} SOL`);
-
-    // Build instruction data: 8-byte Anchor discriminator for claim_winnings
     const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:claim_winnings'));
     const discriminator = Buffer.from(new Uint8Array(discBuffer).slice(0, 8));
-    
-    console.log('[claimWinnings] Discriminator (hex):', discriminator.toString('hex'));
 
     return Response.json({
       success: true,

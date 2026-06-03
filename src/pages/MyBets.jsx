@@ -183,6 +183,12 @@ export default function MyBets() {
       if (res.data.error) {
         throw new Error(res.data.error + (res.data.debug ? ' - ' + JSON.stringify(res.data.debug) : ''));
       }
+      // DB-only claim (voided market) — already committed server-side
+      if (res.data.db_only) {
+        alert(res.data.message || '✓ Winnings claimed!');
+        queryClient.invalidateQueries({ queryKey: ['myBets'] });
+        return;
+      }
       setClaimData({ ...res.data, matchId });
       setBatchClaimMatchId(matchId);
     } catch (err) {
