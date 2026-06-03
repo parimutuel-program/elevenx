@@ -88,7 +88,12 @@ export default function Futures() {
       
     } catch (error) {
       console.error('Failed to prepare bet:', error);
-      alert('Failed to prepare bet: ' + error.message);
+      const errorMsg = error.message || 'Unknown error';
+      if (errorMsg.includes('not deployed on-chain') || errorMsg.includes('Admin must deploy')) {
+        alert('⚠️ This market must be deployed on-chain first.\n\nGo to Admin panel → Futures tab → Click "Deploy" on this country market.\n\nOnce deployed, you can place bets with your Phantom wallet.');
+      } else {
+        alert('Failed to prepare bet: ' + errorMsg);
+      }
     }
   };
 
