@@ -5,7 +5,7 @@ import { Buffer } from 'node:buffer';
 const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA__PROGRAM_ID') || 'PMut1111111111111111111111111111111111111111';
 
 /**
- * Settle a market on-chain by calling the Solana program's oracle vote instruction.
+ * Settle a market on-chain by calling the Solana program's announce_winner instruction.
  * This sets market.settled = true on-chain, allowing players to claim winnings.
  */
 Deno.serve(async (req) => {
@@ -57,12 +57,17 @@ Deno.serve(async (req) => {
 
     console.log(`[settleMarketOnChain] Settling bet ${bet_id} with outcome ${winning_outcome} (index: ${outcomeIndex})`);
 
-    // Build instruction data: 8-byte discriminator + u8 outcome
-    // Discriminator: SHA256("global:settle_market").slice(0, 8)
-    // For simplicity, we'll use a placeholder - the actual discriminator needs to match the Solana program
+    // Build instruction data: 8-byte Anchor discriminator + u8 outcome
+    // Discriminator: SHA256("global:announce_winner").slice(0, 8)
+    const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:announce_winner'));
+    const discriminator = Buffer.from(new Uint8Array(discBuffer).slice(0, 8));
+    
     const data = Buffer.alloc(9);
-    // Placeholder discriminator (will be calculated by frontend)
+    discriminator.copy(data, 0);
     data.writeUInt8(outcomeIndex, 8);
+
+    console.log('[settleMarketOnChain] Instruction data (hex):', data.toString('hex'));
+    console.log('[settleMarketOnChain] Discriminator (hex):', discriminator.toString('hex'));
 
     return Response.json({
       success: true,

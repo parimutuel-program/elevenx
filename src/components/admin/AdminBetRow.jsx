@@ -20,10 +20,11 @@ export default function AdminBetRow({ bet, matches, index }) {
       return res.data;
     },
     enabled: !!match,
-    refetchInterval: 10000,
+    refetchInterval: 5000,
   });
 
-  const isMarketInitialized = bet.solana_market_created || marketStatus?.status === 'initialized';
+  const isMarketInitialized = bet.solana_market_created || marketStatus?.status === 'initialized' || marketStatus?.status === 'settled';
+  const isMarketSettled = marketStatus?.status === 'settled' || marketStatus?.settled === true;
 
   const recreateMarketMutation = useMutation({
     mutationFn: ({ bet_id, match_id }) => base44.functions.invoke('createMarketOnChain', {
@@ -108,8 +109,13 @@ export default function AdminBetRow({ bet, matches, index }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {isMarketInitialized && (
+          {isMarketSettled && (
             <Badge className="bg-accent/20 text-accent text-[10px] py-1 px-3 rounded-lg">
+              <CheckCircle2 className="w-3 h-3 mr-1" /> Settled On-Chain
+            </Badge>
+          )}
+          {isMarketInitialized && !isMarketSettled && (
+            <Badge className="bg-primary/20 text-primary text-[10px] py-1 px-3 rounded-lg">
               <CheckCircle2 className="w-3 h-3 mr-1" /> Market Initialized
             </Badge>
           )}
@@ -183,7 +189,7 @@ export default function AdminBetRow({ bet, matches, index }) {
               {bet.winning_outcome === 'a' ? bet.outcome_a : bet.winning_outcome === 'b' ? bet.outcome_b : 'Draw'}
             </span>
           </p>
-          {!isMarketInitialized || !marketStatus?.settled ? (
+          {!isMarketInitialized || !isMarketSettled ? (
             pendingSettle ? (
               <div className="w-full">
                 <SolanaTransactionSigner
@@ -204,25 +210,10 @@ export default function AdminBetRow({ bet, matches, index }) {
               </Button>
             )
           ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={async () => {
-                if (!confirm('Mark all won bets as claimed?')) return;
-                try {
-                  const res = await base44.functions.invoke('adminMarkAsClaimed', { bet_id: bet.id });
-                  if (res.data.error) throw new Error(res.data.error);
-                  alert(`✓ Marked ${res.data.claimed_bet_ids.length} bet(s) as claimed`);
-                  queryClient.invalidateQueries({ queryKey: ['bets'] });
-                  queryClient.invalidateQueries({ queryKey: ['myBets'] });
-                } catch (err) {
-                  alert('Failed: ' + err.message);
-                }
-              }}
-              className="h-8 text-xs bg-accent/20 text-accent hover:bg-accent/30 rounded-lg w-full"
-            >
-              <CheckCircle className="w-3 h-3 mr-1" /> Mark as Claimed (DB Only)
-            </Button>
+            <div className="bg-accent/10 border border-accent/30 rounded-lg p-3 text-center">
+              <p className="text-xs text-accent font-bold">✓ Market Settled On-Chain</p>
+              <p className="text-[10px] text-accent/80 mt-1">Players can now claim winnings</p>
+            </div>
           )}
         </div>
       ) : null}

@@ -94,6 +94,12 @@ Deno.serve(async (req) => {
     const totalPayout = betsToClaim.reduce((sum, bet) => sum + (bet.actual_payout || bet.potential_payout || 0), 0);
     console.log(`✓ Claim: wallet=${trimmedWallet.slice(0, 8)}... | bets=${betsToClaim.length} | total=${totalPayout} SOL`);
 
+    // Build instruction data: 8-byte Anchor discriminator for claim_winnings
+    const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:claim_winnings'));
+    const discriminator = Buffer.from(new Uint8Array(discBuffer).slice(0, 8));
+    
+    console.log('[claimWinnings] Discriminator (hex):', discriminator.toString('hex'));
+
     return Response.json({
       success: true,
       message: `Sign to claim ${betsToClaim.length} winning bet(s)`,
@@ -109,6 +115,7 @@ Deno.serve(async (req) => {
           { pubkey: trimmedWallet, isSigner: false, isWritable: true },
           { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false },
         ],
+        instruction_data: discriminator.toString('base64'),
       },
     });
 

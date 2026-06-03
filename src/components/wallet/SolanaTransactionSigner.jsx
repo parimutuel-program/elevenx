@@ -140,6 +140,40 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         
         transaction.add(createMarketIx);
         
+      } else if (instruction.instruction_type === 'settle_market') {
+        // settle_market - program instruction to announce winner and settle market
+        console.log('Creating settle_market program instruction:', instruction);
+        
+        const programId = new PublicKey(instruction.programId);
+        
+        // Decode the instruction data from base64
+        const data = Buffer.from(instruction.instruction_data, 'base64');
+        console.log('[SolanaTransactionSigner] settle_market data length:', data.length);
+        console.log('[SolanaTransactionSigner] settle_market data (hex):', data.toString('hex'));
+        
+        // Build keys from instruction
+        const keys = instruction.keys?.map(k => ({
+          pubkey: new PublicKey(k.pubkey),
+          isSigner: k.isSigner,
+          isWritable: k.isWritable,
+        })) || [
+          { pubkey: new PublicKey(instruction.marketPda), isSigner: false, isWritable: true },
+          { pubkey: new PublicKey(instruction.platformConfigPda), isSigner: false, isWritable: true },
+          { pubkey: new PublicKey(instruction.feeVaultPda), isSigner: false, isWritable: true },
+          { pubkey: provider.publicKey, isSigner: true, isWritable: true }, // admin signer
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        ];
+        
+        console.log('[SolanaTransactionSigner] settle_market keys:', keys.map(k => k.pubkey.toBase58()));
+        
+        const settleMarketIx = new TransactionInstruction({
+          keys,
+          programId,
+          data,
+        });
+        
+        transaction.add(settleMarketIx);
+        
       } else if (instruction.instruction_type === 'claim_winnings') {
         // Claim winnings - program instruction to transfer SOL from pool to user
         console.log('Creating claim_winnings program instruction:', instruction);
