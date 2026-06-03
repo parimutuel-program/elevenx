@@ -7,6 +7,7 @@ import { Clock, TrendingUp, TrendingDown, Trophy, Wallet, ChevronRight, External
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { getFlagEmoji } from '@/utils/flags';
 
 const statusConfig = {
   active:   { color: 'bg-primary/10 text-primary border-primary/20', icon: Clock, label: 'Active' },
