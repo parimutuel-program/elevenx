@@ -53,9 +53,9 @@ Deno.serve(async (req) => {
     let openUntil, settleAfter;
     
     if (mode === 'test') {
-      // Test mode: set to 1 hour ago and 2 hours ago
-      openUntil = now - 3600;
-      settleAfter = now - 7200;
+      // Test mode: set to 2 hours ago and 1 hour ago (open_until < settle_after)
+      openUntil = now - 7200;
+      settleAfter = now - 3600;
     } else {
       // Normal mode: set to future times based on match
       openUntil = Math.floor(new Date(bet.open_until).getTime() / 1000);

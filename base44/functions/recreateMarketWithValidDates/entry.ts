@@ -43,8 +43,9 @@ Deno.serve(async (req) => {
     );
 
     // Set timestamps in the past to allow immediate settlement (for testing)
-    const openUntil = Math.floor(Date.now() / 1000) - 3600; // 1 hour ago
-    const settleAfter = Math.floor(Date.now() / 1000) - 1800; // 30 minutes ago
+    // open_until must be < settle_after for the program to accept
+    const openUntil = Math.floor(Date.now() / 1000) - 7200; // 2 hours ago
+    const settleAfter = Math.floor(Date.now() / 1000) - 3600; // 1 hour ago
 
     // Build instruction data: 8-byte discriminator + open_until (i64) + settle_after (i64)
     const discriminator = Buffer.from(sha256("global:update_market_timestamps")).slice(0, 8);
