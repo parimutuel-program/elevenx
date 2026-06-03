@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { PublicKey } from 'npm:@solana/web3.js@1.98.4';
 import { Buffer } from 'node:buffer';
+import bs58 from 'npm:bs58@5.0.0';
 
 const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA__PROGRAM_ID') || 'PMut1111111111111111111111111111111111111111';
 
@@ -27,17 +28,32 @@ Deno.serve(async (req) => {
     }
     
     // Decode payload (base58)
-    const bs58 = await import('npm:bs58@5.0.0');
     const decoder = new TextDecoder();
     let tokenPayload;
     try {
       tokenPayload = JSON.parse(decoder.decode(bs58.decode(payloadPart)));
     } catch (e) {
+      console.error('Token decode error:', e);
       return Response.json({ error: 'Failed to decode token' }, { status: 401 });
     }
     
-    // Get user from database by ID
-    const users = await serviceRole.entities.User.filter({ id: tokenPayload.userId });
+    console.log('[settleMarketOnChain] Token payload:', tokenPayload);
+    
+    // Get user from database by wallet address
+    const walletAddress = tokenPayload.walletAddress;
+    if (!walletAddress) {
+      return Response.json({ error: 'Invalid token - no wallet address' }, { status: 401 });
+    }
+    
+    const walletUsers = await serviceRole.entities.WalletUser.filter({ wallet_address: walletAddress });
+    const walletUser = walletUsers[0];
+    
+    if (!walletUser) {
+      return Response.json({ error: 'Wallet user not found' }, { status: 404 });
+    }
+    
+    // Get full user record
+    const users = await serviceRole.entities.User.filter({ id: walletUser.id });
     const user = users[0];
     
     if (!user) {
