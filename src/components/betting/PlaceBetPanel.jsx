@@ -27,6 +27,14 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
     ? selectedOffer.amount_unmatched * (selectedOffer.odds_at_creation - 1)
     : null;
 
+  // For LP mode: max is the total pool of the opposing outcome (what they're betting against)
+  const maxLpAmount = mode === 'offer' ? (() => {
+    if (selectedOutcome === 'a') return bet.pool_b || 10;
+    if (selectedOutcome === 'b') return bet.pool_a || 10;
+    if (selectedOutcome === 'draw') return Math.max(bet.pool_a || 0, bet.pool_b || 0) || 10;
+    return 10;
+  })() : null;
+
   const lpPayout = mode === 'offer' ? stakeNum * odds : 0;
   const matcherPayout = mode === 'match' && selectedOffer
     ? stakeNum + (stakeNum / (selectedOffer.odds_at_creation - 1))
@@ -174,7 +182,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
         </h3>
         <p className="text-xs text-muted-foreground">
           {mode === 'offer'
-            ? `Odds: ${odds.toFixed(2)}x — your offer goes into the orderbook until matched`
+            ? `Odds: ${odds.toFixed(2)}x — Max: ◎${maxLpAmount?.toFixed(4)} — your offer goes into the orderbook until matched`
             : `Max stake: ◎${maxMatcherStake?.toFixed(4)} — locked immediately once confirmed`
           }
         </p>
@@ -204,6 +212,12 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
             <button onClick={() => setAmount(maxMatcherStake.toFixed(6))}
               className="px-3 py-1.5 text-xs font-medium bg-accent/10 text-accent hover:bg-accent/20 rounded-lg transition-colors">
               Max ◎{maxMatcherStake.toFixed(4)}
+            </button>
+          )}
+          {mode === 'offer' && maxLpAmount && (
+            <button onClick={() => setAmount(maxLpAmount.toFixed(6))}
+              className="px-3 py-1.5 text-xs font-medium bg-accent/10 text-accent hover:bg-accent/20 rounded-lg transition-colors font-bold">
+              Max ◎{maxLpAmount.toFixed(4)}
             </button>
           )}
         </div>
