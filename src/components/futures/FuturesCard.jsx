@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Clock, Zap, Globe, Star, Lock, ChevronRight, Droplets } from 'lucide-react';
+import { Clock, Zap, Globe, Star, Lock, ChevronRight, Droplets, Trophy, Flag } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -16,21 +16,27 @@ export default function FuturesCard({ market, index, selected, onSelect, onBet }
       initial={{ opacity: 0, y: 15 }} 
       animate={{ opacity: 1, y: 0 }} 
       transition={{ delay: index * 0.06 }}
-      className="bg-card border border-border/50 rounded-2xl overflow-hidden"
+      className="bg-gradient-to-br from-card via-card to-yellow-500/5 border border-yellow-500/20 rounded-2xl overflow-hidden hover:border-yellow-500/40 transition-all duration-300"
     >
       {/* Header */}
       <div className="p-5 pb-3">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
-            <span className="text-3xl">{market.icon}</span>
+            {/* Enhanced Flag Display */}
+            <div className="relative">
+              <div className="absolute inset-0 bg-yellow-500/20 blur-lg rounded-full" />
+              <div className="relative bg-gradient-to-br from-yellow-400/20 to-yellow-600/20 border-2 border-yellow-500/40 rounded-xl p-2.5">
+                <span className="text-4xl filter drop-shadow-lg">{market.icon}</span>
+              </div>
+            </div>
             <div>
               <div className="flex items-center gap-2 mb-0.5">
                 <Badge className={`text-[9px] border ${
-                  market.category === 'tournament' ? 'bg-primary/10 text-primary border-primary/20' :
+                  market.category === 'tournament' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
                   market.category === 'player' ? 'bg-accent/10 text-accent border-accent/20' :
                   'bg-secondary text-secondary-foreground border-border'
                 }`}>
-                  {market.category === 'tournament' ? 'Tournament' : market.category === 'player' ? 'Player' : 'Special'}
+                  {market.category === 'tournament' ? <><Trophy className="w-2 h-2 mr-1" />Tournament</> : market.category === 'player' ? 'Player' : 'Special'}
                 </Badge>
                 {market.status === 'open' && (
                   <Badge className="text-[9px] bg-accent/10 text-accent border border-accent/20">
@@ -39,13 +45,16 @@ export default function FuturesCard({ market, index, selected, onSelect, onBet }
                   </Badge>
                 )}
               </div>
-              <h3 className="font-heading font-bold text-base">{market.title}</h3>
+              <h3 className="font-heading font-bold text-base text-yellow-400/90">{market.title}</h3>
               <p className="text-xs text-muted-foreground">{market.subtitle}</p>
             </div>
           </div>
           <div className="text-right shrink-0">
-            <p className="text-[10px] text-muted-foreground">Total Pool</p>
-            <p className="font-heading font-bold text-sm text-primary">◎{totalPool.toFixed(2)}</p>
+            <p className="text-[10px] text-muted-foreground flex items-center justify-end gap-1">
+              <Trophy className="w-2.5 h-2.5 text-yellow-500" />
+              Prize Pool
+            </p>
+            <p className="font-heading font-black text-lg bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">◎{totalPool.toFixed(2)}</p>
             <p className="text-[9px] text-muted-foreground mt-0.5">{totalLpOffers} LP offers</p>
           </div>
         </div>
@@ -69,19 +78,19 @@ export default function FuturesCard({ market, index, selected, onSelect, onBet }
       {/* Outcomes grid with "Big Jar" visualization */}
       <div className="px-5 pb-2">
         {/* Big Jar Summary */}
-        <div className="mb-4 bg-gradient-to-br from-primary/5 to-accent/5 border border-primary/10 rounded-xl p-3">
+        <div className="mb-4 bg-gradient-to-br from-yellow-500/10 via-yellow-600/5 to-accent/5 border border-yellow-500/20 rounded-xl p-3">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-bold text-primary flex items-center gap-1.5">
+            <p className="text-xs font-bold text-yellow-400 flex items-center gap-1.5">
               <Droplets className="w-3.5 h-3.5" />
               Liquidity Pool
             </p>
-            <Badge className="text-[9px] bg-primary/10 text-primary border border-primary/20">
+            <Badge className="text-[9px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
               {market.outcomes.length} Outcomes
             </Badge>
           </div>
           <div className="flex items-end justify-between">
             <div>
-              <p className="text-2xl font-heading font-black text-primary">◎{totalPool.toFixed(2)}</p>
+              <p className="text-2xl font-heading font-black bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">◎{totalPool.toFixed(2)}</p>
               <p className="text-[10px] text-muted-foreground">Total liquidity across all outcomes</p>
             </div>
             <div className="text-right">
@@ -90,9 +99,9 @@ export default function FuturesCard({ market, index, selected, onSelect, onBet }
             </div>
           </div>
           {/* Visual pool meter */}
-          <div className="mt-2 h-2 bg-secondary rounded-full overflow-hidden">
+          <div className="mt-2 h-2.5 bg-secondary rounded-full overflow-hidden">
             <div 
-              className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all"
+              className="h-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 rounded-full transition-all shadow-lg shadow-yellow-500/30"
               style={{ width: `${Math.min(100, (totalPool / 100) * 100)}%` }}
             />
           </div>
@@ -123,19 +132,26 @@ export default function FuturesCard({ market, index, selected, onSelect, onBet }
                 )}
                 
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-lg shrink-0">{o.flag}</span>
-                  <span className={`font-heading font-bold text-xs truncate ${isSelected ? 'text-primary' : ''}`}>
+                  {/* Enhanced Flag with golden border */}
+                  <div className={`relative shrink-0 ${isSelected ? 'scale-110' : ''} transition-transform`}>
+                    <div className="absolute inset-0 bg-yellow-500/30 blur-md rounded-full" />
+                    <div className="relative bg-gradient-to-br from-yellow-400/20 to-yellow-600/20 border border-yellow-500/40 rounded-lg p-1.5">
+                      <span className="text-xl filter drop-shadow-md">{o.flag}</span>
+                    </div>
+                  </div>
+                  <span className={`font-heading font-bold text-xs truncate ${isSelected ? 'text-yellow-400' : ''}`}>
+                    {o.position && <span className="text-[9px] text-muted-foreground mr-1">{o.position}</span>}
                     {o.label}
                   </span>
                 </div>
                 
                 <div className="w-full mt-auto">
                   <div className="flex justify-between items-center mb-1">
-                    <p className={`font-heading font-black text-base ${isSelected ? 'text-primary' : 'text-foreground'}`}>
+                    <p className={`font-heading font-black text-lg ${isSelected ? 'text-yellow-400' : 'text-foreground'} drop-shadow`}>
                       {o.odds.toFixed(2)}x
                     </p>
                     {hasLiquidity && (
-                      <Badge className="text-[8px] bg-accent/10 text-accent border border-accent/20">
+                      <Badge className="text-[8px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
                         ◎{(o.pool || 0).toFixed(1)}
                       </Badge>
                     )}
@@ -143,9 +159,9 @@ export default function FuturesCard({ market, index, selected, onSelect, onBet }
                   
                   {/* Mini jar progress */}
                   {hasLiquidity && (
-                    <div className="h-1 bg-secondary rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                       <div 
-                        className="h-full bg-accent rounded-full transition-all"
+                        className="h-full bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full transition-all"
                         style={{ width: `${Math.min(100, (o.pool / (totalPool || 1)) * 100)}%` }}
                       />
                     </div>
