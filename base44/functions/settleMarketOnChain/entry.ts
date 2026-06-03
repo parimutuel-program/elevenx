@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClient } from 'npm:@base44/sdk@0.8.31';
 import { PublicKey } from 'npm:@solana/web3.js@1.98.4';
 import { Buffer } from 'node:buffer';
 import bs58 from 'npm:bs58@5.0.0';
@@ -10,20 +10,30 @@ const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA__PROGRAM_ID') || 'PMut11111111111
  */
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
+    // Create service role client directly (bypasses platform auth)
+    const base44 = createClient({
+      appId: Deno.env.get('BASE44_APP_ID') || '',
+      token: Deno.env.get('BASE44_SERVICE_TOKEN') || '',
+      functionsVersion: 'v1',
+      serverUrl: '',
+      requiresAuth: false,
+    });
     const serviceRole = base44.asServiceRole;
     
     // Get wallet address from request header (set by frontend after wallet auth)
     const authHeader = req.headers.get('Authorization') || '';
+    console.log('[settleMarketOnChain] Authorization header present:', !!authHeader);
     const walletToken = authHeader.replace('Bearer ', '');
     
-    if (!walletToken) {
-      return Response.json({ error: 'Unauthorized - no auth token' }, { status: 401 });
+    if (!walletToken || walletToken === authHeader) {
+      console.error('[settleMarketOnChain] No Bearer token in Authorization header');
+      return Response.json({ error: 'Unauthorized - no Bearer token' }, { status: 401 });
     }
     
     // Decode wallet token to get user info
     const [headerPart, payloadPart, signaturePart] = walletToken.split('.');
     if (!headerPart || !payloadPart || !signaturePart) {
+      console.error('[settleMarketOnChain] Invalid token format');
       return Response.json({ error: 'Invalid token format' }, { status: 401 });
     }
     
@@ -32,12 +42,11 @@ Deno.serve(async (req) => {
     let tokenPayload;
     try {
       tokenPayload = JSON.parse(decoder.decode(bs58.decode(payloadPart)));
+      console.log('[settleMarketOnChain] Token payload:', tokenPayload);
     } catch (e) {
       console.error('Token decode error:', e);
       return Response.json({ error: 'Failed to decode token' }, { status: 401 });
     }
-    
-    console.log('[settleMarketOnChain] Token payload:', tokenPayload);
     
     // Get user from database by wallet address
     const walletAddress = tokenPayload.walletAddress;
@@ -71,11 +80,11 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Invalid parameters' }, { status: 400 });
     }
 
-    const bets = await base44.entities.Bet.filter({ id: bet_id });
+    const bets = await serviceRole.entities.Bet.filter({ id: bet_id });
     const bet = bets[0];
     if (!bet) return Response.json({ error: 'Bet not found' }, { status: 404 });
 
-    const matches = await base44.entities.Match.filter({ id: bet.match_id });
+    const matches = await serviceRole.entities.Match.filter({ id: bet.match_id });
     const match = matches[0];
     if (!match) return Response.json({ error: 'Match not found' }, { status: 404 });
 

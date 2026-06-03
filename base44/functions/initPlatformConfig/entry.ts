@@ -15,10 +15,13 @@ Deno.serve(async (req) => {
     
     // Get wallet address from request header (set by frontend after wallet auth)
     const authHeader = req.headers.get('Authorization') || '';
+    console.log('[initPlatformConfig] Authorization header present:', !!authHeader, 'Value:', authHeader ? authHeader.slice(0, 50) + '...' : 'NONE');
+    console.log('[initPlatformConfig] All request headers:', Object.fromEntries(req.headers.entries()));
     const walletToken = authHeader.replace('Bearer ', '');
     
-    if (!walletToken) {
-      return Response.json({ error: 'Unauthorized - no auth token' }, { status: 401 });
+    if (!walletToken || walletToken === authHeader) {
+      console.error('[initPlatformConfig] No Bearer token in Authorization header');
+      return Response.json({ error: 'Unauthorized - no Bearer token' }, { status: 401 });
     }
     
     // Decode wallet token to get user info
