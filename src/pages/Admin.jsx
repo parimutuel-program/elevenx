@@ -613,6 +613,8 @@ function AdminBetRow({ bet, matches, index }) {
     alert('Market recreation failed: ' + err.message);
   };
 
+  const [pendingSettle, setPendingSettle] = useState(null);
+
   // Use announceWinner backend function for fixed-odds settlement
   const settleMutation = useMutation({
     mutationFn: async (winningOutcome) => {
@@ -621,14 +623,40 @@ function AdminBetRow({ bet, matches, index }) {
         winning_outcome: winningOutcome,
       });
       if (!res.data.success) throw new Error(res.data.error || 'Settlement failed');
-      return res.data;
+      
+      // Then settle on-chain
+      const onChainRes = await base44.functions.invoke('settleMarketOnChain', {
+        bet_id: bet.id,
+        match_id: bet.match_id,
+        winning_outcome: winningOutcome,
+      });
+      if (!onChainRes.data.success) throw new Error(onChainRes.data.error || 'On-chain settlement failed');
+      
+      return { ...res.data, solana_instruction: onChainRes.data.solana_instruction };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['bets'] });
-      queryClient.invalidateQueries({ queryKey: ['myBets'] });
-      alert(data.message);
+      if (data.solana_instruction) {
+        setPendingSettle(data.solana_instruction);
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['bets'] });
+        queryClient.invalidateQueries({ queryKey: ['myBets'] });
+        alert(data.message);
+      }
     },
   });
+
+  const handleSettleSuccess = (txResult) => {
+    setPendingSettle(null);
+    queryClient.invalidateQueries({ queryKey: ['bets'] });
+    queryClient.invalidateQueries({ queryKey: ['myBets'] });
+    alert('✓ Market settled on-chain! Players can now claim winnings.');
+  };
+
+  const handleSettleError = (err) => {
+    console.error('Settlement failed:', err);
+    setPendingSettle(null);
+    alert('Settlement failed: ' + err.message);
+  };
 
   const voidMutation = useMutation({
     mutationFn: async () => {
@@ -705,19 +733,32 @@ function AdminBetRow({ bet, matches, index }) {
       </div>
 
       {bet.status === 'open' || bet.status === 'closed' ? (
-        <div className="flex gap-2 mt-2">
-          <Button size="sm" onClick={() => settleMutation.mutate('a')} disabled={settleMutation.isPending}
-            className="h-8 text-xs bg-primary/20 text-primary hover:bg-primary/30 rounded-lg flex-1">
-            <Trophy className="w-3 h-3 mr-1" /> {bet.outcome_a}
-          </Button>
-          <Button size="sm" onClick={() => settleMutation.mutate('draw')} disabled={settleMutation.isPending}
-            className="h-8 text-xs bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 rounded-lg flex-1">
-            <Trophy className="w-3 h-3 mr-1" /> Draw
-          </Button>
-          <Button size="sm" onClick={() => settleMutation.mutate('b')} disabled={settleMutation.isPending}
-            className="h-8 text-xs bg-accent/20 text-accent hover:bg-accent/30 rounded-lg flex-1">
-            <Trophy className="w-3 h-3 mr-1" /> {bet.outcome_b}
-          </Button>
+        <div className="space-y-2 mt-2">
+          {pendingSettle ? (
+            <div className="w-full">
+              <SolanaTransactionSigner
+                instruction={pendingSettle}
+                amount={0}
+                onSuccess={handleSettleSuccess}
+                onError={handleSettleError}
+              />
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => settleMutation.mutate('a')} disabled={settleMutation.isPending}
+                className="h-8 text-xs bg-primary/20 text-primary hover:bg-primary/30 rounded-lg flex-1">
+                <Trophy className="w-3 h-3 mr-1" /> {bet.outcome_a}
+              </Button>
+              <Button size="sm" onClick={() => settleMutation.mutate('draw')} disabled={settleMutation.isPending}
+                className="h-8 text-xs bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 rounded-lg flex-1">
+                <Trophy className="w-3 h-3 mr-1" /> Draw
+              </Button>
+              <Button size="sm" onClick={() => settleMutation.mutate('b')} disabled={settleMutation.isPending}
+                className="h-8 text-xs bg-accent/20 text-accent hover:bg-accent/30 rounded-lg flex-1">
+                <Trophy className="w-3 h-3 mr-1" /> {bet.outcome_b}
+              </Button>
+            </div>
+          )}
         </div>
       ) : bet.status === 'settled' ? (
         <div className="space-y-2 mt-2">
