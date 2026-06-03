@@ -72,13 +72,16 @@ export default function CreateFuturesMarket() {
         lp_offers: 0,
       }));
 
+      // Convert local datetime to UTC (form.open_until is in user's local time: America/Costa_Rica)
+      const openUntilUtc = form.open_until ? new Date(form.open_until).toISOString() : '2026-07-19T19:00:00Z';
+      
       const marketData = {
         title: form.title,
         subtitle: form.subtitle,
         category: form.category,
         icon: form.icon,
         status: 'coming_soon',
-        open_until: form.open_until || '2026-07-19T19:00:00Z',
+        open_until: openUntilUtc,
         outcomes,
         total_volume: 0,
         solana_market_created: false,
