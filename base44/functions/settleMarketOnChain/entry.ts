@@ -13,41 +13,16 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const serviceRole = base44.asServiceRole;
     
-    // Get wallet address from request header (set by frontend after wallet auth)
-    const authHeader = req.headers.get('Authorization') || '';
-    console.log('[settleMarketOnChain] Authorization header present:', !!authHeader);
-    const walletToken = authHeader.replace('Bearer ', '');
+    const requestBody = await req.json();
+    const { bet_id, winning_outcome, admin_wallet } = requestBody;
     
-    if (!walletToken || walletToken === authHeader) {
-      console.error('[settleMarketOnChain] No Bearer token in Authorization header');
-      return Response.json({ error: 'Unauthorized - no Bearer token' }, { status: 401 });
+    // Validate admin wallet address
+    if (!admin_wallet) {
+      return Response.json({ error: 'Admin wallet address required' }, { status: 400 });
     }
     
-    // Decode wallet token to get user info
-    const [headerPart, payloadPart, signaturePart] = walletToken.split('.');
-    if (!headerPart || !payloadPart || !signaturePart) {
-      console.error('[settleMarketOnChain] Invalid token format');
-      return Response.json({ error: 'Invalid token format' }, { status: 401 });
-    }
-    
-    // Decode payload (base58)
-    const decoder = new TextDecoder();
-    let tokenPayload;
-    try {
-      tokenPayload = JSON.parse(decoder.decode(bs58.decode(payloadPart)));
-      console.log('[settleMarketOnChain] Token payload:', tokenPayload);
-    } catch (e) {
-      console.error('Token decode error:', e);
-      return Response.json({ error: 'Failed to decode token' }, { status: 401 });
-    }
-    
-    // Get user from database by wallet address
-    const walletAddress = tokenPayload.walletAddress;
-    if (!walletAddress) {
-      return Response.json({ error: 'Invalid token - no wallet address' }, { status: 401 });
-    }
-    
-    const walletUsers = await serviceRole.entities.WalletUser.filter({ wallet_address: walletAddress });
+    // Get wallet user from database
+    const walletUsers = await serviceRole.entities.WalletUser.filter({ wallet_address: admin_wallet });
     const walletUser = walletUsers[0];
     
     if (!walletUser) {
@@ -66,9 +41,6 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Admin access required', got_role: user.role }, { status: 403 });
     }
 
-    const requestBody = await req.json();
-    const { bet_id, winning_outcome } = requestBody;
-    
     if (!bet_id || !winning_outcome || !['a', 'b', 'draw'].includes(winning_outcome)) {
       return Response.json({ error: 'Invalid parameters' }, { status: 400 });
     }
