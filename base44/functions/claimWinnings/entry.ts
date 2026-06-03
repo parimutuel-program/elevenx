@@ -23,11 +23,13 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing userBetId or batchBetIds' }, { status: 400 });
     }
 
-    // Get all user bets to claim
+    // Get all user bets to claim - check both created_by_id and wallet_address for compatibility
     const allUserBets = await base44.entities.UserBet.list();
+    const userWalletAddress = user.wallet_address;
+    
     const betsToClaim = allUserBets.filter(ub => 
       betIdsToProcess.includes(ub.id) && 
-      ub.created_by_id === user.id && 
+      (ub.created_by_id === user.id || (userWalletAddress && ub.wallet_address === userWalletAddress)) &&
       ub.status === 'won'
     );
 
