@@ -385,8 +385,8 @@ export default function Admin() {
             </p>
           </div>
           
-            <div className="space-y-2">
-              {futuresMarkets.map((futures, i) => {
+          <div className="space-y-2">
+            {futuresMarkets.map((futures, i) => {
                 const isInitialized = futures.solana_market_created || futures.solana_market_pda;
                 const isSettled = futures.status === 'settled';
                 
@@ -501,7 +501,6 @@ export default function Admin() {
                 );
               })}
             </div>
-          )}
         </TabsContent>
       </Tabs>
     </div>

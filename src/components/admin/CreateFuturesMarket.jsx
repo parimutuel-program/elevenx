@@ -45,6 +45,7 @@ export default function CreateFuturesMarket() {
     subtitle: '',
     category: 'tournament',
     icon: '🏆',
+    open_until: '',
   });
   const [pendingInit, setPendingInit] = useState(null);
   const queryClient = useQueryClient();
@@ -77,7 +78,7 @@ export default function CreateFuturesMarket() {
         category: form.category,
         icon: form.icon,
         status: 'coming_soon',
-        open_until: '2026-07-19T19:00:00Z',
+        open_until: form.open_until || '2026-07-19T19:00:00Z',
         outcomes,
         total_volume: 0,
         solana_market_created: false,
@@ -116,7 +117,7 @@ export default function CreateFuturesMarket() {
   const resetForm = () => {
     setSelectedTeams([]);
     setTeamOdds({});
-    setForm({ title: '', subtitle: '', category: 'tournament', icon: '🏆' });
+    setForm({ title: '', subtitle: '', category: 'tournament', icon: '🏆', open_until: '' });
   };
 
   return (
@@ -184,6 +185,17 @@ export default function CreateFuturesMarket() {
                   placeholder="e.g. Teams that will make it to the championship match" 
                   className="bg-secondary/50" 
                 />
+              </div>
+
+              <div>
+                <Label className="text-xs">Betting Closes At</Label>
+                <Input 
+                  type="datetime-local"
+                  value={form.open_until} 
+                  onChange={e => setForm({...form, open_until: e.target.value})} 
+                  className="bg-secondary/50" 
+                />
+                <p className="text-[10px] text-muted-foreground mt-1">When betting stops (e.g., final kickoff time)</p>
               </div>
 
               <div>
