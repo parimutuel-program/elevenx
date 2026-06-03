@@ -278,7 +278,10 @@ export default function MyBets() {
     }
     setClaimData(null);
     setBatchClaimMatchId(null);
-    queryClient.invalidateQueries({ queryKey: ['myBets'] });
+    // Force reload after a short delay to ensure DB is updated
+    setTimeout(() => {
+      queryClient.invalidateQueries({ queryKey: ['myBets'] });
+    }, 500);
   };
 
   return (
@@ -457,86 +460,70 @@ export default function MyBets() {
 
         <TabsContent value="lp" className="space-y-4">
           {activeLpOffers.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {activeLpOffers.map((offer, i) => {
-                const userBet = allOffers.find(o => o.id === offer.id);
-                const matchPct = offer.amount_offered > 0
-                  ? Math.round((offer.amount_matched / offer.amount_offered) * 100)
-                  : 0;
-                const hasUnmatched = (offer.amount_unmatched || 0) > 0;
-                const userBetForOffer = lpOffers.find(ub => ub.offer_id === offer.id);
-                
-                return (
-                  <motion.div key={offer.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-                    className="bg-card border border-border/50 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <p className="font-heading font-bold text-sm">{getOutcomeLabel(offer)}</p>
-                        <p className="text-[10px] text-muted-foreground">{getMatchTitle(offer.match_id)}</p>
+            <div className="space-y-3">
+              <div className="bg-card border border-border/50 rounded-2xl p-6 text-center">
+                <TrendingUp className="w-12 h-12 text-primary mx-auto mb-3" />
+                <h3 className="font-heading font-bold text-lg mb-2">LP Positions Managed in LP Dashboard</h3>
+                <p className="text-sm text-muted-foreground mb-4">View and manage your liquidity provider positions, including withdrawals</p>
+                <Link to="/lp">
+                  <Button className="h-11 rounded-xl font-bold">
+                    Go to LP Dashboard <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </Link>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {activeLpOffers.map((offer, i) => {
+                  const matchPct = offer.amount_offered > 0
+                    ? Math.round((offer.amount_matched / offer.amount_offered) * 100)
+                    : 0;
+                  
+                  return (
+                    <motion.div key={offer.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+                      className="bg-card border border-border/50 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="font-heading font-bold text-sm">{getOutcomeLabel(offer)}</p>
+                          <p className="text-[10px] text-muted-foreground">{getMatchTitle(offer.match_id)}</p>
+                        </div>
+                        <Badge className={`text-[10px] ${
+                          offer.status === 'fully_matched' ? 'bg-accent/20 text-accent' :
+                          offer.status === 'partially_matched' ? 'bg-yellow-500/20 text-yellow-400' :
+                          'bg-secondary text-secondary-foreground'
+                        }`}>{offer.status}</Badge>
                       </div>
-                      <Badge className={`text-[10px] ${
-                        offer.status === 'fully_matched' ? 'bg-accent/20 text-accent' :
-                        offer.status === 'partially_matched' ? 'bg-yellow-500/20 text-yellow-400' :
-                        'bg-secondary text-secondary-foreground'
-                      }`}>{offer.status}</Badge>
-                    </div>
-                    <div className="grid grid-cols-3 gap-3 text-xs mt-2">
-                      <div>
-                        <p className="text-muted-foreground">Committed</p>
-                        <p className="font-bold">◎{(offer.amount_offered || 0).toFixed(4)}</p>
+                      <div className="grid grid-cols-3 gap-3 text-xs mt-2">
+                        <div>
+                          <p className="text-muted-foreground">Committed</p>
+                          <p className="font-bold">◎{(offer.amount_offered || 0).toFixed(4)}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Matched</p>
+                          <p className="font-bold text-accent">◎{(offer.amount_matched || 0).toFixed(4)}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Unmatched</p>
+                          <p className="font-bold text-yellow-400">◎{(offer.amount_unmatched || 0).toFixed(4)}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-muted-foreground">Matched</p>
-                        <p className="font-bold text-accent">◎{(offer.amount_matched || 0).toFixed(4)}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Unmatched</p>
-                        <p className="font-bold text-yellow-400">◎{(offer.amount_unmatched || 0).toFixed(4)}</p>
-                      </div>
-                    </div>
-                    <div className="mt-3">
-                      <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
-                        <span>Match rate</span><span>{matchPct}%</span>
-                      </div>
-                      <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                        <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${matchPct}%` }} />
-                      </div>
-                    </div>
-                    
-                    {hasUnmatched && (
                       <div className="mt-3">
-                        {pendingWithdrawTx?.userBetId === userBetForOffer?.id && pendingWithdrawTx?.instruction ? (
-                          <SolanaTransactionSigner
-                            instruction={pendingWithdrawTx.instruction}
-                            amount={pendingWithdrawTx.amount}
-                            onSuccess={handleWithdrawSuccess}
-                            onError={handleWithdrawError}
-                          />
-                        ) : (
-                          <Button
-                            onClick={() => withdrawLpMutation.mutate({ ...offer, userBetId: userBetForOffer?.id })}
-                            disabled={withdrawLpMutation.isPending}
-                            variant="outline"
-                            className="w-full h-8 text-xs border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 rounded-lg"
-                          >
-                            {withdrawLpMutation.isPending ? (
-                              <div className="w-4 h-4 border-2 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin" />
-                            ) : (
-                              <>Withdraw ◎{(offer.amount_unmatched || 0).toFixed(4)}</>
-                            )}
-                          </Button>
-                        )}
+                        <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
+                          <span>Match rate</span><span>{matchPct}%</span>
+                        </div>
+                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${matchPct}%` }} />
+                        </div>
                       </div>
-                    )}
-                    
-                    <Link to={`/match/${offer.match_id}`}>
-                      <Button size="sm" variant="outline" className="w-full mt-3 h-8 text-xs border-border/50 rounded-lg">
-                        View Market <ArrowRight className="w-3 h-3 ml-1" />
-                      </Button>
-                    </Link>
-                  </motion.div>
-                );
-              })}
+                      
+                      <Link to="/lp">
+                        <Button size="sm" variant="outline" className="w-full mt-3 h-8 text-xs border-border/50 rounded-lg">
+                          Manage in LP Dashboard <ArrowRight className="w-3 h-3 ml-1" />
+                        </Button>
+                      </Link>
+                    </motion.div>
+                  );
+                })}
+              </div>
             </div>
           ) : (
             <EmptyState message="No LP positions" actionText="Go to LP Dashboard" link="/lp" />

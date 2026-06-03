@@ -38,9 +38,21 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
       if (res.data.error) {
         throw new Error(res.data.error + (res.data.debug ? ' - ' + JSON.stringify(res.data.debug) : ''));
       }
+      
+      // If DB-only claim (voided market), update local bet status immediately
+      if (res.data.db_only) {
+        await base44.entities.UserBet.update(bet.id, { status: 'claimed' });
+      }
+      
       return res.data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['myBets'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myBets'] });
+      // Force reload after a short delay to ensure DB is updated
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['myBets'] });
+      }, 500);
+    },
   });
 
   const claimRefundMutation = useMutation({
@@ -102,7 +114,7 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
               </div>
               <div>
                 <p className="text-[10px] text-muted-foreground mb-1">Potential</p>
-                <p className="font-heading font-bold text-primary">◎{bet.potential_payout?.toFixed(4)}</p>
+                <p className="font-heading font-bold text-primary">◎{(bet.potential_payout || 0).toFixed(4)}</p>
               </div>
               <div>
                 <p className="text-[10px] text-muted-foreground mb-1">Status</p>
@@ -123,7 +135,7 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
                   ) : (
                     <>
                       <Wallet className="w-4 h-4 mr-2" />
-                      Claim ◎{bet.potential_payout?.toFixed(4)}
+                      Claim ◎{(bet.actual_payout || bet.potential_payout || 0).toFixed(4)}
                     </>
                   )}
                 </Button>
