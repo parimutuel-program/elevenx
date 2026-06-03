@@ -34,43 +34,81 @@ Deno.serve(async (req) => {
     }
 
     // Default: fetch odds via /odds endpoint
-    const res = await fetch(`https://api.thestatsapi.com/api/football/matches/${stats_api_match_id}/odds`, {
+    const url = `https://api.thestatsapi.com/api/football/matches/${stats_api_match_id}/odds`;
+    console.log('Fetching odds from:', url);
+    
+    const res = await fetch(url, {
       headers: { Authorization: `Bearer ${API_KEY}` },
     });
 
+    console.log('API response status:', res.status);
+    
     if (!res.ok) {
       console.error('TheStatsAPI odds fetch failed:', res.status, res.url);
-      return Response.json({ error: `Stats API error: ${res.status}` }, { status: res.status });
+      let errorText = 'Unknown error';
+      try {
+        const errJson = await res.json();
+        errorText = errJson?.error?.message || errJson?.error || 'Unknown API error';
+        console.error('Error response:', errorText);
+      } catch {
+        try {
+          errorText = await res.text();
+          console.error('Error response (text):', errorText.slice(0, 200));
+        } catch {}
+      }
+      
+      // Handle specific error cases
+      if (res.status === 404 && errorText.includes('Odds not found')) {
+        return Response.json({ odds: null, message: 'No odds available yet for this match. Bookmakers typically post odds 1-7 days before kickoff.' });
+      }
+      
+      return Response.json({ error: `Failed to fetch odds: ${errorText}` }, { status: res.status });
     }
 
     const json = await res.json();
-    console.log('TheStatsAPI response:', json);
+    console.log('TheStatsAPI response:', JSON.stringify(json, null, 2));
     
-    // Response structure: { data: { odds: { bet365: { '1x2': { home, draw, away } } } } }
-    const oddsData = json?.data?.odds;
+    // Response structure: { data: { match_id, bookmakers: [{ bookmaker, markets: { match_odds: { home, draw, away } } }] } }
+    // OR: { data: { odds: { bet365: { '1x2': { home, draw, away } } } } }
+    const data = json?.data;
     
-    if (!oddsData) {
-      return Response.json({ odds: null, message: 'No odds available yet' });
+    if (!data) {
+      return Response.json({ odds: null, message: 'No odds data available' });
     }
     
-    // Extract 1X2 odds from first available bookmaker (bet365 preferred)
-    const bookmaker = oddsData.bet365 || oddsData.pinnacle || oddsData.kambi || oddsData.betfair;
+    // Try new format first: bookmakers array
+    let odds1x2 = null;
+    let bookmakerName = null;
     
-    if (!bookmaker?.['1x2']) {
-      return Response.json({ odds: null, message: 'No 1X2 odds available' });
+    if (data.bookmakers && Array.isArray(data.bookmakers)) {
+      const bm = data.bookmakers.find(b => b.bookmaker === 'Bet365' || b.bookmaker === 'Pinnacle');
+      if (bm?.markets?.match_odds) {
+        odds1x2 = bm.markets.match_odds;
+        bookmakerName = bm.bookmaker;
+      }
     }
     
-    const odds1x2 = bookmaker['1x2'];
+    // Fallback to old format: odds object
+    if (!odds1x2 && data.odds) {
+      const oddsData = data.odds;
+      const bm = oddsData.bet365 || oddsData.pinnacle || oddsData.kambi || oddsData.betfair;
+      if (bm?.['1x2']) {
+        odds1x2 = bm['1x2'];
+        bookmakerName = bm === oddsData.bet365 ? 'Bet365' : bm === oddsData.pinnacle ? 'Pinnacle' : 'Other';
+      }
+    }
+    
+    if (!odds1x2) {
+      return Response.json({ odds: null, message: 'No 1X2 odds available yet' });
+    }
 
     return Response.json({
       odds: {
-        home: parseFloat(odds1x2.home || 0),
-        draw: parseFloat(odds1x2.draw || 0),
-        away: parseFloat(odds1x2.away || 0),
+        home: parseFloat(odds1x2.home || odds1x2['home'] || 0),
+        draw: parseFloat(odds1x2.draw || odds1x2['draw'] || 0),
+        away: parseFloat(odds1x2.away || odds1x2['away'] || 0),
       },
-      bookmaker: bookmaker === oddsData.bet365 ? 'Bet365' : 
-                 bookmaker === oddsData.pinnacle ? 'Pinnacle' :
-                 bookmaker === oddsData.kambi ? 'Kambi' : 'Betfair',
+      bookmaker: bookmakerName || 'TheStatsAPI',
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
