@@ -97,8 +97,8 @@ Deno.serve(async (req) => {
     // settle_after must be > open_until. By the time the tx confirms (~5s), both will be in the past,
     // so settlement can be triggered immediately.
     const now = Math.floor(Date.now() / 1000);
-    const openUntil = now + 30;   // 30 seconds from now (passes on-chain validation)
-    const settleAfter = now + 60; // 60 seconds from now (> open_until, settles ~1 min after)
+    const openUntil = now + 300;  // 5 minutes from now (passes on-chain validation)
+    const settleAfter = now + 360; // 6 minutes from now (> open_until)
 
     console.log('[recreateMarketWithValidDates] openUntil:', new Date(openUntil * 1000).toISOString());
     console.log('[recreateMarketWithValidDates] settleAfter:', new Date(settleAfter * 1000).toISOString());
