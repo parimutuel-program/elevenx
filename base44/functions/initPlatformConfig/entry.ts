@@ -10,12 +10,38 @@ const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA__PROGRAM_ID') || 'PMut11111111111
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const serviceRole = base44.asServiceRole;
     
-    // Get authenticated user via Base44 SDK
-    const user = await base44.auth.me();
+    // Get wallet address from request header (set by frontend after wallet auth)
+    const authHeader = req.headers.get('Authorization') || '';
+    const walletToken = authHeader.replace('Bearer ', '');
+    
+    if (!walletToken) {
+      return Response.json({ error: 'Unauthorized - no auth token' }, { status: 401 });
+    }
+    
+    // Decode wallet token to get user info
+    const [headerPart, payloadPart, signaturePart] = walletToken.split('.');
+    if (!headerPart || !payloadPart || !signaturePart) {
+      return Response.json({ error: 'Invalid token format' }, { status: 401 });
+    }
+    
+    // Decode payload (base58)
+    const bs58 = await import('npm:bs58@5.0.0');
+    const decoder = new TextDecoder();
+    let tokenPayload;
+    try {
+      tokenPayload = JSON.parse(decoder.decode(bs58.decode(payloadPart)));
+    } catch (e) {
+      return Response.json({ error: 'Failed to decode token' }, { status: 401 });
+    }
+    
+    // Get user from database by ID
+    const users = await serviceRole.entities.User.filter({ id: tokenPayload.userId });
+    const user = users[0];
     
     if (!user) {
-      return Response.json({ error: 'Unauthorized - please login' }, { status: 401 });
+      return Response.json({ error: 'User not found' }, { status: 404 });
     }
     
     if (user.role !== 'admin') {
