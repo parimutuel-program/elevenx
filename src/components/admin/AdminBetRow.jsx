@@ -189,7 +189,12 @@ export default function AdminBetRow({ bet, matches, index }) {
               {bet.winning_outcome === 'a' ? bet.outcome_a : bet.winning_outcome === 'b' ? bet.outcome_b : 'Draw'}
             </span>
           </p>
-          {!isMarketInitialized || !isMarketSettled ? (
+          {isMarketSettled ? (
+            <div className="bg-accent/10 border border-accent/30 rounded-lg p-3 text-center">
+              <p className="text-xs text-accent font-bold">✓ Market Settled On-Chain</p>
+              <p className="text-[10px] text-accent/80 mt-1">Players can now claim winnings</p>
+            </div>
+          ) : (
             pendingSettle ? (
               <div className="w-full">
                 <SolanaTransactionSigner
@@ -209,11 +214,6 @@ export default function AdminBetRow({ bet, matches, index }) {
                 <Gavel className="w-3 h-3 mr-1" /> Settle On-Chain (Enable Claims)
               </Button>
             )
-          ) : (
-            <div className="bg-accent/10 border border-accent/30 rounded-lg p-3 text-center">
-              <p className="text-xs text-accent font-bold">✓ Market Settled On-Chain</p>
-              <p className="text-[10px] text-accent/80 mt-1">Players can now claim winnings</p>
-            </div>
           )}
         </div>
       ) : null}
