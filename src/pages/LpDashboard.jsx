@@ -173,8 +173,7 @@ export default function LpDashboard() {
   const handleTxSuccess = async (txResult) => {
     const signature = txResult.signature;
     const committedAmount = parseFloat(amount);
-    const outcomeLabel = selectedOutcome === 'a' ? selectedBet.outcome_a : selectedOutcome === 'b' ? selectedBet.outcome_b : 'Draw';
-
+    
     // Commit liquidity to DB after on-chain success
     if (pendingCommitData) {
       try {
@@ -193,11 +192,15 @@ export default function LpDashboard() {
       setPendingCommitData(null);
     }
     
+    // Get outcome label and match info safely
+    const outcomeLabel = selectedBet && selectedOutcome === 'a' ? selectedBet.outcome_a : selectedOutcome === 'b' ? selectedBet?.outcome_b : 'Draw';
+    const matchTitle = selectedBet ? `${selectedBet.outcome_a} vs ${selectedBet.outcome_b}` : 'Market';
+    
     setSuccessDialog({
       signature,
       amount: committedAmount,
       team: outcomeLabel,
-      match: `${selectedBet.outcome_a} vs ${selectedBet.outcome_b}`,
+      match: matchTitle,
     });
     
     setPendingTx(null);
