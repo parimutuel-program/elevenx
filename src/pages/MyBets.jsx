@@ -4,20 +4,26 @@ import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trophy, TrendingUp, TrendingDown, Clock, ChevronRight, Wallet, ArrowLeft, CheckCircle, ExternalLink } from 'lucide-react';
+import { Trophy, TrendingUp, TrendingDown, Clock, ChevronRight, Wallet, ArrowLeft, CheckCircle, ExternalLink, Target, Users, DollarSign, Activity, Award, Shield, Flame, BarChart3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardDescription, CardTitle } from '@/components/ui/card';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
+import StatCard from '@/components/dashboard/StatCard';
+import QuickStat from '@/components/dashboard/QuickStat';
+import EmptyState from '@/components/dashboard/EmptyState';
+import BetCard from '@/components/dashboard/BetCard';
 
 const statusConfig = {
-  active:   { color: 'bg-primary/10 text-primary border-primary/20', icon: Clock },
-  pending:  { color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20', icon: Clock },
-  won:      { color: 'bg-accent/20 text-accent border-accent/20', icon: TrendingUp },
-  lost:     { color: 'bg-destructive/10 text-destructive border-destructive/20', icon: TrendingDown },
-  claimed:  { color: 'bg-accent/20 text-accent border-accent/20', icon: Trophy },
-  refunded: { color: 'bg-secondary text-secondary-foreground border-border', icon: Clock },
-  void:     { color: 'bg-muted text-muted-foreground border-border', icon: Clock },
+  active:   { color: 'bg-primary/10 text-primary border-primary/20', icon: Clock, label: 'Active' },
+  pending:  { color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20', icon: Clock, label: 'Pending' },
+  won:      { color: 'bg-accent/20 text-accent border-accent/20', icon: TrendingUp, label: 'Won' },
+  lost:     { color: 'bg-destructive/10 text-destructive border-destructive/20', icon: TrendingDown, label: 'Lost' },
+  claimed:  { color: 'bg-accent/20 text-accent border-accent/20', icon: Trophy, label: 'Claimed' },
+  refunded: { color: 'bg-secondary text-secondary-foreground border-border', icon: Shield, label: 'Refunded' },
+  void:     { color: 'bg-muted text-muted-foreground border-border', icon: Clock, label: 'Void' },
 };
 
 const RefundDialog = ({ open, onClose, data, onSignSuccess }) => {
@@ -146,6 +152,11 @@ export default function MyBets() {
   const totalWon = myBets.filter(b => b.status === 'won' || b.status === 'claimed').reduce((s, b) => s + (b.actual_payout || 0), 0);
   const activeBets = myBets.filter(b => b.status === 'active' || b.status === 'pending');
   const completedBets = myBets.filter(b => b.status !== 'active' && b.status !== 'pending');
+  const pendingClaims = myBets.filter(b => b.status === 'won');
+  const availableRefunds = myBets.filter(b => b.status === 'refunded');
+  
+  const potentialWinnings = activeBets.reduce((s, b) => s + (b.potential_payout || 0), 0);
+  const winRate = myBets.length > 0 ? ((myBets.filter(b => b.status === 'won' || b.status === 'claimed').length / myBets.length) * 100).toFixed(1) : 0;
 
   const handleRefundSuccess = () => {
     setRefundDialog(null);
@@ -153,58 +164,157 @@ export default function MyBets() {
   };
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
+    <div className="space-y-6 max-w-6xl mx-auto">
       <RefundDialog
         open={!!refundDialog}
         data={refundDialog}
         onClose={() => setRefundDialog(null)}
         onSignSuccess={handleRefundSuccess}
       />
-      <div>
-        <h1 className="font-heading font-black text-2xl mb-1">My Bets</h1>
-        <p className="text-sm text-muted-foreground">Track all your bets and winnings</p>
+      
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-heading font-black text-3xl mb-1">My Bets Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Track your World Cup betting performance</p>
+        </div>
+        <Link to="/matches">
+          <Button variant="outline" className="gap-2 rounded-xl">
+            <Activity className="w-4 h-4" />
+            Browse Matches
+          </Button>
+        </Link>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: 'Total Staked', value: `◎${totalStaked.toFixed(2)}`, color: '' },
-          { label: 'Total Won', value: `◎${totalWon.toFixed(2)}`, color: 'text-accent' },
-          { label: 'Active', value: activeBets.length.toString(), color: 'text-primary' },
-        ].map((stat, i) => (
-          <motion.div key={i} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-            className="bg-card border border-border/50 rounded-2xl p-4">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{stat.label}</p>
-            <p className={`font-heading font-bold text-xl ${stat.color}`}>{stat.value}</p>
-          </motion.div>
-        ))}
+      {/* Enhanced Summary Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard 
+          label="Total Staked" 
+          value={`◎${totalStaked.toFixed(4)}`} 
+          icon={DollarSign}
+          color="text-foreground"
+          delay={0}
+        />
+        <StatCard 
+          label="Potential Winnings" 
+          value={`◎${potentialWinnings.toFixed(4)}`} 
+          icon={TrendingUp}
+          color="text-primary"
+          delay={0.05}
+        />
+        <StatCard 
+          label="Total Won" 
+          value={`◎${totalWon.toFixed(4)}`} 
+          icon={Award}
+          color="text-accent"
+          delay={0.1}
+        />
+        <StatCard 
+          label="Win Rate" 
+          value={`${winRate}%`} 
+          icon={Target}
+          color="text-accent"
+          delay={0.15}
+        />
       </div>
 
-      {activeBets.length > 0 && (
-        <section>
-          <h2 className="font-heading font-bold text-sm mb-3 flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" /> Active Bets
-          </h2>
-          <div className="space-y-2">
-            {activeBets.map((bet, i) => <BetRow key={bet.id} bet={bet} index={i} walletAddress={walletAddress} onRefundRequest={(data) => setRefundDialog(data)} />)}
-          </div>
-        </section>
-      )}
+      {/* Quick Stats Row */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <QuickStat 
+          label="Active Bets" 
+          value={activeBets.length}
+          icon={Flame}
+          color="bg-primary/10 text-primary"
+        />
+        <QuickStat 
+          label="Pending Claims" 
+          value={pendingClaims.length}
+          icon={Wallet}
+          color="bg-accent/10 text-accent"
+        />
+        <QuickStat 
+          label="Available Refunds" 
+          value={availableRefunds.length}
+          icon={Shield}
+          color="bg-yellow-500/10 text-yellow-400"
+        />
+      </div>
 
-      {completedBets.length > 0 && (
-        <section>
-          <h2 className="font-heading font-bold text-sm mb-3">History</h2>
-          <div className="space-y-2">
-            {completedBets.map((bet, i) => <BetRow key={bet.id} bet={bet} index={i} walletAddress={walletAddress} onRefundRequest={(data) => setRefundDialog(data)} />)}
-          </div>
-        </section>
-      )}
+      <Tabs defaultValue="active" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3 bg-card border border-border/50 rounded-xl">
+          <TabsTrigger value="active" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg">
+            <Clock className="w-4 h-4 mr-2" />
+            Active ({activeBets.length})
+          </TabsTrigger>
+          <TabsTrigger value="pending" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground rounded-lg">
+            <Award className="w-4 h-4 mr-2" />
+            Pending Claims ({pendingClaims.length})
+          </TabsTrigger>
+          <TabsTrigger value="history" className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground rounded-lg">
+            <BarChart3 className="w-4 h-4 mr-2" />
+            History ({completedBets.filter(b => b.status !== 'won').length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="active" className="space-y-3">
+          {activeBets.length > 0 ? (
+            activeBets.map((bet, i) => (
+              <BetCard 
+                key={bet.id} 
+                bet={bet} 
+                index={i} 
+                walletAddress={walletAddress} 
+                onRefundRequest={(data) => setRefundDialog(data)}
+              />
+            ))
+          ) : (
+            <EmptyState message="No active bets" actionText="Browse Matches" link="/matches" />
+          )}
+        </TabsContent>
+
+        <TabsContent value="pending" className="space-y-3">
+          {pendingClaims.length > 0 ? (
+            pendingClaims.map((bet, i) => (
+              <BetCard 
+                key={bet.id} 
+                bet={bet} 
+                index={i} 
+                walletAddress={walletAddress} 
+                onRefundRequest={(data) => setRefundDialog(data)}
+              />
+            ))
+          ) : (
+            <EmptyState message="No pending claims" />
+          )}
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-3">
+          {completedBets.filter(b => b.status !== 'won').length > 0 ? (
+            completedBets.filter(b => b.status !== 'won').map((bet, i) => (
+              <BetCard 
+                key={bet.id} 
+                bet={bet} 
+                index={i} 
+                walletAddress={walletAddress} 
+                onRefundRequest={(data) => setRefundDialog(data)}
+              />
+            ))
+          ) : (
+            <EmptyState message="No betting history" />
+          )}
+        </TabsContent>
+      </Tabs>
 
       {myBets.length === 0 && !isLoading && (
         <div className="text-center py-20">
-          <Trophy className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-muted-foreground text-sm">No bets yet</p>
-          <Link to="/matches" className="text-primary text-sm hover:underline mt-2 inline-block">Browse matches →</Link>
+          <Trophy className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
+          <p className="text-muted-foreground text-lg mb-2">No bets yet</p>
+          <p className="text-muted-foreground text-sm mb-4">Start betting on World Cup matches!</p>
+          <Link to="/matches">
+            <Button className="gap-2 rounded-xl">
+              <Activity className="w-4 h-4" />
+              Browse Matches
+            </Button>
+          </Link>
         </div>
       )}
     </div>
