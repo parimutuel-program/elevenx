@@ -371,6 +371,7 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
           { pubkey: new PublicKey(instruction.accounts.market), isSigner: false, isWritable: true },
           { pubkey: new PublicKey(instruction.accounts.platformConfig), isSigner: false, isWritable: true },
           { pubkey: provider.publicKey, isSigner: true, isWritable: true }, // admin signer
+          { pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false }, // system_program
         ];
         
         const data = Buffer.from(instruction.instruction_data, 'base64');

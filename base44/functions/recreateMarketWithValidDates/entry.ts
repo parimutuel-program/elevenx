@@ -12,12 +12,17 @@ const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA__PROGRAM_ID') || 'PMut11111111111
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
     
-    const payload = await req.json();
-    const { bet_id, match_id } = payload;
+    if (!user || user.role !== 'admin') {
+      return Response.json({ error: 'Admin access required' }, { status: 403 });
+    }
 
-    if (!bet_id || !match_id) {
-      return Response.json({ error: 'Missing bet_id or match_id' }, { status: 400 });
+    const payload = await req.json();
+    const { bet_id, match_id, admin_wallet } = payload;
+
+    if (!bet_id || !match_id || !admin_wallet) {
+      return Response.json({ error: 'Missing bet_id, match_id, or admin_wallet' }, { status: 400 });
     }
 
     const bets = await base44.entities.Bet.filter({ id: bet_id });
@@ -67,6 +72,7 @@ Deno.serve(async (req) => {
         accounts: {
           market: marketPda.toBase58(),
           platformConfig: platformConfigPda.toBase58(),
+          admin: admin_wallet,
         },
         instruction_data: data.toString('base64'),
       },

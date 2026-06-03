@@ -62,6 +62,7 @@ export default function AdminBetRow({ bet, matches, index }) {
     mutationFn: ({ bet_id, match_id }) => base44.functions.invoke('recreateMarketWithValidDates', {
       bet_id,
       match_id,
+      admin_wallet: walletAddress,
     }),
     onSuccess: (response) => {
       const data = response.data;
