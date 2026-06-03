@@ -230,14 +230,33 @@ export default function Admin() {
                     <span className="text-xs text-muted-foreground">Fee %:</span>
                     <span className="text-xs font-bold">{platformConfigDetails?.feePercent ?? '-'}</span>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => refetchPlatformConfig()}
-                    className="w-full h-8 text-xs rounded-lg mt-2"
-                  >
-                    Check Platform Config
-                  </Button>
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => refetchPlatformConfig()}
+                      className="flex-1 h-8 text-xs rounded-lg"
+                    >
+                      Check Config
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const res = await base44.functions.invoke('debugPlatformAdmin', {});
+                          if (res.data.admin) {
+                            alert(`On-chain admin:\n${res.data.admin}\n\nYour wallet:\n${walletAddress || 'Not connected'}\n\nMatch: ${res.data.admin === walletAddress}`);
+                          }
+                        } catch (err) {
+                          alert('Error: ' + err.message);
+                        }
+                      }}
+                      className="flex-1 h-8 text-xs rounded-lg"
+                    >
+                      Debug Admin
+                    </Button>
+                  </div>
                   {platformConfigDetails?.admin && (
                     <div className="space-y-1 mt-2">
                       <p className="text-[9px] text-muted-foreground">
