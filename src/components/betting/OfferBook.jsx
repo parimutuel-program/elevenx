@@ -17,6 +17,13 @@ export default function OfferBook({ betId, bet, onSelectOffer }) {
     refetchInterval: 10000,
   });
 
+  const { data: userBets = [] } = useQuery({
+    queryKey: ['userBets', betId],
+    queryFn: () => base44.entities.UserBet.filter({ bet_id: betId, role: 'matcher' }),
+    enabled: !!betId && !!user?.id,
+    refetchInterval: 10000,
+  });
+
   const withdrawMutation = useMutation({
     mutationFn: (offerId) => base44.functions.invoke('withdrawOffer', { offer_id: offerId }),
     onSuccess: () => {
@@ -65,6 +72,11 @@ export default function OfferBook({ betId, bet, onSelectOffer }) {
             const maxMatcherStake = offer.amount_unmatched * (offer.odds_at_creation - 1);
             const outcomeLabel = offer.outcome === 'a' ? bet?.outcome_a : offer.outcome === 'b' ? bet?.outcome_b : 'Draw';
             const oppositeLabel = offer.outcome === 'a' ? bet?.outcome_b : offer.outcome === 'b' ? bet?.outcome_a : `${bet?.outcome_a} or ${bet?.outcome_b}`;
+            
+            // Calculate total user stake and potential payout for this specific offer
+            const userBetsOnThisOffer = userBets.filter(bet => bet.offer_id === offer.id);
+            const totalUserStake = userBetsOnThisOffer.reduce((sum, bet) => sum + (bet.amount || 0), 0);
+            const totalUserPotentialPayout = userBetsOnThisOffer.reduce((sum, bet) => sum + (bet.potential_payout || 0), 0);
 
             return (
               <div
@@ -97,7 +109,19 @@ export default function OfferBook({ betId, bet, onSelectOffer }) {
                         <span>Unmatched:</span>
                         <span className="font-medium text-foreground">◎{offer.amount_unmatched?.toFixed(4)}</span>
                       </div>
-                      {!isOwn && (
+                      {!isOwn && totalUserStake > 0 && (
+                        <div className="mt-2 pt-2 border-t border-primary/20 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-primary font-medium">Your Bets:</span>
+                            <span className="font-bold text-primary">◎{totalUserStake.toFixed(4)}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-accent font-medium">You Can Win:</span>
+                            <span className="font-bold text-accent">◎{totalUserPotentialPayout.toFixed(4)}</span>
+                          </div>
+                        </div>
+                      )}
+                      {!isOwn && totalUserStake === 0 && (
                         <div className="text-accent font-medium mt-1 pt-1 border-t border-accent/20">
                           → Bet up to ◎{maxMatcherStake.toFixed(4)} on {oppositeLabel}
                         </div>
