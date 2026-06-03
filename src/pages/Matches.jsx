@@ -12,9 +12,17 @@ export default function Matches() {
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
 
-  const { data: matches = [] } = useQuery({
+  const { data: rawMatches = [] } = useQuery({
     queryKey: ['matches'],
     queryFn: () => base44.entities.Match.list('match_time', 100),
+  });
+
+  // Deduplicate matches by ID to avoid duplicates in the database
+  const seenIds = new Set();
+  const matches = rawMatches.filter(m => {
+    if (seenIds.has(m.id)) return false;
+    seenIds.add(m.id);
+    return true;
   });
 
   const { data: bets = [] } = useQuery({
