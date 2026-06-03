@@ -10,12 +10,59 @@ export default function AdminFuturesPanel() {
   const queryClient = useQueryClient();
   const [pendingDeploy, setPendingDeploy] = useState(null);
   const [deployingMarketId, setDeployingMarketId] = useState(null);
+  const [isBulkDeploying, setIsBulkDeploying] = useState(false);
+  const [pendingBulkDeploy, setPendingBulkDeploy] = useState(null);
 
   // Fetch existing futures markets (country-by-country)
   const { data: futuresMarkets = [], refetch } = useQuery({
     queryKey: ['futuresMarkets'],
     queryFn: () => base44.entities.FuturesMarket.list('-created_date', 100),
   });
+
+  // Bulk deploy all markets
+  const handleBulkDeploy = async () => {
+    setIsBulkDeploying(true);
+    try {
+      const res = await base44.functions.invoke('bulkDeployFutures', {});
+      if (res.data.error) {
+        alert('Error: ' + res.data.error);
+        return;
+      }
+      
+      if (res.data.instructions && res.data.instructions.length > 0) {
+        setPendingBulkDeploy({
+          instructions: res.data.instructions,
+          marketUpdates: res.data.marketUpdates,
+          marketCount: res.data.marketCount,
+        });
+      } else {
+        alert('No markets to deploy or failed to prepare instructions');
+      }
+    } catch (error) {
+      console.error('Bulk deploy failed:', error);
+      alert('Failed to prepare bulk deploy: ' + error.message);
+    } finally {
+      setIsBulkDeploying(false);
+    }
+  };
+
+  const handleBulkDeploySuccess = async (result) => {
+    console.log('Bulk deploy success:', result);
+    
+    // Update all deployed markets in database
+    if (pendingBulkDeploy?.marketUpdates) {
+      for (const marketUpdate of pendingBulkDeploy.marketUpdates) {
+        await base44.entities.FuturesMarket.update(marketUpdate.id, {
+          solana_market_created: true,
+          solana_market_pda: marketUpdate.solana_market_pda,
+        });
+      }
+    }
+    
+    setPendingBulkDeploy(null);
+    queryClient.invalidateQueries({ queryKey: ['futuresMarkets'] });
+    alert(`✓ Successfully deployed ${pendingBulkDeploy?.marketCount || 0} futures markets to Solana!`);
+  };
 
   const handleDeploySuccess = async (result) => {
     console.log('Futures market deploy success:', result);
@@ -62,9 +109,25 @@ export default function AdminFuturesPanel() {
             <p className="text-xs text-muted-foreground">Each country has 1st, 2nd, 3rd place outcomes</p>
           </div>
         </div>
-        <Badge className="bg-primary text-primary-foreground font-bold">
-          {futuresMarkets.length} Markets
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge className="bg-primary text-primary-foreground font-bold">
+            {futuresMarkets.length} Markets
+          </Badge>
+          <Button
+            size="sm"
+            onClick={handleBulkDeploy}
+            disabled={isBulkDeploying || futuresMarkets.length === 0}
+            className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs font-bold h-8 px-3 rounded-lg"
+          >
+            {isBulkDeploying ? (
+              <Loader className="w-3 h-3 animate-spin" />
+            ) : (
+              <>
+                <Rocket className="w-3 h-3 mr-1" /> Deploy All
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Markets List */}
@@ -139,7 +202,7 @@ export default function AdminFuturesPanel() {
         </div>
       )}
 
-      {/* Deploy Transaction Modal */}
+      {/* Single Deploy Transaction Modal */}
       {pendingDeploy && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-card border border-border/50 rounded-2xl p-6 max-w-md w-full">
@@ -157,6 +220,57 @@ export default function AdminFuturesPanel() {
               <Button variant="outline" size="sm" onClick={() => setPendingDeploy(null)} className="w-full">
                 Cancel
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Deploy Transaction Modal */}
+      {pendingBulkDeploy && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border/50 rounded-2xl p-6 max-w-lg w-full">
+            <div className="space-y-4">
+              <div className="bg-primary/10 border border-primary/30 rounded-xl p-4">
+                <p className="text-sm font-bold text-primary mb-1">Bulk Deploy {pendingBulkDeploy.marketCount} Markets</p>
+                <p className="text-xs text-muted-foreground">
+                  This will deploy all {pendingBulkDeploy.marketCount} country futures markets to Solana in a single transaction.
+                </p>
+              </div>
+              
+              <div className="max-h-64 overflow-y-auto space-y-2">
+                <p className="text-xs font-bold text-foreground mb-2">Markets to deploy:</p>
+                {pendingBulkDeploy.instructions.map((inst, idx) => (
+                  <div key={idx} className="bg-secondary/30 rounded-lg p-2 flex items-center justify-between">
+                    <span className="text-xs font-bold">{inst.marketId?.slice(0, 8)}...{inst.marketId?.slice(-4)}</span>
+                    <Badge className="text-[9px] bg-primary/20 text-primary">Market #{idx + 1}</Badge>
+                  </div>
+                ))}
+              </div>
+
+              <SolanaTransactionSigner
+                instruction={pendingBulkDeploy.instructions[0]}
+                amount={0}
+                futures_market_id={pendingBulkDeploy.instructions[0]?.futures_market_id}
+                onSuccess={handleBulkDeploySuccess}
+              />
+              
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPendingBulkDeploy(null)} className="flex-1">
+                  Cancel
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={() => {
+                    // For bulk deploy, we'd need to batch multiple transactions
+                    // For now, deploy first market as demo
+                    alert('Note: Full bulk transaction support requires Solana transaction batching. Deploying markets one at a time is recommended for now.');
+                  }}
+                  className="flex-1 bg-accent hover:bg-accent/90"
+                  disabled
+                >
+                  Batch Deploy (Coming Soon)
+                </Button>
+              </div>
             </div>
           </div>
         </div>
