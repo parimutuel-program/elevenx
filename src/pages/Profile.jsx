@@ -177,7 +177,7 @@ export default function Profile() {
           {platformDebug?.success ? (
             <div className="space-y-3">
               <div className="bg-accent/10 border border-accent/30 rounded-xl p-3">
-                <p className="text-xs text-accent font-bold mb-1">✓ Platform Initialized</p>
+                <p className="text-xs text-accent font-bold mb-1">✓ Platform Already Initialized</p>
                 <p className="text-[10px] text-muted-foreground">
                   Admin: <span className="font-mono text-accent">{platformDebug.admin?.slice(0, 6)}...{platformDebug.admin?.slice(-6)}</span>
                 </p>
@@ -185,45 +185,15 @@ export default function Profile() {
                   Fee: {(platformDebug.feePercent / 100).toFixed(2)}% | Consensus: {platformDebug.consensusThreshold}
                 </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Platform is already initialized. Reinitialize only if you need to change the admin wallet.
-              </p>
-              {reinitMutation.isError && (
-                <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-3 text-xs text-destructive">
-                  ✗ Error: {reinitMutation.error?.message}
-                </div>
-              )}
-              {reinitMutation.isSuccess && reinitMutation.data?.solana_instruction ? (
-                <div className="space-y-3">
-                  <SolanaTransactionSigner
-                    instruction={reinitMutation.data.solana_instruction}
-                    amount="0"
-                    onSuccess={() => {
-                      alert('✓ Platform reinitialized! You are now the admin.');
-                      reinitMutation.reset();
-                      setTimeout(() => window.location.reload(), 2000);
-                    }}
-                    onError={(err) => alert('Transaction failed: ' + err.message)}
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={() => reinitMutation.reset()}
-                    className="w-full h-10 rounded-xl"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  onClick={() => reinitMutation.mutate()}
-                  disabled={reinitMutation.isPending || !isConnected || !walletAddress}
-                  variant="outline"
-                  className="w-full h-11 rounded-xl border-border/50"
-                >
-                  <RefreshCcw className="w-4 h-4 mr-2" />
-                  {reinitMutation.isPending ? 'Preparing...' : 'Reinitialize Platform (Advanced)'}
-                </Button>
-              )}
+              <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-3">
+                <p className="text-xs text-destructive font-bold">⚠ "Betting Window Closed" Error?</p>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  This error is from <strong>markets</strong>, not the platform. Your platform is fine.
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Go to <strong>Admin panel</strong> → Click ⚡ Test Mode on markets to fix timestamps.
+                </p>
+              </div>
             </div>
           ) : (
             <div>
