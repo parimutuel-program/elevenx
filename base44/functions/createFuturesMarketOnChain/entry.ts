@@ -37,6 +37,12 @@ Deno.serve(async (req) => {
       programId
     );
 
+    // Derive vote tally PDA for this market
+    const [voteTallyPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('vote_tally'), marketIdBytes],
+      programId
+    );
+
     const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
     const accountInfo = await connection.getAccountInfo(marketPda);
     
@@ -178,8 +184,7 @@ Deno.serve(async (req) => {
         instruction_data: instructionData.toString('base64'),
         accounts: {
           market: marketPda.toBase58(),
-          payer: '',
-          systemProgram: '11111111111111111111111111111111',
+          voteTally: voteTallyPda.toBase58(),
           platformConfig: platformConfigPda.toBase58(),
         }
       },
