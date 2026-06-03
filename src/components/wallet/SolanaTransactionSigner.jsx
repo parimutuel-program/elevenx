@@ -472,21 +472,24 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
     }
   };
 
-  if (signature && !userBetId) {
-    // Only show internal success UI if NOT a refund/claim (those have custom parent dialogs)
+  if (signature) {
+    // Show success message for all transaction types
     const solanaScanUrl = `https://solscan.io/tx/${signature}?cluster=devnet`;
     
     // Determine transaction type message and payout info
     let txMessage = 'Transaction confirmed on Solana';
     let payoutInfo = null;
+    let goodLuckMessage = null;
     if (instruction?.instruction_type === 'place_bet') {
       txMessage = '✓ Bet placed successfully!';
+      goodLuckMessage = 'Good luck! 🍀';
       if (instruction.amountLamports) {
         const solAmount = (instruction.amountLamports / 1e9).toFixed(4);
         payoutInfo = `◎${solAmount} SOL staked`;
       }
     } else if (instruction?.instruction_type === 'provide_liquidity') {
       txMessage = '✓ Liquidity provided!';
+      goodLuckMessage = 'Good luck! 🍀';
     } else if (instruction?.instruction_type === 'claim_winnings') {
       txMessage = '✓ Winnings claimed!';
     } else if (instruction?.instruction_type === 'withdraw_liquidity') {
@@ -510,17 +513,21 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         {payoutInfo && (
           <p className="font-heading font-bold text-lg text-accent mt-1">{payoutInfo}</p>
         )}
-        <p className="text-xs text-muted-foreground mt-2">
-          View transaction:{' '}
+        {goodLuckMessage && (
+          <p className="font-heading font-bold text-sm text-accent mt-2">{goodLuckMessage}</p>
+        )}
+        <div className="mt-3 pt-3 border-t border-accent/20">
+          <p className="text-xs text-muted-foreground mb-1">Transaction on Solana</p>
           <a 
             href={solanaScanUrl} 
             target="_blank" 
             rel="noopener noreferrer" 
-            className="text-primary hover:underline font-medium"
+            className="inline-flex items-center gap-1 text-primary text-xs font-bold hover:underline"
           >
-            {signature.slice(0, 8)}...{signature.slice(-8)}
+            View on Solscan →
+            <span className="font-mono text-[10px] text-muted-foreground">{signature.slice(0, 8)}...{signature.slice(-8)}</span>
           </a>
-        </p>
+        </div>
       </motion.div>
     );
   }
