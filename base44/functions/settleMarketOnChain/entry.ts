@@ -38,9 +38,16 @@ Deno.serve(async (req) => {
     
     try {
       // Decode payload
-      const payloadBytes = bs58.decode(parts[1]);
-      const payload = JSON.parse(new TextDecoder().decode(payloadBytes));
+      let payloadBytes;
+      try {
+        payloadBytes = bs58.decode(parts[1]);
+      } catch (decodeErr) {
+        console.error('[settleMarketOnChain] Failed to decode payload:', decodeErr.message);
+        console.error('[settleMarketOnChain] Payload part:', parts[1].slice(0, 50));
+        throw new Error('Invalid payload encoding: ' + decodeErr.message);
+      }
       
+      const payload = JSON.parse(new TextDecoder().decode(payloadBytes));
       console.log('[settleMarketOnChain] Decoded token payload:', payload);
       
       // Verify token hasn't expired
@@ -83,7 +90,13 @@ Deno.serve(async (req) => {
       console.log('[settleMarketOnChain] ✓ Authenticated wallet:', payload.walletAddress, 'role:', payload.role);
       
       if (payload.role !== 'admin') {
-        return Response.json({ error: 'Admin access required', got_role: payload.role }, { status: 403 });
+        console.error('[settleMarketOnChain] Non-admin user trying to settle. Role:', payload.role);
+        return Response.json({ 
+          error: 'Admin access required', 
+          got_role: payload.role,
+          wallet: payload.walletAddress,
+          hint: 'Your wallet needs admin role. Contact support to be granted admin access.'
+        }, { status: 403 });
       }
       
     } catch (tokenErr) {

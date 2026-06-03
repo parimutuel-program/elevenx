@@ -8,7 +8,6 @@ const { appId, token, functionsVersion, appBaseUrl } = appParams;
 const getWalletAuthToken = () => {
   if (typeof window === 'undefined') return null;
   const walletToken = localStorage.getItem('elevenx_auth_token');
-  console.log('[base44Client] Retrieved auth token:', walletToken ? walletToken.slice(0, 20) + '...' : 'none');
   return walletToken;
 };
 
@@ -16,7 +15,6 @@ const getWalletAuthToken = () => {
 const createBase44AxiosClient = () => {
   const walletToken = getWalletAuthToken();
   const authToken = walletToken || token;
-  console.log('[base44Client] Creating axios client with auth:', authToken ? 'Bearer token present' : 'platform token only');
   
   return createAxiosClient({
     baseURL: '',
