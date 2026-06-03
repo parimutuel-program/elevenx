@@ -18,10 +18,18 @@ Deno.serve(async (req) => {
     const SOLANA_RPC_URL = 'https://api.devnet.solana.com';
     
     const payload = await req.json();
-    const { match_id } = payload;
+    let { match_id, bet_id } = payload;
+    
+    // If bet_id is provided, use it to get the match_id
+    if (bet_id && !match_id) {
+      const bet = await base44.entities.Bet.get(bet_id);
+      if (bet) {
+        match_id = bet.match_id;
+      }
+    }
     
     if (!match_id) {
-      return Response.json({ error: 'Missing match_id' }, { status: 400 });
+      return Response.json({ error: 'Missing match_id or bet_id' }, { status: 400 });
     }
     
     const programId = new PublicKey(SOLANA_PROGRAM_ID);

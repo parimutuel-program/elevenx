@@ -48,12 +48,10 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Invalid parameters' }, { status: 400 });
     }
 
-    const bets = await serviceRole.entities.Bet.filter({ id: bet_id });
-    const bet = bets[0];
+    const bet = await serviceRole.entities.Bet.get(bet_id);
     if (!bet) return Response.json({ error: 'Bet not found' }, { status: 404 });
 
-    const matches = await serviceRole.entities.Match.filter({ id: bet.match_id });
-    const match = matches[0];
+    const match = await serviceRole.entities.Match.get(bet.match_id);
     if (!match) return Response.json({ error: 'Match not found' }, { status: 404 });
 
     const programId = new PublicKey(SOLANA_PROGRAM_ID);
