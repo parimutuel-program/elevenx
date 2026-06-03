@@ -189,43 +189,32 @@ Deno.serve(async (req) => {
       }, { status: 500 });
     }
 
-    // Create UserBet record for the matcher
-    const userBet = await serviceRole.entities.UserBet.create({
-      bet_id: offer.bet_id,
-      match_id: offer.match_id,
-      offer_id: offer.id,
-      role: 'matcher',
-      outcome: bettor_outcome,
-      outcome_label: bettor_outcome_label,
-      amount,
-      potential_payout,
-      status: 'active',
-      match_title: bet.title,
-      wallet_address: trimmedWallet,
-    });
-    console.log('[matchBet] Created UserBet:', userBet.id);
-
-    // Update BetOffer: increase amount_matched, decrease amount_unmatched
-    const newMatched = (offer.amount_matched || 0) + amount;
-    const newUnmatched = (offer.amount_unmatched || 0) - amount;
-    const newStatus = newUnmatched <= 0.0001 ? 'fully_matched' : 'partially_matched';
-    
-    await serviceRole.entities.BetOffer.update(offer.id, {
-      amount_matched: newMatched,
-      amount_unmatched: newUnmatched,
-      status: newStatus,
-    });
-    console.log('[matchBet] Updated BetOffer:', { newMatched, newUnmatched, newStatus });
-
-    // Update Bet pool totals and bettor count
-    const poolKey = `pool_${offer.outcome}`;
-    const currentPool = bet[poolKey] || 0;
-    await serviceRole.entities.Bet.update(bet.id, {
-      [poolKey]: currentPool + amount,
-      total_pool: (bet.total_pool || 0) + amount,
-      total_bettors: (bet.total_bettors || 0) + 1,
-    });
-    console.log('[matchBet] Updated Bet pools');
+    // Prepare commit data (do NOT write to DB yet - will commit after transaction succeeds)
+    const commit_data = {
+      userBet: {
+        bet_id: offer.bet_id,
+        match_id: offer.match_id,
+        offer_id: offer.id,
+        role: 'matcher',
+        outcome: bettor_outcome,
+        outcome_label: bettor_outcome_label,
+        amount,
+        potential_payout,
+        status: 'active',
+        match_title: bet.title,
+        wallet_address: trimmedWallet,
+      },
+      offerUpdate: {
+        amount_matched: (offer.amount_matched || 0) + amount,
+        amount_unmatched: (offer.amount_unmatched || 0) - amount,
+        status: (offer.amount_unmatched - amount) <= 0.0001 ? 'fully_matched' : 'partially_matched',
+      },
+      betUpdate: {
+        poolKey: `pool_${offer.outcome}`,
+        currentPool: bet[offer.outcome === 'a' ? 'pool_a' : offer.outcome === 'b' ? 'pool_b' : 'pool_draw'] || 0,
+        amount,
+      },
+    };
 
     console.log('[matchBet] Preparing place_bet instruction:', {
       bettor_outcome,
@@ -250,7 +239,9 @@ Deno.serve(async (req) => {
         outcome: outcomeIndex,
         amountLamports,
       },
-      message: `✓ Bet matched! ◎${amount.toFixed(4)} on ${bettor_outcome_label} to win ◎${potential_payout.toFixed(4)} — transaction will be recorded on Solana`,
+      // Data to commit after transaction succeeds (not written to DB yet)
+      commit_data,
+      message: `✓ Ready to bet ◎${amount.toFixed(4)} on ${bettor_outcome_label} — sign transaction to commit`,
     });
   } catch (error) {
     console.error('[matchBet] Unexpected error:', {

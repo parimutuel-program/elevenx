@@ -224,50 +224,25 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Record in BetOffer entity
-    const existingOffers = await base44.entities.BetOffer.filter({ bet_id, lp_wallet_address: walletAddress, outcome });
-    if (existingOffers.length > 0) {
-      console.log('Existing BetOffer found with stored PDAs:', {
-        stored_market_pda: existingOffers[0].solana_bet_pool_pda,
-        stored_lp_pda: existingOffers[0].solana_position_pda,
-        matches_current: existingOffers[0].solana_bet_pool_pda === marketPda.toBase58() && existingOffers[0].solana_position_pda === lpOfferPda.toBase58(),
-      });
-    }
-    let offer;
-    if (existingOffers.length > 0) {
-      offer = await base44.entities.BetOffer.update(existingOffers[0].id, {
-        amount_offered: (existingOffers[0].amount_offered || 0) + amount,
-        amount_unmatched: (existingOffers[0].amount_unmatched || 0) + amount,
-      });
-      offer = { ...existingOffers[0], ...offer };
-    } else {
-      offer = await base44.entities.BetOffer.create({
-        bet_id,
-        match_id,
-        outcome,
-        outcome_label: outcomeLabel,
-        amount_offered: amount,
-        amount_matched: 0,
-        amount_unmatched: amount,
-        status: 'open',
-        odds_at_creation: oddsBps / 100,
-        lp_wallet_address: walletAddress,
-        solana_bet_pool_pda: marketPda.toBase58(),
-        solana_position_pda: lpOfferPda.toBase58(),
-      });
-    }
-
-    // Update bet LP totals
-    const lpField = outcome === 'a' ? 'lp_amount_a' : outcome === 'b' ? 'lp_amount_b' : 'lp_amount_draw';
-    await base44.entities.Bet.update(bet_id, {
-      [lpField]: (bet[lpField] || 0) + amount,
-    });
-
-    // Create UserBet record for LP position
-    await base44.entities.UserBet.create({
+    // Prepare offer data for commit after transaction succeeds (do NOT write to DB yet)
+    const offerData = {
       bet_id,
       match_id,
-      offer_id: offer.id,
+      outcome,
+      outcome_label: outcomeLabel,
+      amount_offered: amount,
+      amount_matched: 0,
+      amount_unmatched: amount,
+      status: 'open',
+      odds_at_creation: oddsBps / 100,
+      lp_wallet_address: walletAddress,
+      solana_bet_pool_pda: marketPda.toBase58(),
+      solana_position_pda: lpOfferPda.toBase58(),
+    };
+    
+    const userBetData = {
+      bet_id,
+      match_id,
       outcome,
       amount,
       role: 'lp',
@@ -276,7 +251,9 @@ Deno.serve(async (req) => {
       match_title: `${match?.team_a} vs ${match?.team_b}`,
       potential_payout: 0,
       wallet_address: walletAddress,
-    });
+    };
+    
+    const lpField = outcome === 'a' ? 'lp_amount_a' : outcome === 'b' ? 'lp_amount_b' : 'lp_amount_draw';
 
     // Platform config PDA - MUST match Solana program seeds [b"platform"]
     const [platformConfigPda] = PublicKey.findProgramAddressSync(
@@ -288,7 +265,6 @@ Deno.serve(async (req) => {
 
     return Response.json({
       success: true,
-      offerId: offer.id,
       oddsBps,
       solana_instruction: {
         instruction_type: 'provide_liquidity',
@@ -301,7 +277,14 @@ Deno.serve(async (req) => {
         outcome: outcomeIndex,
         amountLamports: Math.round(amount * 1_000_000_000),
       },
-      message: `✓ Liquidity provided! ◎${amount} at ${oddsBps / 100}x for ${outcomeLabel} — transaction will be recorded on Solana`,
+      // Data to commit after transaction succeeds (not written to DB yet)
+      commit_data: {
+        offer: offerData,
+        userBet: userBetData,
+        lpField,
+        amount,
+      },
+      message: `✓ Ready to provide ◎${amount} at ${oddsBps / 100}x for ${outcomeLabel} — sign transaction to commit`,
     });
 
   } catch (error) {

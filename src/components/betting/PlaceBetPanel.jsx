@@ -138,7 +138,11 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
         console.log('[PlaceBetPanel] matchBet response:', res.data);
       }
       if (res.data?.error) throw new Error(res.data.error);
-      setInstruction(res.data.solana_instruction);
+      // Include commit_data in instruction for post-tx commit
+      setInstruction({
+        ...res.data.solana_instruction,
+        commit_data: res.data.commit_data,
+      });
     } catch (err) {
       console.error('[PlaceBetPanel] Error in handleGetInstruction:', err);
       const msg = err.response?.data?.error || err.message || 'Failed to prepare transaction';
@@ -148,11 +152,35 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
     }
   };
 
-  const handleTransactionSuccess = (result) => {
+  const handleTransactionSuccess = async (result) => {
     console.log('[PlaceBetPanel] Transaction success!', result);
     setAmount('');
     setLastSignature(result.signature);
     setLastInstruction(instruction);
+    
+    // Commit to database after transaction succeeds
+    try {
+      const commitPayload = {
+        signature: result.signature,
+        commit_data: instruction.commit_data,
+      };
+      
+      const commitFunction = mode === 'offer' ? 'commitLiquidity' : 'commitBet';
+      console.log('[PlaceBetPanel] Calling commit function:', commitFunction, commitPayload);
+      
+      const commitRes = await base44.functions.invoke(commitFunction, commitPayload);
+      
+      if (commitRes.data.error) {
+        console.error('[PlaceBetPanel] Commit failed:', commitRes.data.error);
+        // Show error but don't block - transaction still succeeded on-chain
+      } else {
+        console.log('[PlaceBetPanel] Commit successful:', commitRes.data);
+      }
+    } catch (commitErr) {
+      console.error('[PlaceBetPanel] Commit error:', commitErr);
+      // Transaction succeeded, commit failure is logged but doesn't block UX
+    }
+    
     // Keep showing success message for 5.5 seconds before calling parent callback
     const timer = setTimeout(() => {
       setInstruction(null);
