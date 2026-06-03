@@ -1,7 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { PublicKey } from 'npm:@solana/web3.js@1.98.4';
 import { Buffer } from 'node:buffer';
-import bs58 from 'npm:bs58@5.0.0';
 
 const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA__PROGRAM_ID') || 'PMut1111111111111111111111111111111111111111';
 
@@ -12,60 +11,15 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     
-    // Get wallet auth token from request headers
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return Response.json({ error: 'Missing authentication token' }, { status: 401 });
+    // Get authenticated user via Base44 SDK (platform handles auth)
+    const user = await base44.auth.me();
+    
+    if (!user) {
+      return Response.json({ error: 'Unauthorized - please login' }, { status: 401 });
     }
     
-    const authToken = authHeader.replace('Bearer ', '');
-    const parts = authToken.split('.');
-    if (parts.length !== 3) {
-      return Response.json({ error: 'Invalid token format' }, { status: 401 });
-    }
-    
-    const { subtle } = await import('node:crypto');
-    const encoder = new TextEncoder();
-    
-    try {
-      // Decode payload (base64, not base58 - standard JWT format)
-      const payloadBytes = Buffer.from(parts[1], 'base64');
-      const payload = JSON.parse(new TextDecoder().decode(payloadBytes));
-      
-      if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) {
-        throw new Error('Token expired');
-      }
-      
-      // Verify signature
-      const secretKey = Deno.env.get('BASE44_APP_ID') || 'elevenx-secret';
-      const keyData = encoder.encode(secretKey);
-      const key = await subtle.importKey(
-        'raw',
-        keyData,
-        { name: 'HMAC', hash: 'SHA-256' },
-        false,
-        ['sign']
-      );
-      
-      const expectedSignature = await subtle.sign(
-        'HMAC',
-        key,
-        encoder.encode(`${parts[0]}.${parts[1]}`)
-      );
-      
-      const expectedArray = new Uint8Array(expectedSignature);
-      const expectedB58 = bs58.encode(expectedArray);
-      
-      if (expectedB58 !== parts[2]) {
-        throw new Error('Invalid token signature');
-      }
-      
-      if (payload.role !== 'admin') {
-        return Response.json({ error: 'Admin access required', got_role: payload.role }, { status: 403 });
-      }
-      
-    } catch (tokenErr) {
-      return Response.json({ error: 'Invalid authentication token', details: tokenErr.message }, { status: 401 });
+    if (user.role !== 'admin') {
+      return Response.json({ error: 'Admin access required', got_role: user.role }, { status: 403 });
     }
 
     const requestBody = await req.json();
