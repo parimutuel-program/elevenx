@@ -82,12 +82,14 @@ export default function AdminBetRow({ bet, matches, index }) {
 
   const settleOnChainMutation = useMutation({
     mutationFn: async (winningOutcome) => {
+      console.log('[AdminBetRow] Settling market:', { bet_id: bet.id, winning_outcome: winningOutcome, walletAddress });
       const onChainRes = await base44.functions.invoke('settleMarketOnChain', {
         bet_id: bet.id,
         match_id: bet.match_id,
         winning_outcome: winningOutcome,
         admin_wallet: walletAddress,
       });
+      console.log('[AdminBetRow] Backend response:', onChainRes.data);
       if (!onChainRes.data.success) throw new Error(onChainRes.data.error || 'On-chain settlement failed');
       return { solana_instruction: onChainRes.data.solana_instruction };
     },
