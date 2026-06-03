@@ -17,6 +17,7 @@ export default function AdminBetRow({ bet, matches, index }) {
   const [pendingRecreate, setPendingRecreate] = useState(null);
   const [pendingSettle, setPendingSettle] = useState(null);
   const [pendingSettleOutcome, setPendingSettleOutcome] = useState(null);
+  const [pendingTimestampUpdate, setPendingTimestampUpdate] = useState(null);
 
   // Debug: Log wallet state on mount and when it changes
   useEffect(() => {
@@ -235,24 +236,53 @@ export default function AdminBetRow({ bet, matches, index }) {
               </Button>
             )}
             <>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={async () => {
-                  if (confirm('Set market times to 1 hour ago for testing? This will close betting and allow immediate settlement.')) {
-                    try {
-                      const res = await base44.functions.invoke('updateMarketSettleTime', { bet_id: bet.id });
-                      alert(res.data.message || 'Times updated!');
+              {pendingTimestampUpdate ? (
+                <div className="w-64">
+                  <SolanaTransactionSigner
+                    instruction={pendingTimestampUpdate}
+                    amount={0}
+                    onSuccess={async () => {
+                      setPendingTimestampUpdate(null);
                       queryClient.invalidateQueries({ queryKey: ['bets'] });
+                      queryClient.invalidateQueries({ queryKey: ['marketStatus', match?.id] });
+                      alert('✓ Timestamps updated on-chain! You can now settle.');
+                    }}
+                    onError={(err) => {
+                      setPendingTimestampUpdate(null);
+                      alert('On-chain timestamp update failed: ' + err.message);
+                    }}
+                  />
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    if (!confirm('Set market times to 1 hour ago (on-chain + DB) to allow immediate settlement?')) return;
+                    try {
+                      // Step 1: Update DB timestamps
+                      await base44.functions.invoke('updateMarketSettleTime', { bet_id: bet.id });
+                      // Step 2: Get on-chain instruction to update timestamps on-chain
+                      const res = await base44.functions.invoke('updateMarketTimestampsOnChain', {
+                        bet_id: bet.id,
+                        match_id: bet.match_id,
+                        admin_wallet: walletAddress,
+                      });
+                      if (res.data?.solana_instruction) {
+                        setPendingTimestampUpdate(res.data.solana_instruction);
+                      } else {
+                        alert(res.data?.message || 'Times updated (DB only)');
+                        queryClient.invalidateQueries({ queryKey: ['bets'] });
+                      }
                     } catch (err) {
                       alert('Error: ' + err.message);
                     }
-                  }
-                }}
-                className="h-8 text-xs border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10 rounded-lg"
-              >
-                ⚡ Test Mode
-              </Button>
+                  }}
+                  className="h-8 text-xs border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10 rounded-lg"
+                >
+                  ⚡ Test Mode
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="outline"

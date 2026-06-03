@@ -13,24 +13,31 @@ const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA__PROGRAM_ID') || 'PMut11111111111
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    
-    if (!user || user.role !== 'admin') {
-      return Response.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const serviceRole = base44.asServiceRole;
 
     const payload = await req.json();
     const { bet_id, match_id, admin_wallet, mode = 'test' } = payload;
+
+    if (!admin_wallet) {
+      return Response.json({ error: 'admin_wallet required' }, { status: 400 });
+    }
+
+    // Verify admin via WalletUser entity
+    const walletUsers = await serviceRole.entities.WalletUser.filter({ wallet_address: admin_wallet });
+    const walletUser = walletUsers[0];
+    if (!walletUser || walletUser.role !== 'admin') {
+      return Response.json({ error: 'Admin access required' }, { status: 403 });
+    }
 
     if (!bet_id || !match_id || !admin_wallet) {
       return Response.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
-    const bets = await base44.entities.Bet.filter({ id: bet_id });
+    const bets = await serviceRole.entities.Bet.filter({ id: bet_id });
     const bet = bets[0];
     if (!bet) return Response.json({ error: 'Bet not found' }, { status: 404 });
 
-    const matches = await base44.entities.Match.filter({ id: match_id });
+    const matches = await serviceRole.entities.Match.filter({ id: match_id });
     const match = matches[0];
     if (!match) return Response.json({ error: 'Match not found' }, { status: 404 });
 
@@ -82,11 +89,12 @@ Deno.serve(async (req) => {
       solana_instruction: {
         instruction_type: 'update_market_timestamps',
         programId: SOLANA_PROGRAM_ID,
-        accounts: {
-          market: marketPda.toBase58(),
-          platformConfig: platformConfigPda.toBase58(),
-          admin: adminPubkey.toBase58(),
-        },
+        keys: [
+          { pubkey: marketPda.toBase58(), isSigner: false, isWritable: true },
+          { pubkey: platformConfigPda.toBase58(), isSigner: false, isWritable: false },
+          { pubkey: 'SIGNER_WALLET', isSigner: true, isWritable: false },
+          { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false },
+        ],
         instruction_data: data.toString('base64'),
       },
       timestamps: {
