@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Wallet } from 'lucide-react';
+import { Wallet, CheckCircle } from 'lucide-react';
 import { useWallet } from '@/lib/WalletContext';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
 
@@ -69,6 +69,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
 
   const [isPreparing, setIsPreparing] = useState(false);
   const [prepareError, setPrepareError] = useState(null);
+  const [lastSignature, setLastSignature] = useState(null);
 
   const handleReconnect = async () => {
     localStorage.removeItem('elevenx_wallet_session');
@@ -149,6 +150,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
   const handleTransactionSuccess = (result) => {
     setAmount('');
     setInstruction(null);
+    setLastSignature(result.signature);
     onSuccess && onSuccess(result);
   };
 
@@ -279,7 +281,30 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
         <p className="text-xs text-destructive text-center">{prepareError}</p>
       )}
 
-      {instruction ? (
+      {lastSignature ? (
+        <div className="bg-accent/10 border border-accent/30 rounded-xl p-4 text-center">
+          <CheckCircle className="w-8 h-8 text-accent mx-auto mb-2" />
+          <p className="font-heading font-bold text-sm text-accent">✓ Bet placed successfully!</p>
+          {instruction?.amountLamports && (
+            <p className="font-heading font-bold text-lg text-accent mt-1">
+              ◎{(instruction.amountLamports / 1e9).toFixed(4)} SOL staked
+            </p>
+          )}
+          <p className="font-heading font-bold text-sm text-accent mt-2">Good luck! 🍀</p>
+          <div className="mt-3 pt-3 border-t border-accent/20">
+            <p className="text-xs text-muted-foreground mb-1">Transaction on Solana</p>
+            <a 
+              href={`https://solscan.io/tx/${lastSignature}?cluster=devnet`}
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="inline-flex items-center gap-1 text-primary text-xs font-bold hover:underline"
+            >
+              View on Solscan →
+              <span className="font-mono text-[10px] text-muted-foreground">{lastSignature.slice(0, 8)}...{lastSignature.slice(-8)}</span>
+            </a>
+          </div>
+        </div>
+      ) : instruction ? (
         <SolanaTransactionSigner
           instruction={instruction}
           amount={stakeNum}
