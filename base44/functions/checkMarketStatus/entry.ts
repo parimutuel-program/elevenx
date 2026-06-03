@@ -56,14 +56,25 @@ Deno.serve(async (req) => {
     const actualSize = accountInfo.data.length;
     
     if (actualSize < expectedMinSize) {
-      console.log('Account too small - status: not_initialized');
+      console.log('Account too small - size:', actualSize, 'expected:', expectedMinSize);
+      // Check if it's a small uninitialized account (just discriminator + bump)
+      if (actualSize >= 8) {
+        console.log('[checkMarketStatus] Account exists but too small - likely uninitialized');
+        return Response.json({
+          status: 'not_initialized',
+          marketPda: marketPda.toBase58(),
+          actualSize,
+          expectedMinSize,
+          lamports: accountInfo.lamports,
+          owner: accountInfo.owner.toBase58(),
+        });
+      }
+      console.log('[checkMarketStatus] Account size invalid - status: not_created');
       return Response.json({
-        status: 'not_initialized',
+        status: 'not_created',
         marketPda: marketPda.toBase58(),
         actualSize,
         expectedMinSize,
-        lamports: accountInfo.lamports,
-        owner: accountInfo.owner.toBase58(),
       });
     }
     

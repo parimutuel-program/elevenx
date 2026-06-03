@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    return Response.json({
+    const response = {
       success: true,
       marketPda: marketPda.toBase58(),
       alreadyExists: false,
@@ -188,7 +188,20 @@ Deno.serve(async (req) => {
       message: payload.force_recreate === true 
         ? 'Sign to RECREATE market with updated odds (this will overwrite existing market data)' 
         : 'Sign to create pari-mutuel market on-chain',
-    });
+    };
+    
+    // Store the market PDA in the bet record for future reference
+    try {
+      await base44.entities.Bet.update(bet.id, { 
+        solana_market_pda: marketPda.toBase58(),
+        solana_market_created: true,
+      });
+      console.log('[createMarketOnChain] Updated bet with solana_market_pda:', marketPda.toBase58());
+    } catch (updateErr) {
+      console.error('[createMarketOnChain] Failed to update bet:', updateErr);
+    }
+    
+    return Response.json(response);
 
   } catch (error) {
     console.error('createMarketOnChain error:', error);
