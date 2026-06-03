@@ -7,7 +7,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Wallet, CheckCircle, X, Clock } from 'lucide-react';
 import { useWallet } from '@/lib/WalletContext';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
-import BetCountdown from '@/components/betting/BetCountdown';
 
 const QUICK_AMOUNTS = [0.1, 0.25, 0.5, 1];
 
@@ -250,11 +249,6 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
 
   return (
     <div className="bg-card border border-primary/20 rounded-2xl p-5 space-y-4">
-      <BetCountdown 
-        openUntil={bet?.open_until} 
-        onTimeExpired={() => setIsBettingClosed(true)}
-      />
-      
       <div>
         <div className="flex items-center justify-between gap-2 mb-0.5">
           <h3 className="font-heading font-bold text-base">
@@ -357,7 +351,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
       {stakeNum > 0 && mode === 'offer' && maxLpAmount && stakeNum > maxLpAmount && (
         <p className="text-xs text-destructive text-center font-semibold">Not enough liquidity to place bet</p>
       )}
-      {isBettingClosed && (
+      {timeRemaining && timeRemaining.total <= 0 && (
         <p className="text-xs text-destructive text-center font-bold">⏰ Betting has closed for this match</p>
       )}
       {prepareError && prepareError.includes('reconnect') && (
@@ -411,10 +405,10 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
       ) : (
         <Button
           onClick={handleGetInstruction}
-          disabled={stakeNum <= 0 || isPreparing || isBettingClosed || (mode === 'match' && maxMatcherStake && stakeNum > maxMatcherStake) || (mode === 'offer' && maxLpAmount && stakeNum > maxLpAmount)}
+          disabled={stakeNum <= 0 || isPreparing || (timeRemaining && timeRemaining.total <= 0) || (mode === 'match' && maxMatcherStake && stakeNum > maxMatcherStake) || (mode === 'offer' && maxLpAmount && stakeNum > maxLpAmount)}
           className="w-full h-12 font-heading font-bold text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isBettingClosed ? (
+          {timeRemaining && timeRemaining.total <= 0 ? (
             <>
               <Clock className="w-4 h-4 mr-2" />
               Betting Closed
