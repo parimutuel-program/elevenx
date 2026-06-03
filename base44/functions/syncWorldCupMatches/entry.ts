@@ -24,6 +24,12 @@ Deno.serve(async (req) => {
       { headers: { Authorization: `Bearer ${API_KEY}` } }
     );
     if (!res.ok) {
+      if (res.status === 403) {
+        return Response.json({ 
+          error: 'THE_STATS_API_KEY has no active subscription plan. Please activate your API key at TheStatsAPI.',
+          status_code: 403
+        }, { status: 503 });
+      }
       const text = await res.text();
       return Response.json({ error: `API error ${res.status}: ${text}` }, { status: 500 });
     }
