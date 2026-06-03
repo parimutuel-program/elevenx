@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trophy, TrendingUp, TrendingDown, Clock, ChevronRight, Wallet } from 'lucide-react';
+import { Trophy, TrendingUp, TrendingDown, Clock, ChevronRight, Wallet, ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
 
 const statusConfig = {
   active:   { color: 'bg-primary/10 text-primary border-primary/20', icon: Clock },
@@ -18,8 +20,50 @@ const statusConfig = {
   void:     { color: 'bg-muted text-muted-foreground border-border', icon: Clock },
 };
 
+const RefundDialog = ({ open, onClose, data, onSignSuccess }) => {
+  if (!data) return null;
+  
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-card border-border/50 max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-heading flex items-center gap-2">
+            <ArrowLeft className="w-5 h-5 text-yellow-400" />
+            Claim Refund
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 text-center">
+            <p className="text-sm text-muted-foreground">Refund Amount</p>
+            <p className="font-heading font-bold text-2xl text-yellow-400">◎{data?.refundAmount.toFixed(4)} SOL</p>
+            <p className="text-xs text-muted-foreground mt-2">Unmatched liquidity will be returned to your wallet</p>
+          </div>
+          
+          <SolanaTransactionSigner
+            instruction={data.solanaInstruction}
+            amount={data.refundAmount}
+            userBetId={data.userBetId}
+            onSuccess={onSignSuccess}
+            onError={() => onClose()}
+          />
+          
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="w-full h-10 text-sm rounded-xl border-border/50"
+          >
+            Cancel
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default function MyBets() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [refundDialog, setRefundDialog] = useState(null);
 
   const getWalletAddress = () => {
     const walletSession = localStorage.getItem('elevenx_wallet_session');
@@ -49,8 +93,19 @@ export default function MyBets() {
   const activeBets = myBets.filter(b => b.status === 'active' || b.status === 'pending');
   const completedBets = myBets.filter(b => b.status !== 'active' && b.status !== 'pending');
 
+  const handleRefundSuccess = () => {
+    setRefundDialog(null);
+    queryClient.invalidateQueries({ queryKey: ['myBets'] });
+  };
+
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
+      <RefundDialog
+        open={!!refundDialog}
+        data={refundDialog}
+        onClose={() => setRefundDialog(null)}
+        onSignSuccess={handleRefundSuccess}
+      />
       <div>
         <h1 className="font-heading font-black text-2xl mb-1">My Bets</h1>
         <p className="text-sm text-muted-foreground">Track all your bets and winnings</p>
@@ -77,7 +132,7 @@ export default function MyBets() {
             <div className="w-2 h-2 rounded-full bg-primary animate-pulse" /> Active Bets
           </h2>
           <div className="space-y-2">
-            {activeBets.map((bet, i) => <BetRow key={bet.id} bet={bet} index={i} walletAddress={walletAddress} />)}
+            {activeBets.map((bet, i) => <BetRow key={bet.id} bet={bet} index={i} walletAddress={walletAddress} onRefundRequest={(data) => setRefundDialog(data)} />)}
           </div>
         </section>
       )}
@@ -86,7 +141,7 @@ export default function MyBets() {
         <section>
           <h2 className="font-heading font-bold text-sm mb-3">History</h2>
           <div className="space-y-2">
-            {completedBets.map((bet, i) => <BetRow key={bet.id} bet={bet} index={i} walletAddress={walletAddress} />)}
+            {completedBets.map((bet, i) => <BetRow key={bet.id} bet={bet} index={i} walletAddress={walletAddress} onRefundRequest={(data) => setRefundDialog(data)} />)}
           </div>
         </section>
       )}
@@ -102,7 +157,7 @@ export default function MyBets() {
   );
 }
 
-function BetRow({ bet, index }) {
+function BetRow({ bet, index, onRefundRequest }) {
   const queryClient = useQueryClient();
 
   const config = statusConfig[bet.status] || statusConfig.active;
@@ -112,6 +167,22 @@ function BetRow({ bet, index }) {
     mutationFn: () => base44.functions.invoke('claimWinnings', { userBetId: bet.id }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['myBets'] }),
     onError: (error) => alert('Claim failed: ' + (error.message || 'Unknown error')),
+  });
+
+  const claimRefundMutation = useMutation({
+    mutationFn: async () => {
+      const res = await base44.functions.invoke('claimRefund', { userBetId: bet.id });
+      if (res.data.error) throw new Error(res.data.error);
+      return res.data;
+    },
+    onSuccess: (data) => {
+      onRefundRequest({
+        userBetId: bet.id,
+        refundAmount: bet.amount,
+        solanaInstruction: data.solana_instruction,
+      });
+    },
+    onError: (error) => alert('Refund claim failed: ' + (error.message || 'Unknown error')),
   });
 
   return (
@@ -138,6 +209,18 @@ function BetRow({ bet, index }) {
                   <div className="w-4 h-4 border-2 border-accent-foreground/30 border-t-accent-foreground rounded-full animate-spin" />
                 ) : (
                   <><Wallet className="w-3 h-3 mr-1" />Claim</>
+                )}
+              </Button>
+            </>
+          ) : bet.status === 'refunded' ? (
+            <>
+              <span className="text-sm font-bold text-yellow-400">◎{bet.amount?.toFixed(4)}</span>
+              <Button size="sm" onClick={() => claimRefundMutation.mutate()} disabled={claimRefundMutation.isPending}
+                className="h-8 text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 font-bold rounded-lg border border-yellow-500/30">
+                {claimRefundMutation.isPending ? (
+                  <div className="w-4 h-4 border-2 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin" />
+                ) : (
+                  <><Wallet className="w-3 h-3 mr-1" />Claim Refund</>
                 )}
               </Button>
             </>
