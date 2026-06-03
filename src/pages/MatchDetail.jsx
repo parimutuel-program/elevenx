@@ -31,6 +31,7 @@ export default function MatchDetail() {
   const [claimData, setClaimData] = useState(null);
   const [isBatchClaim, setIsBatchClaim] = useState(false);
   const [withdrawingId, setWithdrawingId] = useState(null);
+  const [pendingLpWithdraw, setPendingLpWithdraw] = useState(null);
 
   const { data: match } = useQuery({
     queryKey: ['match', matchId],
@@ -175,6 +176,26 @@ export default function MatchDetail() {
     queryClient.invalidateQueries({ queryKey: ['myUserBets', matchId, user?.id] });
   };
 
+  const handleLpWithdrawSuccess = async (txResult) => {
+    const signature = txResult.signature;
+    if (pendingLpWithdraw?.userBetId && pendingLpWithdraw?.offerId) {
+      try {
+        const commitRes = await base44.functions.invoke('finalizeWithdrawal', {
+          signature,
+          userBetId: pendingLpWithdraw.userBetId,
+          offerId: pendingLpWithdraw.offerId
+        });
+        if (commitRes.data.error) {
+          console.error('[MatchDetail] finalizeWithdrawal error:', commitRes.data.error);
+        }
+      } catch (err) {
+        console.error('[MatchDetail] finalizeWithdrawal threw:', err);
+      }
+    }
+    setPendingLpWithdraw(null);
+    queryClient.invalidateQueries({ queryKey: ['myUserBets', matchId, user?.id] });
+  };
+
   const handleSelectOffer = (offer) => {
     setSelectedOffer(offer);
     setSelectedOutcome(null);
@@ -194,14 +215,47 @@ export default function MatchDetail() {
 
   const withdrawMutation = useMutation({
     mutationFn: async (userBetId) => {
-      const res = await base44.functions.invoke('withdrawBet', { userBetId });
-      if (res.data.error) throw new Error(res.data.error);
-      return res.data;
+      const ub = myActiveBets.find(b => b.id === userBetId);
+      if (ub?.role === 'lp') {
+        // LP withdrawal - requires on-chain transaction
+        const res = await base44.functions.invoke('withdrawLiquidity', { 
+          walletAddress, 
+          userBetId 
+        });
+        if (res.data.error) throw new Error(res.data.error);
+        // Commit the withdrawal after successful transaction
+        if (res.data.offerId) {
+          await base44.functions.invoke('finalizeWithdrawal', {
+            signature: 'pending', // Will be updated after signing
+            userBetId,
+            offerId: res.data.offerId
+          });
+        }
+        return res.data;
+      } else {
+        // Matcher withdrawal - database only
+        const res = await base44.functions.invoke('withdrawBet', { 
+          userBetId,
+          walletAddress 
+        });
+        if (res.data.error) throw new Error(res.data.error);
+        return res.data;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['myUserBets', matchId, user?.id] });
       setWithdrawingId(null);
-      alert('Bet withdrawn successfully!');
+      if (data.solana_instruction) {
+        // LP withdrawal - show transaction signer
+        setPendingLpWithdraw({
+          instruction: data.solana_instruction,
+          amount: data.amount,
+          userBetId: data.userBetId,
+          offerId: data.offerId
+        });
+      } else {
+        alert('Bet withdrawn successfully!');
+      }
     },
     onError: (err) => {
       alert('Withdraw failed: ' + err.message);
@@ -224,6 +278,30 @@ export default function MatchDetail() {
 
   return (
     <div className="space-y-4 max-w-2xl mx-auto">
+      {/* LP Withdraw Dialog */}
+      {pendingLpWithdraw && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card border border-border/50 rounded-2xl p-6 max-w-md w-full">
+            <h3 className="font-heading font-bold text-lg mb-4">Withdraw LP Funds</h3>
+            <SolanaTransactionSigner
+              instruction={pendingLpWithdraw.instruction}
+              amount={pendingLpWithdraw.amount?.toFixed(4) || '0'}
+              userBetId={pendingLpWithdraw.userBetId}
+              offerId={pendingLpWithdraw.offerId}
+              onSuccess={handleLpWithdrawSuccess}
+              onError={() => setPendingLpWithdraw(null)}
+            />
+            <Button
+              variant="outline"
+              onClick={() => setPendingLpWithdraw(null)}
+              className="w-full mt-3 h-10 rounded-xl"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
       <Link to="/matches" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
         <ArrowLeft className="w-4 h-4" /> Back to matches
       </Link>
