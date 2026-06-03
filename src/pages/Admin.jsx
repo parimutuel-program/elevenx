@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Trophy, Shield, Radio, CheckCircle2, Zap, Download, BarChart3, List, Flame, Target, RefreshCw, TestTube } from 'lucide-react';
+import { Plus, Trophy, Shield, Radio, CheckCircle2, Zap, Download, BarChart3, List, Flame, Target, RefreshCw, TestTube, RefreshCcw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
@@ -17,7 +17,7 @@ import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner
 import AdminMatchRow from '@/components/admin/AdminMatchRow';
 import AdminBetRow from '@/components/admin/AdminBetRow';
 import AdminFuturesPanel from '@/components/admin/AdminFuturesPanel';
-import CreateFuturesMarket from '@/components/admin/CreateFuturesMarket';
+import CreateCountryFutures from '@/components/admin/CreateCountryFutures';
 
 export default function Admin() {
   const { user } = useAuth();
@@ -468,9 +468,36 @@ export default function Admin() {
             <div>
               <h2 className="font-heading font-bold text-lg flex items-center gap-2">
                 <Flame className="w-5 h-5 text-primary" />
-                Futures Markets
+                Country Futures Markets
               </h2>
-              <p className="text-xs text-muted-foreground mt-1">Pre-set markets with all countries from API</p>
+              <p className="text-xs text-muted-foreground mt-1">Create markets for each country - 1st, 2nd, 3rd place outcomes</p>
+            </div>
+            <CreateCountryFutures />
+          </div>
+
+          <div className="bg-card border border-primary/20 rounded-xl p-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <RefreshCcw className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="text-sm font-bold text-foreground">Fetch & Calculate All Odds</p>
+                  <p className="text-xs text-muted-foreground">Fetches winner odds from API, auto-calculates 2nd/3rd place for all countries</p>
+                </div>
+              </div>
+              <Button
+                onClick={async () => {
+                  const res = await base44.functions.invoke('fetchAndCalculateOdds', {});
+                  if (res.data.error) {
+                    alert('Error: ' + res.data.error);
+                  } else {
+                    alert(`Success! ${res.data.countriesProcessed} countries processed with calculated odds.`);
+                    queryClient.invalidateQueries({ queryKey: ['futuresMarkets'] });
+                  }
+                }}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-heading font-bold rounded-xl h-9"
+              >
+                Fetch All Odds
+              </Button>
             </div>
           </div>
 

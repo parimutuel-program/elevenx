@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Flame, TrendingUp, Clock, ChevronRight, Lock, Trophy, Calendar, Loader } from 'lucide-react';
+import { Flame, TrendingUp, Clock, ChevronRight, Lock, Trophy, Calendar, Loader, RefreshCcw, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
-import FuturesCard from '@/components/futures/FuturesCard';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import CountryFuturesCard from '@/components/futures/CountryFuturesCard';
 
 export default function Futures() {
-  const [selected, setSelected] = useState(null);
+  const [selectedOutcome, setSelectedOutcome] = useState(null);
   const [activeTab, setActiveTab] = useState('futures');
+  const queryClient = useQueryClient();
 
   // Fetch futures markets from database
   const { data: futuresMarkets = [], isLoading } = useQuery({
@@ -18,6 +19,18 @@ export default function Futures() {
     queryFn: async () => {
       const markets = await base44.entities.FuturesMarket.list();
       return markets;
+    },
+  });
+
+  // Mutation to fetch and calculate odds
+  const fetchOddsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await base44.functions.invoke('fetchAndCalculateOdds', {});
+      if (res.data.error) throw new Error(res.data.error);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['futures-markets'] });
     },
   });
 
@@ -65,16 +78,31 @@ export default function Futures() {
                 <Badge className="ml-auto text-[10px] bg-primary/20 text-primary border border-primary/30">Beta</Badge>
               </div>
 
-              <h1 className="font-heading font-black text-3xl text-white mb-2">Long-Range Bets</h1>
+              <div className="flex items-center justify-between mb-2">
+                <h1 className="font-heading font-black text-3xl text-white">Country Futures</h1>
+                <Button
+                  size="sm"
+                  onClick={() => fetchOddsMutation.mutate()}
+                  disabled={fetchOddsMutation.isPending}
+                  className="bg-accent/20 hover:bg-accent/30 text-accent border border-accent/30 text-xs font-bold"
+                >
+                  {fetchOddsMutation.isPending ? (
+                    <Loader className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <RefreshCcw className="w-3.5 h-3.5 mr-1.5" />
+                  )}
+                  Fetch Odds
+                </Button>
+              </div>
               <p className="text-white/50 text-sm max-w-md">
-                Bet on tournament outcomes before they happen. Fixed odds, locked in at time of placement.
+                Bet on where each country will finish. 1st, 2nd, or 3rd place - each with live odds & LP pools.
               </p>
 
               {/* Stats */}
               <div className="grid grid-cols-3 gap-4 mt-5">
                 <div>
-                  <p className="text-white font-heading font-bold text-xl">{openMarkets.length}</p>
-                  <p className="text-white/40 text-[10px]">Open Markets</p>
+                  <p className="text-white font-heading font-bold text-xl">{futuresMarkets.length}</p>
+                  <p className="text-white/40 text-[10px]">Countries</p>
                 </div>
                 <div>
                   <p className="text-white font-heading font-bold text-xl">◎{(totalPool / 1000).toFixed(2)}K</p>
@@ -91,17 +119,17 @@ export default function Futures() {
           {/* Open markets */}
           <section>
             <h2 className="font-heading font-bold text-base mb-4 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary" /> Active Futures
+              <TrendingUp className="w-4 h-4 text-primary" /> Active Country Markets
             </h2>
             <div className="space-y-5">
               {openMarkets.map((market, index) => (
-                <FuturesCard
+                <CountryFuturesCard
                   key={market.id}
                   market={market}
                   index={index}
-                  selected={selected}
-                  onSelect={setSelected}
-                  onBet={(m, outcome) => console.log('Place bet:', m.title, outcome)}
+                  selected={selectedOutcome}
+                  onSelect={setSelectedOutcome}
+                  onBet={(m, outcome) => console.log('Place bet:', m.country, outcome)}
                 />
               ))}
             </div>
@@ -124,9 +152,11 @@ export default function Futures() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="text-2xl">{market.icon}</span>
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 border border-primary/20 flex items-center justify-center text-2xl">
+                          {market.country_flag || market.icon}
+                        </div>
                         <div>
-                          <p className="font-heading font-bold text-sm">{market.title}</p>
+                          <p className="font-heading font-bold text-sm">{market.country}</p>
                           <p className="text-xs text-muted-foreground">{market.subtitle}</p>
                         </div>
                       </div>

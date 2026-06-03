@@ -4,11 +4,11 @@
   "properties": {
     "title": {
       "type": "string",
-      "description": "Market title (e.g. 'World Cup 2026 Winner')"
+      "description": "Market title (e.g. 'Brazil - World Cup Finish')"
     },
     "subtitle": {
       "type": "string",
-      "description": "Market subtitle (e.g. 'Who will lift the trophy?')"
+      "description": "Market subtitle (e.g. 'Where will Brazil finish?')"
     },
     "category": {
       "type": "string",
@@ -18,6 +18,14 @@
         "special"
       ],
       "description": "Market category"
+    },
+    "country": {
+      "type": "string",
+      "description": "Country name (e.g. 'Brazil')"
+    },
+    "country_flag": {
+      "type": "string",
+      "description": "Country flag emoji (e.g. '\ud83c\udde7\ud83c\uddf7')"
     },
     "icon": {
       "type": "string",
@@ -46,6 +54,14 @@
           "label": {
             "type": "string"
           },
+          "position": {
+            "type": "string",
+            "enum": [
+              "1st",
+              "2nd",
+              "3rd"
+            ]
+          },
           "flag": {
             "type": "string"
           },
@@ -62,7 +78,7 @@
           }
         }
       },
-      "description": "Array of possible outcomes with odds"
+      "description": "Array of 3 outcomes: 1st, 2nd, 3rd place"
     },
     "total_volume": {
       "type": "number",
@@ -82,6 +98,8 @@
     "title",
     "subtitle",
     "category",
+    "country",
+    "country_flag",
     "outcomes"
   ]
 }
