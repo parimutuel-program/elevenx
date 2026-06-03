@@ -59,9 +59,10 @@ Deno.serve(async (req) => {
     console.log('[recreateMarketWithValidDates] Time diff:', settleAfter - openUntil, 'seconds');
 
     // Build instruction data: 8-byte discriminator + open_until (i64) + settle_after (i64)
-    // Anchor discriminator for "global:update_market_timestamps"
-    const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:update_market_timestamps'));
+    // Anchor 0.30 uses "instruction:" namespace for instruction discriminators
+    const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('instruction:update_market_timestamps'));
     const discriminator = Buffer.from(new Uint8Array(discBuffer).slice(0, 8));
+    console.log('[recreateMarketWithValidDates] Using "instruction:" discriminator:', discriminator.toString('hex'));
     
     const data = Buffer.alloc(24);
     discriminator.copy(data, 0);
