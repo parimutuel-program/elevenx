@@ -130,7 +130,7 @@ export default function MyBets() {
   };
   const walletAddress = getWalletAddress();
 
-  const { data: myBets = [], isLoading } = useQuery({
+  const { data: myBets = [], isLoading, refetch } = useQuery({
     queryKey: ['myBets', walletAddress, user?.id],
     queryFn: async () => {
       const all = await base44.entities.UserBet.list('-created_date', 100);
@@ -139,6 +139,8 @@ export default function MyBets() {
       return [];
     },
     enabled: !!walletAddress || !!user,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   const totalStaked = myBets.reduce((s, b) => s + (b.amount || 0), 0);
@@ -167,16 +169,24 @@ export default function MyBets() {
 
   const handleBatchClaim = async (matchId, bets) => {
     try {
+      console.log('[MyBets] Batch claim:', { matchId, betCount: bets.length, wallet: walletAddress });
+      if (!walletAddress) {
+        throw new Error('Wallet not connected. Please connect your Phantom wallet first.');
+      }
       const betIds = bets.map(b => b.id);
       const res = await base44.functions.invoke('claimWinnings', { 
         userBetId: betIds[0], 
         batchBetIds: betIds,
         walletAddress: walletAddress 
       });
-      if (res.data.error) throw new Error(res.data.error);
+      console.log('[MyBets] Claim response:', res.data);
+      if (res.data.error) {
+        throw new Error(res.data.error + (res.data.debug ? ' - ' + JSON.stringify(res.data.debug) : ''));
+      }
       setClaimData({ ...res.data, matchId });
       setBatchClaimMatchId(matchId);
     } catch (err) {
+      console.error('[MyBets] Claim error:', err);
       alert('Claim failed: ' + err.message);
     }
   };

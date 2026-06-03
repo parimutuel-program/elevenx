@@ -25,10 +25,21 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
   const StatusIcon = config.icon;
 
   const claimMutation = useMutation({
-    mutationFn: () => base44.functions.invoke('claimWinnings', { 
-      userBetId: bet.id,
-      walletAddress: walletAddress 
-    }),
+    mutationFn: async () => {
+      console.log('[BetCard] Claiming bet:', bet.id, 'wallet:', walletAddress);
+      if (!walletAddress) {
+        throw new Error('Wallet not connected. Please connect your Phantom wallet first.');
+      }
+      const res = await base44.functions.invoke('claimWinnings', { 
+        userBetId: bet.id,
+        walletAddress: walletAddress 
+      });
+      console.log('[BetCard] Claim response:', res.data);
+      if (res.data.error) {
+        throw new Error(res.data.error + (res.data.debug ? ' - ' + JSON.stringify(res.data.debug) : ''));
+      }
+      return res.data;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['myBets'] }),
   });
 
