@@ -25,7 +25,10 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
   const StatusIcon = config.icon;
 
   const claimMutation = useMutation({
-    mutationFn: () => base44.functions.invoke('claimWinnings', { userBetId: bet.id }),
+    mutationFn: () => base44.functions.invoke('claimWinnings', { 
+      userBetId: bet.id,
+      walletAddress: walletAddress 
+    }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['myBets'] }),
   });
 

@@ -168,7 +168,11 @@ export default function MyBets() {
   const handleBatchClaim = async (matchId, bets) => {
     try {
       const betIds = bets.map(b => b.id);
-      const res = await base44.functions.invoke('claimWinnings', { userBetId: betIds[0], batchBetIds: betIds });
+      const res = await base44.functions.invoke('claimWinnings', { 
+        userBetId: betIds[0], 
+        batchBetIds: betIds,
+        walletAddress: walletAddress 
+      });
       if (res.data.error) throw new Error(res.data.error);
       setClaimData({ ...res.data, matchId });
       setBatchClaimMatchId(matchId);

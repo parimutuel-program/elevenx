@@ -6,62 +6,71 @@ const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA__PROGRAM_ID') || 'PMut11111111111
 
 /**
  * Batch claim winnings for all won bets on a specific match.
- * Groups all winning positions for a single match into one claim transaction.
+ * Uses wallet-only authentication (no email login required).
  */
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    const serviceRole = base44.asServiceRole;
 
-    const { matchId } = await req.json();
-    if (!matchId) return Response.json({ error: 'Missing matchId' }, { status: 400 });
+    const { matchId, walletAddress } = await req.json();
+    
+    if (!matchId) {
+      return Response.json({ error: 'Missing matchId' }, { status: 400 });
+    }
 
-    // Get all user's won bets for this match
-    const allUserBets = await base44.entities.UserBet.filter({ match_id: matchId });
+    if (!walletAddress) {
+      return Response.json({ error: 'Missing wallet address' }, { status: 400 });
+    }
+
+    // Validate wallet format
+    const trimmedWallet = walletAddress.trim();
+    const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+    if (!base58Regex.test(trimmedWallet)) {
+      return Response.json({ error: 'Invalid wallet address format' }, { status: 400 });
+    }
+
+    // Verify wallet is authenticated (exists in WalletUser entity)
+    const allWalletUsers = await serviceRole.entities.WalletUser.list();
+    const walletUser = allWalletUsers.find(wu => wu.wallet_address === trimmedWallet);
+    
+    if (!walletUser) {
+      return Response.json({ 
+        error: 'Wallet not authenticated. Please connect your wallet first.',
+        hint: 'Connect your Phantom wallet on the Profile page'
+      }, { status: 401 });
+    }
+
+    // Get all user's won bets for this match - filter by wallet_address
+    const allUserBets = await serviceRole.entities.UserBet.filter({ match_id: matchId });
     const wonBets = allUserBets.filter(
-      ub => ub.created_by_id === user.id && ub.status === 'won'
+      ub => ub.wallet_address === trimmedWallet && ub.status === 'won'
     );
 
     if (wonBets.length === 0) {
       return Response.json({ error: 'No won bets found for this match' }, { status: 400 });
     }
 
-    const walletAddress = user.wallet_address;
-    if (!walletAddress) {
-      return Response.json({ error: 'Wallet not connected' }, { status: 400 });
-    }
-
     // Calculate total payout
     const totalPayout = wonBets.reduce((sum, bet) => sum + (bet.actual_payout || bet.potential_payout || 0), 0);
 
-    const bettorPubkey = new PublicKey(walletAddress);
+    const bettorPubkey = new PublicKey(trimmedWallet);
     const programId = new PublicKey(SOLANA_PROGRAM_ID);
     const matchIdBytes = Buffer.alloc(32);
     Buffer.from(matchId, 'utf-8').copy(matchIdBytes, 0, 0, Math.min(matchId.length, 32));
 
     // Get market PDA (same for all bets on this match)
     const [marketPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('pm_market'), matchIdBytes],
+      [Buffer.from('market'), matchIdBytes],
       programId
     );
 
     const [feeVaultPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('pm_fee_vault')],
+      [Buffer.from('fee_vault')],
       programId
     );
 
-    // Collect all position PDAs for the won bets
-    const positionPdas = wonBets.map(bet => {
-      const outcomeIndex = bet.outcome === 'a' ? 0 : bet.outcome === 'draw' ? 1 : 2;
-      const [positionPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from('pm_position'), marketPda.toBuffer(), bettorPubkey.toBuffer(), Buffer.from([outcomeIndex])],
-        programId
-      );
-      return positionPda.toBase58();
-    });
-
-    console.log(`✓ Batch Claim: user=${user.id} | match=${matchId} | bets=${wonBets.length} | total=${totalPayout} SOL`);
+    console.log(`✓ Batch Claim: wallet=${trimmedWallet.slice(0, 8)}... | match=${matchId} | bets=${wonBets.length} | total=${totalPayout} SOL`);
 
     return Response.json({
       success: true,
@@ -73,9 +82,9 @@ Deno.serve(async (req) => {
         instruction_type: 'claim_winnings',
         programId: SOLANA_PROGRAM_ID,
         marketPda: marketPda.toBase58(),
-        positionPda: positionPdas[0], // Use first position PDA (program handles all positions for this user/market)
+        positionPda: marketPda.toBase58(), // Program handles all positions for this user/market
         feeVaultPda: feeVaultPda.toBase58(),
-        bettorPubkey: walletAddress,
+        bettorPubkey: trimmedWallet,
       },
     });
 
