@@ -63,61 +63,68 @@ Deno.serve(async (req) => {
       }
     }
     
-    // If API fails, use fallback data for major teams
-    if (winnerOutcomes.length === 0) {
-      console.log('API returned no data, using fallback odds for major teams');
-      winnerOutcomes = [
-        { name: 'Brazil', odds: 5.5 },
-        { name: 'Argentina', odds: 6.0 },
-        { name: 'France', odds: 7.0 },
-        { name: 'England', odds: 8.0 },
-        { name: 'Spain', odds: 9.0 },
-        { name: 'Germany', odds: 10.0 },
-        { name: 'Portugal', odds: 11.0 },
-        { name: 'Netherlands', odds: 13.0 },
-        { name: 'Belgium', odds: 15.0 },
-        { name: 'Italy', odds: 17.0 },
-        { name: 'USA', odds: 50.0 },
-        { name: 'Mexico', odds: 60.0 },
-        { name: 'Canada', odds: 100.0 },
-        { name: 'Morocco', odds: 40.0 },
-        { name: 'Japan', odds: 80.0 },
-        { name: 'South Korea', odds: 100.0 },
-        { name: 'Australia', odds: 150.0 },
-        { name: 'Nigeria', odds: 120.0 },
-        { name: 'Egypt', odds: 200.0 },
-        { name: 'Iran', odds: 250.0 },
-        { name: 'Saudi Arabia', odds: 300.0 },
-        { name: 'Senegal', odds: 150.0 },
-        { name: 'Denmark', odds: 60.0 },
-        { name: 'Switzerland', odds: 70.0 },
-        { name: 'Croatia', odds: 35.0 },
-        { name: 'Uruguay', odds: 40.0 },
-        { name: 'Colombia', odds: 45.0 },
-        { name: 'Ecuador', odds: 100.0 },
-        { name: 'Poland', odds: 80.0 },
-        { name: 'Ukraine', odds: 150.0 },
-        { name: 'Sweden', odds: 120.0 },
-        { name: 'Austria', odds: 150.0 },
-        { name: 'Wales', odds: 200.0 },
-        { name: 'Serbia', odds: 150.0 },
-        { name: 'Tunisia', odds: 250.0 },
-        { name: 'Cameroon', odds: 200.0 },
-        { name: 'Ghana', odds: 180.0 },
-        { name: 'Algeria', odds: 250.0 },
-        { name: 'Costa Rica', odds: 300.0 },
-        { name: 'Jamaica', odds: 350.0 },
-        { name: 'Panama', odds: 400.0 },
-        { name: 'Iran', odds: 250.0 },
-        { name: 'Qatar', odds: 500.0 },
-        { name: 'Bosnia and Herzegovina', odds: 300.0 },
-        { name: 'Czechia', odds: 200.0 },
-        { name: 'South Africa', odds: 350.0 },
-        { name: 'Chile', odds: 150.0 },
-        { name: 'Peru', odds: 200.0 },
-        { name: 'Paraguay', odds: 250.0 },
-      ];
-    }
+    // Fallback data for all 48 World Cup teams
+    const fallbackOdds = [
+      { name: 'Brazil', odds: 5.5 },
+      { name: 'Argentina', odds: 6.0 },
+      { name: 'France', odds: 7.0 },
+      { name: 'England', odds: 8.0 },
+      { name: 'Spain', odds: 9.0 },
+      { name: 'Germany', odds: 10.0 },
+      { name: 'Portugal', odds: 11.0 },
+      { name: 'Netherlands', odds: 13.0 },
+      { name: 'Belgium', odds: 15.0 },
+      { name: 'Italy', odds: 17.0 },
+      { name: 'USA', odds: 50.0 },
+      { name: 'Mexico', odds: 60.0 },
+      { name: 'Canada', odds: 100.0 },
+      { name: 'Morocco', odds: 40.0 },
+      { name: 'Japan', odds: 80.0 },
+      { name: 'South Korea', odds: 100.0 },
+      { name: 'Australia', odds: 150.0 },
+      { name: 'Nigeria', odds: 120.0 },
+      { name: 'Egypt', odds: 200.0 },
+      { name: 'Iran', odds: 250.0 },
+      { name: 'Saudi Arabia', odds: 300.0 },
+      { name: 'Senegal', odds: 150.0 },
+      { name: 'Denmark', odds: 60.0 },
+      { name: 'Switzerland', odds: 70.0 },
+      { name: 'Croatia', odds: 35.0 },
+      { name: 'Uruguay', odds: 40.0 },
+      { name: 'Colombia', odds: 45.0 },
+      { name: 'Ecuador', odds: 100.0 },
+      { name: 'Poland', odds: 80.0 },
+      { name: 'Ukraine', odds: 150.0 },
+      { name: 'Sweden', odds: 120.0 },
+      { name: 'Austria', odds: 150.0 },
+      { name: 'Wales', odds: 200.0 },
+      { name: 'Serbia', odds: 150.0 },
+      { name: 'Tunisia', odds: 250.0 },
+      { name: 'Cameroon', odds: 200.0 },
+      { name: 'Ghana', odds: 180.0 },
+      { name: 'Algeria', odds: 250.0 },
+      { name: 'Costa Rica', odds: 300.0 },
+      { name: 'Jamaica', odds: 350.0 },
+      { name: 'Panama', odds: 400.0 },
+      { name: 'Qatar', odds: 500.0 },
+      { name: 'Bosnia and Herzegovina', odds: 300.0 },
+      { name: 'Czechia', odds: 200.0 },
+      { name: 'South Africa', odds: 350.0 },
+      { name: 'Chile', odds: 150.0 },
+      { name: 'Peru', odds: 200.0 },
+      { name: 'Paraguay', odds: 250.0 },
+    ];
+    
+    // Merge API data with fallback - prefer API odds when available, otherwise use fallback
+    const apiOddsMap = {};
+    winnerOutcomes.forEach(o => { apiOddsMap[o.name] = o.odds; });
+    
+    winnerOutcomes = fallbackOdds.map(team => ({
+      name: team.name,
+      odds: apiOddsMap[team.name] || team.odds, // Use API odds if available, otherwise fallback
+    }));
+    
+    console.log(`Merged odds: ${Object.keys(apiOddsMap).length} from API, ${fallbackOdds.length - Object.keys(apiOddsMap).length} from fallback`);
 
     console.log('Processed winner outcomes:', winnerOutcomes.length);
 
