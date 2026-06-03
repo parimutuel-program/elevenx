@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Wallet, CheckCircle } from 'lucide-react';
+import { Wallet, CheckCircle, X } from 'lucide-react';
 import { useWallet } from '@/lib/WalletContext';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
 
@@ -153,11 +153,19 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
     setAmount('');
     setLastSignature(result.signature);
     setLastInstruction(instruction);
-    // Keep showing success message for 3 seconds before calling parent callback
-    setTimeout(() => {
+    // Keep showing success message for 5.5 seconds before calling parent callback
+    const timer = setTimeout(() => {
       setInstruction(null);
       onSuccess && onSuccess(result);
-    }, 3000);
+    }, 5500);
+    // Store timer reference for manual cleanup
+    return () => clearTimeout(timer);
+  };
+
+  const handleCloseSuccess = () => {
+    setLastSignature(null);
+    setLastInstruction(null);
+    setInstruction(null);
   };
 
   const handleTransactionError = (error) => {
@@ -288,26 +296,34 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
       )}
 
       {lastSignature ? (
-        <div className="bg-accent/10 border border-accent/30 rounded-xl p-4 text-center">
-          <CheckCircle className="w-8 h-8 text-accent mx-auto mb-2" />
-          <p className="font-heading font-bold text-sm text-accent">✓ Bet placed successfully!</p>
-          {lastInstruction?.amountLamports && (
-            <p className="font-heading font-bold text-lg text-accent mt-1">
-              ◎{(lastInstruction.amountLamports / 1e9).toFixed(4)} SOL staked
-            </p>
-          )}
-          <p className="font-heading font-bold text-sm text-accent mt-2">Good luck! 🍀</p>
-          <div className="mt-3 pt-3 border-t border-accent/20">
-            <p className="text-xs text-muted-foreground mb-1">Transaction on Solana</p>
-            <a 
-              href={`https://solscan.io/tx/${lastSignature}?cluster=devnet`}
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="inline-flex items-center gap-1 text-primary text-xs font-bold hover:underline"
-            >
-              View on Solscan →
-              <span className="font-mono text-[10px] text-muted-foreground">{lastSignature.slice(0, 8)}...{lastSignature.slice(-8)}</span>
-            </a>
+        <div className="bg-accent/10 border border-accent/30 rounded-xl p-4 relative">
+          <button
+            onClick={handleCloseSuccess}
+            className="absolute top-2 right-2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <div className="text-center">
+            <CheckCircle className="w-8 h-8 text-accent mx-auto mb-2" />
+            <p className="font-heading font-bold text-sm text-accent">✓ Bet placed successfully!</p>
+            {lastInstruction?.amountLamports && (
+              <p className="font-heading font-bold text-lg text-accent mt-1">
+                ◎{(lastInstruction.amountLamports / 1e9).toFixed(4)} SOL staked
+              </p>
+            )}
+            <p className="font-heading font-bold text-sm text-accent mt-2">Good luck! 🍀</p>
+            <div className="mt-3 pt-3 border-t border-accent/20">
+              <p className="text-xs text-muted-foreground mb-1">Transaction on Solana</p>
+              <a 
+                href={`https://solscan.io/tx/${lastSignature}?cluster=devnet`}
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="inline-flex items-center gap-1 text-primary text-xs font-bold hover:underline"
+              >
+                View on Solscan →
+                <span className="font-mono text-[10px] text-muted-foreground">{lastSignature.slice(0, 8)}...{lastSignature.slice(-8)}</span>
+              </a>
+            </div>
           </div>
         </div>
       ) : instruction ? (
