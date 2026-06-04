@@ -574,7 +574,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
 
       <Button
         onClick={handleGetInstruction}
-        disabled={stakeNum <= 0 || isPreparing || timeRemaining && timeRemaining.total <= 0 || (bettingMode === 'no_liquidity')}
+        disabled={stakeNum <= 0 || isPreparing || timeRemaining && timeRemaining.total <= 0}
         className="w-full h-12 font-heading font-bold text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
         
         {(() => {
