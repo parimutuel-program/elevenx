@@ -29,14 +29,20 @@ export default function BetDetail() {
   const [selectedOffer, setSelectedOffer] = useState(null);
   const [timeRemaining, setTimeRemaining] = useState(null);
 
+  const { data: bet } = useQuery({
+    queryKey: ['bet', betId],
+    queryFn: () => base44.entities.Bet.list().then(bets => bets.find(b => b.id === betId)),
+    enabled: !!betId,
+  });
+
   // Calculate time remaining - updates every second
   useEffect(() => {
-    const updateTime = () => {
-      if (!bet?.open_until) {
-        setTimeRemaining(null);
-        return;
-      }
+    if (!bet?.open_until) {
+      setTimeRemaining(null);
+      return;
+    }
 
+    const updateTime = () => {
       const now = new Date().getTime();
       const closeTime = new Date(bet.open_until).getTime();
       const diff = closeTime - now;
@@ -54,12 +60,6 @@ export default function BetDetail() {
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, [bet?.open_until, bet?.id]);
-
-  const { data: bet } = useQuery({
-    queryKey: ['bet', betId],
-    queryFn: () => base44.entities.Bet.list().then(bets => bets.find(b => b.id === betId)),
-    enabled: !!betId,
-  });
 
   const { data: match } = useQuery({
     queryKey: ['match', bet?.match_id],
