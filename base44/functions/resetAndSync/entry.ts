@@ -209,15 +209,18 @@ Deno.serve(async (req) => {
     });
     
     // Bulk create matches first
+    console.log('[resetAndSync] Creating matches...');
     const createdMatches = await base44.asServiceRole.entities.Match.bulkCreate(matchPayloads);
     console.log(`[resetAndSync] Created ${createdMatches.length} matches`);
     
     // Link bets to matches
+    console.log('[resetAndSync] Linking bets to matches...');
     const betsWithMatchId = betPayloads.map((bet, i) => ({
       ...bet,
       match_id: createdMatches[i].id,
     }));
     
+    console.log(`[resetAndSync] Creating ${betWithMatchId.length} bets...`);
     const createdBets = await base44.asServiceRole.entities.Bet.bulkCreate(betsWithMatchId);
     console.log(`[resetAndSync] Created ${createdBets.length} bet markets with live odds`);
 
