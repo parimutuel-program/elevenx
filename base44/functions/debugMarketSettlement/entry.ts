@@ -38,6 +38,12 @@ Deno.serve(async (req) => {
       programId
     );
     
+    // Derive platform PDA
+    const [platformPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('platform')],
+      programId
+    );
+    
     // Fetch account info
     const accountInfo = await connection.getAccountInfo(marketPda);
     
@@ -72,6 +78,13 @@ Deno.serve(async (req) => {
     const adminBytes = data.slice(40, 72);
     const adminPubkey = new PublicKey(adminBytes);
     
+    // Derive and check fee_vault PDA
+    const [feeVaultPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('fee_vault')],
+      programId
+    );
+    const feeVaultInfo = await connection.getAccountInfo(feeVaultPda);
+    
     // Safe date conversion
     const safeDate = (ns: number) => {
       if (!ns || ns <= 0 || ns > BigInt('9999999999999')) return 'Invalid timestamp';
@@ -97,6 +110,9 @@ Deno.serve(async (req) => {
       voided: voided,
       settlement_finalized: settlementFinalized,
       stored_pda: bet.solana_market_pda || null,
+      fee_vault_pda: feeVaultPda.toBase58(),
+      fee_vault_exists: !!feeVaultInfo,
+      platform_pda: platformPda.toBase58(),
     });
     
   } catch (error) {
