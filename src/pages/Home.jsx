@@ -351,41 +351,41 @@ export default function Home() {
       }
 
       {/* ── FEATURED FUTURES (6 CARDS) ── */}
-      <section className="hidden">
-       <div className="flex items-center justify-between mb-4">
-         <div className="flex items-center gap-2">
-           <Trophy className="w-4 h-4 text-primary hidden" />
-           <h2 className="font-heading font-bold text-lg hidden">Featured Futures</h2>
-           <span className="bg-accent/10 text-accent text-[10px] font-bold px-2 py-0.5 rounded-full hidden">Tournament Markets</span>
-         </div>
-         <Link to="/futures" className="flex items-center gap-1 text-xs text-primary hover:underline font-medium">
-           View all <ChevronRight className="w-3 h-3" />
-         </Link>
-       </div>
-       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-         {futuresMarkets.
-          filter((m) => m.status === 'open' && m.country).
-          sort((a, b) => (b.total_volume || 0) - (a.total_volume || 0)).
-          slice(0, 6).
-          map((market, i) => {
-            const topOutcome = market.outcomes?.reduce((max, o) => o.odds > (max?.odds || 0) ? o : max, null);
-            // Map country to group for navigation
-            const countryToGroup = {
-              'Brazil': 'E', 'Argentina': 'E', 'Paraguay': 'L', 'Uruguay': 'L',
-              'USA': 'A', 'Mexico': 'A', 'Canada': 'B', 'England': 'D',
-              'France': 'F', 'Germany': 'G', 'Spain': 'H', 'Portugal': 'I'
-            };
-            const group = countryToGroup[market.country] || 'A';
-            return (
-              <motion.div
-                key={market.id}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="bg-card border border-border/50 rounded-2xl overflow-hidden hover:border-primary/30 transition-all group">
-                
-                 <Link to={`/futures?group=${group}`} className="block">
-                    <div className="p-5 hidden">
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-primary" />
+            <h2 className="font-heading font-bold text-lg">Featured Futures</h2>
+            <span className="bg-accent/10 text-accent text-[10px] font-bold px-2 py-0.5 rounded-full">Tournament Markets</span>
+          </div>
+          <Link to="/futures" className="flex items-center gap-1 text-xs text-primary hover:underline font-medium">
+            View all <ChevronRight className="w-3 h-3" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {futuresMarkets.
+           filter((m) => m.status === 'open' && m.country).
+           sort((a, b) => (b.total_volume || 0) - (a.total_volume || 0)).
+           slice(0, 6).
+           map((market, i) => {
+             const topOutcome = market.outcomes?.reduce((max, o) => o.odds > (max?.odds || 0) ? o : max, null);
+             // Map country to group for navigation
+             const countryToGroup = {
+               'Brazil': 'E', 'Argentina': 'E', 'Paraguay': 'L', 'Uruguay': 'L',
+               'USA': 'A', 'Mexico': 'A', 'Canada': 'B', 'England': 'D',
+               'France': 'F', 'Germany': 'G', 'Spain': 'H', 'Portugal': 'I'
+             };
+             const group = countryToGroup[market.country] || 'A';
+             return (
+               <motion.div
+                 key={market.id}
+                 initial={{ opacity: 0, y: 15 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 transition={{ delay: i * 0.05 }}
+                 className="bg-card border border-border/50 rounded-2xl overflow-hidden hover:border-primary/30 transition-all group">
+                 
+                  <Link to={`/futures?group=${group}`} className="block">
+                    <div className="p-5">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="text-4xl shrink-0">{market.country_flag || '🌍'}</div>
                         <div className="flex-1">
