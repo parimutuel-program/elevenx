@@ -156,8 +156,11 @@ export default function AdminMatchRow({ match, bets, index }) {
   };
 
   const handleMarketInitError = (err) => {
+    console.error('[AdminMatchRow] Transaction error:', err);
     setPendingMarketInit(null);
-    alert('Market initialization failed: ' + err.message);
+    // Show more specific error message
+    const errorMsg = err.message || 'Unknown error';
+    alert('Market initialization failed: ' + errorMsg);
   };
 
   const updateStatusMutation = useMutation({
