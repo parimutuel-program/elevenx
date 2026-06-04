@@ -223,8 +223,8 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
         console.log('[PlaceBetPanel] matchBet response:', res.data);
       } else {
         console.log('[PlaceBetPanel] Betting on outcome (needs LP offer):', wallet);
-        // Bettor clicked odds but no LP exists - block with clear message
-        throw new Error('No LP liquidity available for this outcome. Wait for someone to add LP, or go to LP Dashboard to add liquidity yourself.');
+        // Bettor clicked odds but no specific offer selected - need to select an offer from the book first
+        throw new Error('Please select a specific offer from the Liquidity Pool below to bet against.');
       }
       if (res.data?.error) throw new Error(res.data.error);
       // Include commit_data in instruction for post-tx commit
