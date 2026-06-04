@@ -220,81 +220,98 @@ export default function Home() {
                  initial={{ opacity: 0, y: 20 }}
                  animate={{ opacity: 1, y: 0 }}
                  transition={{ delay: 0.1 + i * 0.08 }}
-                 className="bg-card border border-border/50 rounded-2xl overflow-hidden hover:border-primary/30 transition-all group h-full flex flex-col">
+                 className="group relative bg-card border border-border/50 rounded-2xl overflow-hidden hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 h-full">
 
-                {/* Match photo strip */}
-                <div className="relative h-40 overflow-hidden flex-shrink-0">
+                {/* Match Image Header */}
+                <div className="relative h-36 overflow-hidden">
                   <img
                      src={fm.img || WC_PHOTOS[(i + 1) % WC_PHOTOS.length]}
                      alt="match"
-                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                     style={i === 1 ? { objectPosition: 'center 20%' } : {}} />
+                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
 
-                  <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
-                  <div className="absolute top-2 left-2">
-                    <span className="text-[10px] font-bold bg-black/50 backdrop-blur-sm text-white/90 px-2 py-0.5 rounded-full">{fm.group}</span>
+                  {/* Group Badge */}
+                  <div className="absolute top-3 left-3">
+                    <span className="text-[10px] font-bold bg-black/60 backdrop-blur-md text-white px-2.5 py-1 rounded-full border border-white/10">
+                      {fm.group}
+                    </span>
                   </div>
-                  <div className="absolute top-2 right-2">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-white text-green-500 border-green-500/30 shadow-sm">OPEN</span>
+
+                  {/* Status Badge */}
+                  <div className="absolute top-3 right-3">
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/90 text-white border border-emerald-400/30 shadow-lg shadow-emerald-500/20">
+                      OPEN
+                    </span>
+                  </div>
+
+                  {/* Date Badge - Bottom Left */}
+                  <div className="absolute bottom-3 left-3">
+                    <span className="text-[10px] font-bold text-white/90 bg-primary/80 backdrop-blur-md px-2.5 py-1 rounded-full border border-primary/30">
+                      {fm.date}
+                    </span>
                   </div>
                 </div>
 
-                <div className="p-4 flex flex-col flex-1">
-                  {/* Teams */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="text-center flex-1 min-w-0">
-                      <div className="text-2xl mb-0.5">{getTeamFlag(fm.team_a)}</div>
-                      <p className="font-heading font-bold text-[11px] leading-tight truncate">{fm.team_a}</p>
-                    </div>
-                    <div className="flex flex-col items-center gap-0.5 px-1">
-                      <span className="font-heading font-black text-primary text-xs">VS</span>
-                      <span className="text-[9px] text-muted-foreground whitespace-nowrap">{fm.date}</span>
-                    </div>
-                    <div className="text-center flex-1 min-w-0">
-                      <div className="text-2xl mb-0.5">{getTeamFlag(fm.team_b)}</div>
-                      <p className="font-heading font-bold text-[11px] leading-tight truncate">{fm.team_b}</p>
-                    </div>
-                  </div>
+                {/* Card Content */}
+                <div className="p-4">
+                 {/* Teams Section */}
+                 <div className="flex items-center justify-between mb-4 pb-4 border-b border-border/30">
+                   <div className="flex flex-col items-center flex-1 min-w-0">
+                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-1.5 border border-primary/20">
+                       <span className="text-xl">{getTeamFlag(fm.team_a)}</span>
+                     </div>
+                     <p className="font-heading font-bold text-[11px] text-center truncate w-full">{fm.team_a}</p>
+                   </div>
 
-                  {/* Odds Multipliers */}
-                  {bet && (
-                    <div className="grid grid-cols-3 gap-1.5 mb-3">
-                      <div className="bg-primary/5 border border-primary/20 rounded-lg p-1.5 text-center">
-                        <p className="text-[9px] text-muted-foreground font-medium truncate">{fm.team_a}</p>
-                        <p className="font-heading font-bold text-sm text-primary">{bet.odds_a?.toFixed(2) || '0.00'}x</p>
-                      </div>
-                      <div className="bg-secondary/50 border border-border/30 rounded-lg p-1.5 text-center">
-                        <p className="text-[9px] text-muted-foreground font-medium">Draw</p>
-                        <p className="font-heading font-bold text-sm text-foreground">{bet.odds_draw?.toFixed(2) || '0.00'}x</p>
-                      </div>
-                      <div className="bg-primary/5 border border-primary/20 rounded-lg p-1.5 text-center">
-                        <p className="text-[9px] text-muted-foreground font-medium truncate">{fm.team_b}</p>
-                        <p className="font-heading font-bold text-sm text-primary">{bet.odds_b?.toFixed(2) || '0.00'}x</p>
-                      </div>
-                    </div>
-                  )}
+                   <div className="flex flex-col items-center px-2">
+                     <span className="font-heading font-black text-primary text-xs bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/20">VS</span>
+                   </div>
 
-                  <div className="mt-auto grid grid-cols-2 gap-2">
-                    <Link to={`/match/${fm.matchId}`} className="block">
-                     <Button className="w-full h-10 text-xs font-heading font-bold rounded-xl"
-                       style={{ background: 'rgba(100,200,140,0.25)', color: '#64c88c', borderColor: 'rgba(100,200,140,0.4)', borderWidth: '1px' }}
-                       onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(100,200,140,0.35)'}
-                       onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(100,200,140,0.25)'}>
-                       Bet Now →
+                   <div className="flex flex-col items-center flex-1 min-w-0">
+                     <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center mb-1.5 border border-accent/20">
+                       <span className="text-xl">{getTeamFlag(fm.team_b)}</span>
+                     </div>
+                     <p className="font-heading font-bold text-[11px] text-center truncate w-full">{fm.team_b}</p>
+                   </div>
+                 </div>
+
+                 {/* Odds Section */}
+                 {bet && bet.odds_a && bet.odds_b && (
+                   <div className="mb-4">
+                     <p className="text-[9px] text-muted-foreground font-medium text-center mb-2 uppercase tracking-wide">Live Odds</p>
+                     <div className="grid grid-cols-3 gap-1.5">
+                       <div className="bg-primary/5 border border-primary/20 rounded-lg p-2 text-center">
+                         <p className="text-[9px] text-muted-foreground font-medium truncate mb-0.5">{fm.team_a}</p>
+                         <p className="font-heading font-bold text-xs text-primary">{bet.odds_a?.toFixed(2) || '0.00'}x</p>
+                       </div>
+                       <div className="bg-secondary/50 border border-border/30 rounded-lg p-2 text-center">
+                         <p className="text-[9px] text-muted-foreground font-medium mb-0.5">Draw</p>
+                         <p className="font-heading font-bold text-xs text-foreground">{bet.odds_draw?.toFixed(2) || '0.00'}x</p>
+                       </div>
+                       <div className="bg-accent/5 border border-accent/20 rounded-lg p-2 text-center">
+                         <p className="text-[9px] text-muted-foreground font-medium truncate mb-0.5">{fm.team_b}</p>
+                         <p className="font-heading font-bold text-xs text-accent">{bet.odds_b?.toFixed(2) || '0.00'}x</p>
+                       </div>
+                     </div>
+                   </div>
+                 )}
+
+                 {/* Action Buttons */}
+                 <div className="grid grid-cols-2 gap-2">
+                   <Link to={`/match/${fm.matchId}`} className="block">
+                     <Button className="w-full h-9 text-xs font-heading font-bold rounded-lg bg-gradient-to-r from-emerald-500/20 to-emerald-500/30 text-emerald-400 border border-emerald-500/30 hover:from-emerald-500/30 hover:to-emerald-500/40 transition-all duration-300">
+                       Bet Now
                      </Button>
                    </Link>
                    <Link to={`/match/${fm.matchId}`} className="block">
-                     <Button className="w-full h-10 text-xs font-heading font-bold rounded-xl border"
-                       style={{ background: 'rgba(166,156,242,0.15)', color: '#a69cf2', borderColor: 'rgba(166,156,242,0.3)' }}
-                       onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(166,156,242,0.25)'}
-                       onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(166,156,242,0.15)'}>
-                       + Add LP
+                     <Button className="w-full h-9 text-xs font-heading font-bold rounded-lg bg-gradient-to-r from-primary/20 to-primary/30 text-primary border border-primary/30 hover:from-primary/30 hover:to-primary/40 transition-all duration-300">
+                       + LP
                      </Button>
                    </Link>
-                   </div>
-                   </div>
-                   </motion.div>);
-
+                 </div>
+                </div>
+               </motion.div>
+             );
            })}
          </div>
       </section>
