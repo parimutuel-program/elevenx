@@ -68,7 +68,7 @@ export default function Home() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="relative overflow-hidden rounded-3xl min-h-[320px] flex flex-col justify-between order-1 md:order-2">
+          className="relative overflow-hidden rounded-3xl min-h-[300px] sm:min-h-[320px] flex flex-col justify-between order-1 md:order-2">
           
           <img
             src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=800&q=80"
@@ -78,25 +78,25 @@ export default function Home() {
           <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(10,8,20,0.97) 0%, rgba(10,8,20,0.6) 50%, rgba(10,8,20,0.2) 100%)' }} />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(166,156,242,0.12) 0%, transparent 60%)' }} />
 
-          <div className="relative z-10 p-7">
+          <div className="relative z-10 p-5 sm:p-7">
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm border border-white/10 px-3 py-1 rounded-full">
+              <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm border border-white/10 px-2.5 sm:px-3 py-1 rounded-full">
                 <Globe className="w-3 h-3 text-white/70" />
-                <span className="text-[11px] font-bold text-white/80 tracking-wide">FIFA WORLD CUP 2026™</span>
+                <span className="text-[10px] sm:text-[11px] font-bold text-white/80 tracking-wide">FIFA WORLD CUP 2026™</span>
               </div>
             </div>
           </div>
 
-          <div className="relative z-10 p-7">
+          <div className="relative z-10 p-5 sm:p-7">
             <div className="flex items-center gap-2 mb-2">
               <Star className="w-4 h-4 text-primary" />
               <span className="text-xs font-bold text-primary tracking-widest uppercase">48 Teams · 104 Matches</span>
             </div>
-            <h2 className="font-heading font-black text-3xl md:text-4xl text-white leading-tight mb-3">
+            <h2 className="font-heading font-black text-2xl sm:text-3xl md:text-4xl text-white leading-tight mb-2 sm:mb-3">
               One Trophy.<br />
               <span className="text-primary">Your Prediction.</span>
             </h2>
-            <p className="text-white/60 text-sm mb-5">
+            <p className="text-white/60 text-xs sm:text-sm mb-4 sm:mb-5">
               USA · Canada · Mexico hosting the biggest sporting event on Earth. Pick your winner and back it with SOL.
             </p>
             <div className="flex items-center gap-3">
@@ -115,7 +115,7 @@ export default function Home() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="relative overflow-hidden rounded-3xl min-h-[320px] flex flex-col justify-between p-7 order-2 md:order-1"
+          className="relative overflow-hidden rounded-3xl min-h-[300px] sm:min-h-[320px] flex flex-col justify-between p-5 sm:p-7 order-2 md:order-1"
           style={{ background: 'linear-gradient(135deg, #1a1040 0%, #0f0a1e 50%, #12102a 100%)' }}>
           
           {/* Glow orbs */}
@@ -125,32 +125,32 @@ export default function Home() {
           <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'linear-gradient(#a69cf2 1px, transparent 1px), linear-gradient(90deg, #a69cf2 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
           <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="flex items-center gap-1.5 bg-primary/20 border border-primary/30 px-3 py-1 rounded-full">
+            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+              <div className="flex items-center gap-1.5 bg-primary/20 border border-primary/30 px-2.5 sm:px-3 py-1 rounded-full">
                 <Zap className="w-3 h-3 text-primary" />
-                <span className="text-[11px] font-bold text-primary tracking-widest">SOLANA POWERED</span>
+                <span className="text-[10px] sm:text-[11px] font-bold text-primary tracking-widest">SOLANA POWERED</span>
               </div>
             </div>
-            <h1 className="font-heading font-black text-3xl md:text-4xl leading-tight mb-3 text-white">
+            <h1 className="font-heading font-black text-2xl sm:text-3xl md:text-4xl leading-tight mb-2 sm:mb-3 text-white">
               Bet P2P.<br />
               <span className="text-primary" style={{ textShadow: '0 0 40px rgba(166,156,242,0.6)' }}>Win On-Chain.</span>
             </h1>
-            <p className="text-white/60 text-sm leading-relaxed max-w-xs">
+            <p className="text-white/60 text-xs sm:text-sm leading-relaxed max-w-xs">
               The first fully decentralized World Cup betting pool. No house edge. No middlemen. Just pure odds between you and other fans.
             </p>
           </div>
 
-          <div className="relative z-10 mt-6">
-            <div className="flex flex-col sm:flex-row gap-3 w-full">
+          <div className="relative z-10 mt-5 sm:mt-6">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full">
               <Link to="/matches" className="flex-1">
-                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-heading font-bold px-6 h-12 rounded-xl text-sm" style={{ boxShadow: '0 0 24px rgba(166,156,242,0.35)' }}>
-                  <Trophy className="w-4 h-4 mr-2" />
+                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-heading font-bold px-4 sm:px-6 h-10 sm:h-12 rounded-xl text-xs sm:text-sm" style={{ boxShadow: '0 0 24px rgba(166,156,242,0.35)' }}>
+                  <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
                   Start Betting
                 </Button>
               </Link>
               <Link to="/my-bets" className="flex-1">
-                <Button variant="outline" className="w-full font-heading font-medium h-12 rounded-xl border-white/15 text-white/80 bg-white/5 hover:bg-white/10">
-                  My Bets <ArrowRight className="w-4 h-4 ml-1.5" />
+                <Button variant="outline" className="w-full font-heading font-medium h-10 sm:h-12 rounded-xl border-white/15 text-white/80 bg-white/5 hover:bg-white/10">
+                  My Bets <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 ml-1.5" />
                 </Button>
               </Link>
             </div>

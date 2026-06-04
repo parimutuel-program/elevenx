@@ -71,19 +71,19 @@ export default function AppLayout() {
           </nav>
 
           <div className="flex items-center gap-3">
-            {/* Social links */}
-            <div className="hidden md:flex items-center gap-1">
+            {/* Social links - visible on all screens */}
+            <div className="flex items-center gap-1">
               <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-all duration-200">
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all duration-200">
                 <TwitterIcon />
               </a>
               <a href="https://t.me" target="_blank" rel="noopener noreferrer"
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-all duration-200">
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-accent hover:bg-accent/10 transition-all duration-200">
                 <TelegramIcon />
               </a>
             </div>
-            <div className="hidden md:block w-px h-5 bg-border/50" />
-            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-secondary/50 rounded-full">
+            <div className="hidden sm:block w-px h-5 bg-border/50" />
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-secondary/50 rounded-full">
               <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
               <span className="text-xs text-muted-foreground font-medium">Solana</span>
             </div>
