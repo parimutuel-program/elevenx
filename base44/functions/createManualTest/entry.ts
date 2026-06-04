@@ -15,8 +15,8 @@ Deno.serve(async (req) => {
     }
 
     const now = new Date();
-    const openUntil = new Date(now.getTime() + 30 * 60 * 1000); // 30 minutes from now
-    const settleAfter = new Date(openUntil.getTime() + 5 * 60 * 1000); // 5 minutes after close
+    const openUntil = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes from now
+    const settleAfter = new Date(now.getTime() + 6 * 60 * 1000); // 6 minutes from now
 
     // Create test match
     const match = await serviceRole.entities.Match.create({

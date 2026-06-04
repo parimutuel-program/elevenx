@@ -413,8 +413,8 @@ export default function Admin() {
               <div className="flex items-center gap-3">
                 <Target className="w-5 h-5 text-primary" />
                 <div>
-                  <p className="text-sm font-bold text-foreground">Create Manual Test (30min)</p>
-                  <p className="text-xs text-muted-foreground">Creates match + bet with 30-minute betting window</p>
+                  <p className="text-sm font-bold text-foreground">Create Manual Test (5min)</p>
+                  <p className="text-xs text-muted-foreground">Creates match + bet with 5-minute betting window</p>
                 </div>
               </div>
               <Button
