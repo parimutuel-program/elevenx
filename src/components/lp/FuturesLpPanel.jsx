@@ -187,7 +187,6 @@ export default function FuturesLpPanel({
 function FuturesOutcomeCard({ outcome, selectedOutcome, setSelectedOutcome, onProvideLiquidity }) {
   const [amount, setAmount] = React.useState('');
   const isSelected = selectedOutcome?.label === outcome.label && selectedOutcome?.market_id === outcome.market_id;
-  const isExpanded = isSelected || amount > 0;
 
   return (
     <motion.div
@@ -197,27 +196,30 @@ function FuturesOutcomeCard({ outcome, selectedOutcome, setSelectedOutcome, onPr
         isSelected ? 'border-primary bg-primary/5' : 'border-border/50 bg-card hover:border-border'
       }`}
     >
-      {/* Card Header with Flag/Icon */}
-      <div className="p-4 border-b border-border/30">
-        <div className="flex items-start justify-between mb-2">
-          <div className="text-4xl">{outcome.flag || '🌍'}</div>
-          <Badge className={`${outcome.odds >= 5 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-primary/20 text-primary'}`}>
+      {/* Card Header with Flag, Country Name, and Odds */}
+      <div className="p-5 border-b border-border/30">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="text-5xl shrink-0">{outcome.country_flag || outcome.flag || '🌍'}</div>
+          <div className="flex-1">
+            <h3 className="font-heading font-black text-xl text-foreground">{outcome.country}</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">{outcome.label}</p>
+          </div>
+          <Badge className={`${outcome.odds >= 5 ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' : 'bg-primary/20 text-primary border-primary/30'} border text-base font-bold px-3 py-1`}>
             {outcome.odds.toFixed(1)}x
           </Badge>
         </div>
-        <h3 className="font-heading font-black text-lg">{outcome.label}</h3>
-        <p className="text-xs text-muted-foreground mt-1">{outcome.market_title}</p>
+        <p className="text-xs text-muted-foreground">{outcome.market_title}</p>
       </div>
 
       {/* LP Provider Section */}
-      <div className="p-4 space-y-3">
+      <div className="p-5 space-y-4">
         {/* Explainer */}
-        <div className="bg-secondary/40 rounded-xl p-3 text-xs">
-          <p className="font-bold text-foreground mb-1">💰 Be The House</p>
+        <div className="bg-secondary/40 rounded-xl p-3.5 text-xs">
+          <p className="font-bold text-foreground mb-1.5">💰 Be The House</p>
           <p className="text-muted-foreground">
             Provide liquidity <span className="text-destructive font-bold">AGAINST</span> {outcome.label}.
           </p>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1.5">
             If they <span className="text-green-400 font-bold">LOSE</span> → You profit.
             If they <span className="text-destructive font-bold">WIN</span> → You pay {outcome.odds.toFixed(1)}x.
           </p>
@@ -225,20 +227,20 @@ function FuturesOutcomeCard({ outcome, selectedOutcome, setSelectedOutcome, onPr
 
         {/* Amount Input */}
         <div>
-          <label className="text-xs text-muted-foreground mb-1.5 block">LP Amount (SOL)</label>
+          <label className="text-xs text-muted-foreground mb-2 block font-bold">LP Amount (SOL)</label>
           <input
             type="number"
             placeholder="0.00"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-full bg-secondary/50 border-border/50 text-lg font-heading font-bold h-11 rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full bg-secondary/50 border-border/50 text-xl font-heading font-bold h-12 rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary"
           />
-          <div className="flex gap-2 mt-2">
+          <div className="flex gap-2 mt-2.5">
             {[0.5, 1, 5, 10].map(qa => (
               <button
                 key={qa}
                 onClick={() => setAmount(String(qa))}
-                className="px-2 py-1 text-xs font-medium bg-secondary hover:bg-secondary/80 rounded-lg flex-1"
+                className="px-3 py-2 text-sm font-bold bg-secondary hover:bg-secondary/80 rounded-lg flex-1 transition-colors"
               >
                 ◎{qa}
               </button>
@@ -250,10 +252,10 @@ function FuturesOutcomeCard({ outcome, selectedOutcome, setSelectedOutcome, onPr
         <Button
           onClick={() => onProvideLiquidity(outcome, parseFloat(amount))}
           disabled={!amount || parseFloat(amount) <= 0}
-          className="w-full h-11 font-heading font-bold rounded-xl"
+          className="w-full h-12 font-heading font-bold rounded-xl text-base"
           style={{ background: 'linear-gradient(135deg, #a69cf2, #8b84e8)' }}
         >
-          <DollarSign className="w-4 h-4 mr-2" />
+          <DollarSign className="w-5 h-5 mr-2" />
           Provide ◎{amount || '0'} LP
         </Button>
 
@@ -261,21 +263,21 @@ function FuturesOutcomeCard({ outcome, selectedOutcome, setSelectedOutcome, onPr
         {amount > 0 && (
           <button
             onClick={() => setAmount('')}
-            className="text-xs text-muted-foreground hover:text-foreground mt-2"
+            className="text-xs text-muted-foreground hover:text-foreground mt-2 font-medium"
           >
             Clear
           </button>
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-2 pt-3 border-t border-border/30">
+        <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border/30">
           <div>
-            <p className="text-[10px] text-muted-foreground">Pool</p>
-            <p className="font-bold text-xs">◎{outcome.pool?.toFixed(2) || '0'}</p>
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Pool</p>
+            <p className="font-heading font-black text-sm text-foreground">◎{outcome.pool?.toFixed(2) || '0'}</p>
           </div>
           <div>
-            <p className="text-[10px] text-muted-foreground">LP Offers</p>
-            <p className="font-bold text-xs">{outcome.lp_offers || 0}</p>
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">LP Offers</p>
+            <p className="font-heading font-black text-sm text-foreground">{outcome.lp_offers || 0}</p>
           </div>
         </div>
       </div>
