@@ -363,6 +363,10 @@ export default function LpDashboard() {
     setSelectedOutcome(outcome);
     setAmount(String(amount));
     setDetailModalOpen(false);
+    // Trigger the mutation after a short delay to allow state to update
+    setTimeout(() => {
+      provideLiquidityMutation.mutate();
+    }, 100);
   };
 
   return (
