@@ -18,10 +18,10 @@ const WC_PHOTOS = [
 
 
 const FEATURED_MATCHES = [
-{ team_a: 'Mexico', team_b: 'South Africa', group: 'Group A', date: 'Jun 11', matchId: '6a20ec5003fec97668e1177c', img: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=800&q=80' },
-{ team_a: 'South Korea', team_b: 'Czech Republic', group: 'Group A', date: 'Jun 12', matchId: '6a20ec5003fec97668e1177d', img: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&q=80' },
-{ team_a: 'Canada', team_b: 'Bosnia & Herzegovina', group: 'Group B', date: 'Jun 12', matchId: '6a20ec5003fec97668e1177e', img: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&q=80' },
-{ team_a: 'USA', team_b: 'Paraguay', group: 'Group B', date: 'Jun 13', matchId: '6a20ec5003fec97668e1177f', img: 'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?w=800&q=80' }];
+{ team_a: 'Mexico', team_b: 'South Africa', group: 'Group A', date: 'Jun 11', matchId: '6a20ec5003fec97668e1177c', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/a1d1835b2_image.png' },
+{ team_a: 'South Korea', team_b: 'Czech Republic', group: 'Group A', date: 'Jun 12', matchId: '6a20ec5003fec97668e1177d', img: 'https://media.base44.com/images/public/6a1da108eb293de119e4e930/8290ef7dc_image.png' },
+{ team_a: 'Brazil', team_b: 'Morocco', group: 'Group E', date: 'Jun 12', matchId: '6a20ec5003fec97668e1177e', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/f0e42aabe_image.png', odds_a: 1.85, odds_b: 4.20, odds_draw: 3.50 },
+{ team_a: 'USA', team_b: 'Uruguay', group: 'Group D', date: 'Jun 13', matchId: '6a20ec5003fec97668e1177f', img: 'https://media.base44.com/images/public/6a1da108eb293de119e4e930/6adfc36e9_image.png' }];
 
 
 
