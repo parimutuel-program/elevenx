@@ -36,7 +36,7 @@ export default function AppLayout() {
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5 ml-8">
-            <img src="https://media.base44.com/images/public/6a1da108eb293de119e4e930/1d4523149_Make_me_nice_clean_l-411022.png" alt="ElevenX" className="h-8 w-auto" />
+            <img src="https://media.base44.com/images/public/6a1da108eb293de119e4e930/1d4523149_Make_me_nice_clean_l-411022.png" alt="ElevenX" className="h-16 w-auto" />
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
