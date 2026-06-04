@@ -7,6 +7,7 @@ import { Trophy, ArrowRight, Flame, TrendingUp, Zap, Globe, Star, ChevronRight, 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import MatchCard from '@/components/betting/MatchCard';
+import HottestBetCard from '@/components/betting/HottestBetCard';
 import { getTeamFlag } from '@/utils/flags';
 
 const WC_PHOTOS = [
@@ -366,7 +367,7 @@ export default function Home() {
               .map((bet, i) => {
                 const match = matches.find(m => m.id === bet.match_id);
                 if (!match) return null;
-                return <MatchCard key={bet.id} match={match} bet={bet} index={i} />;
+                return <HottestBetCard key={bet.id} match={match} bet={bet} index={i} />;
               })}
           </div>
         </section>
