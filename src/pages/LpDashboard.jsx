@@ -296,10 +296,10 @@ export default function LpDashboard() {
     
     setPendingTx(null);
     setError(null);
-    setTimeout(() => {
-      refetchOffers();
-      refetchUserBets();
-    }, 300);
+    // Invalidate queries immediately to remove withdrawn position
+    queryClient.invalidateQueries({ queryKey: ['myOffers', walletAddress] });
+    queryClient.invalidateQueries({ queryKey: ['allUserBets', walletAddress] });
+    queryClient.invalidateQueries({ queryKey: ['offersWithUserBet', walletAddress] });
   };
 
   // Stats
@@ -317,35 +317,17 @@ export default function LpDashboard() {
     enabled: !!walletAddress,
   });
   
-  // Group offers by match_id + outcome, aggregating amounts and collecting all userBetIds
-  const offersWithUserBet = (() => {
-    const grouped = new Map();
+  // Don't group offers - show each LP position separately for individual withdrawal
+  const offersWithUserBet = myOffers.map(offer => {
+    const userBet = allUserBets.find(ub => ub.offer_id === offer.id);
+    if (!userBet) return null; // Skip offers without a linked UserBet
     
-    myOffers.forEach(offer => {
-      const userBet = allUserBets.find(ub => ub.offer_id === offer.id);
-      if (!userBet) return; // Skip offers without a linked UserBet
-      
-      const groupKey = `${offer.match_id}-${offer.outcome}`;
-      
-      if (!grouped.has(groupKey)) {
-        grouped.set(groupKey, {
-          ...offer,
-          userBetIds: [userBet.id],
-          amount_offered: offer.amount_offered || 0,
-          amount_matched: offer.amount_matched || 0,
-          amount_unmatched: offer.amount_unmatched || 0,
-        });
-      } else {
-        const existing = grouped.get(groupKey);
-        existing.userBetIds.push(userBet.id);
-        existing.amount_offered += offer.amount_offered || 0;
-        existing.amount_matched += offer.amount_matched || 0;
-        existing.amount_unmatched += offer.amount_unmatched || 0;
-      }
-    });
-    
-    return Array.from(grouped.values());
-  })();
+    return {
+      ...offer,
+      userBetId: userBet.id, // Single userBetId for withdrawal
+      userBetIds: [userBet.id],
+    };
+  }).filter(Boolean);
 
   const getMatchTitle = (matchId) => {
     const m = matches.find(m => m.id === matchId);
@@ -801,8 +783,8 @@ export default function LpDashboard() {
 
                     return (
                       <LpPositionCard
-                        key={`${offer.match_id}-${offer.outcome}`}
-                        offer={{...offer, userBetId: offer.userBetIds[0]}} // Pass first userBetId for withdrawal
+                        key={offer.id}
+                        offer={offer}
                         match={match}
                         potentialEarnings={potentialEarnings}
                         matchPct={matchPct}
@@ -814,7 +796,6 @@ export default function LpDashboard() {
                         onWithdraw={(o) => {
                           console.log('[onWithdraw] Called with offer:', {
                             userBetId: o.userBetId,
-                            userBetIds: o.userBetIds,
                             amount_unmatched: o.amount_unmatched,
                             status: o.status,
                             match_id: o.match_id,
