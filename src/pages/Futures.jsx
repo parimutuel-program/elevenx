@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import GroupCountryCard from '@/components/futures/GroupCountryCard';
+import { Droplets, Crown, Zap } from 'lucide-react';
 import GroupNavigation, { WORLD_CUP_GROUPS_2026 } from '@/components/futures/GroupNavigation';
 import FuturesBetSlip from '@/components/futures/FuturesBetSlip';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
