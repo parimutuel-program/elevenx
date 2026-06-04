@@ -222,8 +222,12 @@ export default function MatchDetail() {
   };
 
   const handleBetSuccess = () => {
+    // Clear selections
     setSelectedOutcome(null);
     setSelectedOffer(null);
+    // Force refresh of offers to get updated amount_unmatched values
+    queryClient.invalidateQueries({ queryKey: ['offers', bet?.id] });
+    queryClient.invalidateQueries({ queryKey: ['allOffers', bet?.id] });
   };
 
   const withdrawMatcherBetMutation = useMutation({

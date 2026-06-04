@@ -263,10 +263,14 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
         console.error('[PlaceBetPanel] Commit failed:', commitRes.data.error);
       } else {
         console.log('[PlaceBetPanel] Commit successful:', commitRes.data);
-        // Invalidate queries to refresh LP liquidity data
-        queryClient.invalidateQueries({ queryKey: ['allOffers', bet?.id] });
-        queryClient.invalidateQueries({ queryKey: ['offers', bet?.id] });
-        queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
+        // Invalidate queries to refresh LP liquidity data IMMEDIATELY
+        await queryClient.invalidateQueries({ queryKey: ['allOffers', bet?.id] });
+        await queryClient.invalidateQueries({ queryKey: ['offers', bet?.id] });
+        await queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
+        // Force immediate refetch and wait for it
+        await refetchOffers();
+        // Give React Query time to update the data
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     } catch (commitErr) {
       console.error('[PlaceBetPanel] Commit error:', commitErr);
@@ -275,7 +279,8 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
     // Keep showing success message for 5.5 seconds before calling parent callback
     const timer = setTimeout(() => {
       setInstruction(null);
-      onSuccess && onSuccess(result);
+      // Don't call onSuccess immediately - let user see success message
+      // Parent component will handle navigation/refresh
     }, 5500);
     return () => clearTimeout(timer);
   };
