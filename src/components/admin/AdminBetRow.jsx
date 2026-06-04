@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { Trophy, CheckCircle2, Gavel, Database } from 'lucide-react';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
+import RecreateMarketButton from '@/components/admin/RecreateMarketButton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function AdminBetRow({ bet, matches, index }) {
@@ -90,7 +91,10 @@ export default function AdminBetRow({ bet, matches, index }) {
     },
     onSuccess: (response) => {
       const data = response.data;
-      if (data.solana_instruction) {
+      if (data.steps && data.steps.length > 0) {
+        // 2-step flow handled by RecreateMarketButton component
+        setPendingRecreate(data);
+      } else if (data.solana_instruction) {
         setPendingRecreate(data.solana_instruction);
       } else {
         alert(data.message || 'Market recreated');
@@ -104,7 +108,7 @@ export default function AdminBetRow({ bet, matches, index }) {
     setPendingRecreate(null);
     queryClient.invalidateQueries({ queryKey: ['bets'] });
     queryClient.invalidateQueries({ queryKey: ['marketStatus', match?.id] });
-    alert('✓ Market recreated! Now you can settle immediately.');
+    alert('✓ Market ready! Timestamps updated - you can now settle immediately.');
   };
 
   const handleRecreateError = (err) => {
@@ -288,13 +292,26 @@ export default function AdminBetRow({ bet, matches, index }) {
           )}
           <div className="flex gap-2">
             {pendingRecreate ? (
-              <div className="w-64">
-                <SolanaTransactionSigner
-                  instruction={pendingRecreate}
-                  amount={0}
-                  onSuccess={handleRecreateSuccess}
-                  onError={handleRecreateError}
-                />
+              <div className="w-80">
+                {pendingRecreate.steps ? (
+                  // 2-step flow: use RecreateMarketButton component
+                  <RecreateMarketButton
+                    bet={bet}
+                    match_id={bet.match_id}
+                    onSuccess={() => {
+                      setPendingRecreate(null);
+                      handleRecreateSuccess();
+                    }}
+                  />
+                ) : (
+                  // Legacy single-step flow
+                  <SolanaTransactionSigner
+                    instruction={pendingRecreate}
+                    amount={0}
+                    onSuccess={handleRecreateSuccess}
+                    onError={handleRecreateError}
+                  />
+                )}
               </div>
             ) : (
               <Button
@@ -305,7 +322,7 @@ export default function AdminBetRow({ bet, matches, index }) {
                     alert('Please connect your Phantom wallet first');
                     return;
                   }
-                  if (confirm('Recreate market with timestamps in the past to allow immediate settlement. Continue?')) {
+                  if (confirm('⚡ Test Mode: This will recreate the market with proper timestamps for immediate settlement.\n\n2 steps:\n1. Create market on-chain\n2. Backdate timestamps\n\nContinue?')) {
                     recreateMarketMutation.mutate({ bet_id: bet.id, match_id: bet.match_id });
                   }
                 }}

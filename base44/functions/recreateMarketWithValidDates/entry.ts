@@ -102,14 +102,15 @@ Deno.serve(async (req) => {
       console.log('[recreateMarketWithValidDates] Market voided/settled, will recreate with past timestamps');
     }
 
-    // open_until must be far in the future to pass on-chain validation (open_until > clock.unix_timestamp).
-    // settle_after must be > open_until per validation. After creation, use update_market_timestamps to set both in the past for testing.
+    // STEP 1: Create market with timestamps FAR in future to guarantee on-chain validation passes
     const now = Math.floor(Date.now() / 1000);
-    const openUntil = now + 86400;  // 24 hours from now (eliminates clock drift issues)
-    const settleAfter = now + 86460; // 24 hours + 1 minute (must be > open_until)
+    const openUntilFuture = now + 86400;  // 24 hours from now
+    const settleAfterFuture = now + 86460; // 24 hours + 1 minute
 
-    console.log('[recreateMarketWithValidDates] openUntil:', new Date(openUntil * 1000).toISOString(), '(24 hours from now)');
-    console.log('[recreateMarketWithValidDates] settleAfter:', new Date(settleAfter * 1000).toISOString(), '(24 hours + 1 min from now)');
+    console.log('[recreateMarketWithValidDates] Step 1 - Create market with future timestamps:', {
+      openUntil: new Date(openUntilFuture * 1000).toISOString(),
+      settleAfter: new Date(settleAfterFuture * 1000).toISOString(),
+    });
 
     // Build create_market instruction data
     const discriminator = Buffer.from(sha256('global:create_market')).slice(0, 8);
@@ -144,22 +145,62 @@ Deno.serve(async (req) => {
     console.log('[recreateMarketWithValidDates] Discriminator:', discriminator.toString('hex'));
     console.log('[recreateMarketWithValidDates] Instruction data length:', instructionData.length);
 
+    // STEP 2: Prepare update_market_timestamps instruction to backdate timestamps for immediate settlement
+    const openUntilPast = now - 300;  // 5 minutes ago
+    const settleAfterPast = now;       // right now
+    
+    const updateDiscriminator = Buffer.from(sha256('global:update_market_timestamps')).slice(0, 8);
+    const updateData = Buffer.alloc(24);
+    updateDiscriminator.copy(updateData, 0);
+    updateData.writeBigInt64LE(BigInt(openUntilPast), 8);
+    updateData.writeBigInt64LE(BigInt(settleAfterPast), 16);
+    
+    console.log('[recreateMarketWithValidDates] Step 2 - Update timestamps to past:', {
+      openUntil: new Date(openUntilPast * 1000).toISOString(),
+      settleAfter: new Date(settleAfterPast * 1000).toISOString(),
+    });
+
     return Response.json({
       success: true,
       marketPda: marketPda.toBase58(),
-      message: 'Sign to recreate market with past timestamps (settlement enabled immediately)',
-      solana_instruction: {
-        instruction_type: 'create_market',
-        programId: SOLANA_PROGRAM_ID,
-        instruction_data: instructionData.toString('base64'),
-        accounts: {
-          market: marketPda.toBase58(),
-          voteTally: voteTallyPda.toBase58(),
-          platformConfig: platformConfigPda.toBase58(),
-          admin: admin_wallet,
-          systemProgram: '11111111111111111111111111111111',
+      message: '2-Step Flow: 1) Create market → 2) Backdate timestamps for immediate settlement',
+      steps: [
+        {
+          step: 1,
+          label: 'Create Market On-Chain',
+          action: 'create_market',
+          message: 'Sign to create market on-chain (timestamps set 24hrs in future to pass validation)',
+          solana_instruction: {
+            instruction_type: 'create_market',
+            programId: SOLANA_PROGRAM_ID,
+            instruction_data: instructionData.toString('base64'),
+            accounts: {
+              market: marketPda.toBase58(),
+              voteTally: voteTallyPda.toBase58(),
+              platformConfig: platformConfigPda.toBase58(),
+              admin: admin_wallet,
+              systemProgram: '11111111111111111111111111111111',
+            },
+          },
         },
-      },
+        {
+          step: 2,
+          label: 'Backdate Timestamps for Immediate Settlement',
+          action: 'update_market_timestamps',
+          message: 'Sign to backdate timestamps (betting window closed 5 min ago, settlement enabled now)',
+          solana_instruction: {
+            instruction_type: 'update_market_timestamps',
+            programId: SOLANA_PROGRAM_ID,
+            keys: [
+              { pubkey: marketPda.toBase58(), isSigner: false, isWritable: true },
+              { pubkey: platformConfigPda.toBase58(), isSigner: false, isWritable: false },
+              { pubkey: 'SIGNER_WALLET', isSigner: true, isWritable: false },
+              { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false },
+            ],
+            instruction_data: updateData.toString('base64'),
+          },
+        },
+      ],
     });
 
   } catch (error) {
