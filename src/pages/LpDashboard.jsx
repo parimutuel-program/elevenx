@@ -377,6 +377,53 @@ export default function LpDashboard() {
         </div>
       </div>
 
+      {/* ── BRANDED LP EXPLANATION BANNER ── */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-[#1a1040]/80 via-[#0f0a1e]/90 to-[#12102a]/80 border border-primary/20 rounded-2xl p-6 relative overflow-hidden mb-6"
+      >
+        {/* Decorative Glow Orbs */}
+        <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl opacity-25 bg-[#a69cf2]" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full blur-2xl opacity-15 bg-[#14f195]" />
+
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2 max-w-xl">
+            <div className="inline-flex items-center gap-1.5 bg-primary/20 border border-primary/30 px-3 py-1 rounded-full text-primary text-[10px] font-bold tracking-widest uppercase">
+              👑 Be the House
+            </div>
+            <h2 className="font-heading font-black text-lg md:text-xl text-white">How Liquidity Providing Works</h2>
+            <p className="text-xs text-white/70 leading-relaxed">
+              ElevenX has no house edge or greedy middlemen. Instead, <strong>YOU</strong> get to act as the bookmaker, set the odds, and take the other side of the action!
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-white/10 relative z-10">
+          <div className="space-y-1.5">
+            <span className="text-xl">🎲</span>
+            <h3 className="font-heading font-bold text-xs text-primary">1. Underwrite an Outcome</h3>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              By providing liquidity on an outcome (e.g. Mexico), you are betting <strong>against</strong> it. If Mexico loses or draws, you keep your deposit and win the bettors' money!
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <span className="text-xl">📈</span>
+            <h3 className="font-heading font-bold text-xs text-accent">2. Earn Organic Yield</h3>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Your SOL is locked on-chain to cover incoming bets. When bettors lose, their stake is paid directly into your LP position, growing your capital.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <span className="text-xl">🔓</span>
+            <h3 className="font-heading font-bold text-xs text-yellow-400">3. 100% Flexible Withdrawals</h3>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Your funds are yours. Any portion of your committed liquidity that hasn't been matched by an active bettor can be withdrawn <strong>instantly at any time</strong>.
+            </p>
+          </div>
+        </div>
+      </motion.div>
+
       {!isConnected && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           className="rounded-2xl border border-primary/20 p-8 text-center"
