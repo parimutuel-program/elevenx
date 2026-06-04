@@ -174,7 +174,7 @@ function FuturesMarketLpCard({ market, onProvideLiquidity }) {
     >
       {/* Animated gradient border frame */}
       <div className="absolute inset-0 rounded-2xl p-[2px] pointer-events-none">
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/60 via-accent/40 to-primary/60 opacity-60 group-hover:opacity-100 transition-opacity duration-500 animate-gradient" 
+        <div className="absolute inset-0 rounded-2xl" 
              style={{
                background: 'linear-gradient(45deg, #a69cf2, #14f195, #a69cf2, #14f195)',
                backgroundSize: '200% 200%',
