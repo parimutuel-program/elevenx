@@ -438,6 +438,33 @@ export default function Admin() {
             </div>
           </div>
 
+          <div className="bg-card border border-green-500/30 rounded-xl p-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <TestTube className="w-5 h-5 text-green-500" />
+                <div>
+                  <p className="text-sm font-bold text-foreground">⚡ NEW TEST: Flow1 vs Flow2 (15min)</p>
+                  <p className="text-xs text-muted-foreground">Starts 1:25PM, Ends 1:40PM, Bets close 1:40PM</p>
+                </div>
+              </div>
+              <Button
+                onClick={async () => {
+                  try {
+                    const res = await base44.functions.invoke('createTestBet', {});
+                    if (res.data.error) throw new Error(res.data.error);
+                    alert(`✅ Test Bet Created!\n\nMatch: ${res.data.match_id}\nBet: ${res.data.bet_id}\n\nStart: ${res.data.match_time}\nEnd: ${res.data.match_end_time}\n\nGo to Matches tab to test!`);
+                    queryClient.invalidateQueries({ queryKey: ['matches', 'bets'] });
+                  } catch (err) {
+                    alert('Error: ' + err.message);
+                  }
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white font-heading font-bold rounded-xl h-9"
+              >
+                <Zap className="w-4 h-4 mr-2" /> Deploy Test
+              </Button>
+            </div>
+          </div>
+
           <div className="bg-card border border-primary/20 rounded-xl p-4">
             {pendingPlatformInit ? (
               <div className="space-y-3">
