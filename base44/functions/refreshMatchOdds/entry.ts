@@ -9,19 +9,19 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Unauthorized - Admin access required' }, { status: 403 });
         }
 
-        const { bet_id, stats_api_match_id } = await req.json();
+        const { bet_id } = await req.json();
         
-        if (!bet_id || !stats_api_match_id) {
-            return Response.json({ error: 'Missing bet_id or stats_api_match_id' }, { status: 400 });
+        if (!bet_id) {
+            return Response.json({ error: 'Missing bet_id' }, { status: 400 });
         }
 
-        const apiKey = Deno.env.get('THE_STATS_API_KEY');
+        const apiKey = Deno.env.get('THE_ODDS_API_KEY');
         if (!apiKey) {
-            return Response.json({ error: 'THE_STATS_API_KEY not configured' }, { status: 500 });
+            return Response.json({ error: 'THE_ODDS_API_KEY not configured' }, { status: 500 });
         }
 
-        // Fetch odds from TheStatsAPI
-        const url = `https://api.thestatsapi.com/v1/match/${stats_api_match_id}/odds?apiKey=${apiKey}`;
+        // Fetch all odds from The Odds API
+        const url = `https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup/odds/?apiKey=${apiKey}&regions=eu,us&markets=h2h&oddsFormat=decimal`;
         const response = await fetch(url);
         
         if (!response.ok) {
@@ -33,30 +33,67 @@ Deno.serve(async (req) => {
 
         const data = await response.json();
         
-        if (!data.odds || !data.bookmaker) {
+        if (!Array.isArray(data)) {
             return Response.json({ 
-                error: 'No odds available', 
-                message: 'Odds data not found for this match' 
+                error: 'Invalid API response', 
+                message: 'Expected array of matches' 
+            }, { status: 500 });
+        }
+
+        // Get the bet to find team names
+        const bet = await base44.entities.Bet.get(bet_id);
+        if (!bet) {
+            return Response.json({ error: 'Bet not found' }, { status: 404 });
+        }
+
+        // Find matching game by team names
+        const matchedGame = data.find(game => {
+            const homeMatch = game.home_team.toLowerCase() === bet.outcome_a.toLowerCase() ||
+                             bet.outcome_a.toLowerCase().includes(game.home_team.toLowerCase());
+            const awayMatch = game.away_team.toLowerCase() === bet.outcome_b.toLowerCase() ||
+                             bet.outcome_b.toLowerCase().includes(game.away_team.toLowerCase());
+            return homeMatch && awayMatch;
+        });
+
+        if (!matchedGame) {
+            return Response.json({ 
+                error: 'Match not found in API', 
+                message: `Could not find ${bet.outcome_a} vs ${bet.outcome_b} in The Odds API` 
             }, { status: 404 });
         }
 
+        // Extract odds from first bookmaker
+        const bookmaker = matchedGame.bookmakers?.[0];
+        if (!bookmaker?.markets?.[0]?.outcomes) {
+            return Response.json({ 
+                error: 'No odds available', 
+                message: 'No odds data from bookmakers' 
+            }, { status: 404 });
+        }
+
+        const outcomes = bookmaker.markets[0].outcomes;
+        const homeOdds = outcomes.find(o => o.name === matchedGame.home_team)?.price || 0;
+        const awayOdds = outcomes.find(o => o.name === matchedGame.away_team)?.price || 0;
+        const drawOdds = outcomes.find(o => o.name === 'Draw')?.price || 0;
+
         // Update bet entity with fresh odds
         await base44.entities.Bet.update(bet_id, {
-            odds_a: data.odds.home,
-            odds_b: data.odds.away,
-            odds_draw: data.odds.draw,
-            odds_bookmaker: data.bookmaker,
+            odds_a: homeOdds,
+            odds_b: awayOdds,
+            odds_draw: drawOdds,
+            odds_bookmaker: bookmaker.title || 'The Odds API',
             odds_updated_at: new Date().toISOString()
         });
 
         return Response.json({
             success: true,
-            bookmaker: data.bookmaker,
-            odds: data.odds,
+            bookmaker: bookmaker.title || 'The Odds API',
+            odds: { home: homeOdds, away: awayOdds, draw: drawOdds },
             message: 'Odds updated successfully'
         });
 
     } catch (error) {
+        console.error('refreshMatchOdds error:', error);
         return Response.json({ error: error.message }, { status: 500 });
     }
 });

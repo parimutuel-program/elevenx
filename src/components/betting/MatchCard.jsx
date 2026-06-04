@@ -22,17 +22,11 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
   const handleRefreshOdds = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    if (!bet?.stats_api_match_id) {
-      alert('No TheStatsAPI match ID linked to this bet');
-      return;
-    }
 
     setIsRefreshing(true);
     try {
       const res = await base44.functions.invoke('refreshMatchOdds', {
-        bet_id: bet.id,
-        stats_api_match_id: bet.stats_api_match_id
+        bet_id: bet.id
       });
       
       if (res.data.error) {
