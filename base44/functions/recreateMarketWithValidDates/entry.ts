@@ -20,10 +20,10 @@ Deno.serve(async (req) => {
     }
 
     const payload = await req.json();
-    const { bet_id, match_id, admin_wallet } = payload;
+    const { bet_id, match_id } = payload;
 
-    if (!bet_id || !match_id || !admin_wallet) {
-      return Response.json({ error: 'Missing bet_id, match_id, or admin_wallet' }, { status: 400 });
+    if (!bet_id || !match_id) {
+      return Response.json({ error: 'Missing bet_id or match_id' }, { status: 400 });
     }
 
     const bets = await base44.asServiceRole.entities.Bet.filter({ id: bet_id });
@@ -53,8 +53,17 @@ Deno.serve(async (req) => {
       programId
     );
 
-    // If market already exists on-chain, issue void_market so we can recreate it fresh with past timestamps
+    // Get platform admin from on-chain config (not from frontend)
     const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
+    const platformInfo = await connection.getAccountInfo(platformConfigPda);
+    if (!platformInfo) {
+      return Response.json({ error: 'Platform config not initialized' }, { status: 400 });
+    }
+    const adminPubkey = new PublicKey(platformInfo.data.slice(8, 40));
+    const admin_wallet = adminPubkey.toBase58();
+    console.log('[recreateMarketWithValidDates] Using platform admin:', admin_wallet);
+
+    // If market already exists on-chain, issue void_market so we can recreate it fresh with past timestamps
     const accountInfo = await connection.getAccountInfo(marketPda);
     if (accountInfo && accountInfo.data.length >= 249) {
       // Parse settled/voided flags from account data (correct offsets after total_pending[3×8])
