@@ -75,13 +75,10 @@ export default function Matches() {
       })
     : filtered;
 
-  // Filter by date (up to June 27, 2026) and exclude test matches
+  // Filter by date (up to June 27, 2026)
   const cutoffDate = new Date('2026-06-27T23:59:59Z');
   const finalFiltered = searchFiltered.filter(m => {
     if (m.match_time && new Date(m.match_time) > cutoffDate) return false;
-    // Exclude test matches (ffo, ffo1, test1, etc.)
-    if (m.team_a?.toLowerCase?.().includes('ffo') || m.team_b?.toLowerCase?.().includes('ffo')) return false;
-    if (m.team_a?.toLowerCase?.().includes('test') || m.team_b?.toLowerCase?.().includes('test')) return false;
     return true;
   });
 
