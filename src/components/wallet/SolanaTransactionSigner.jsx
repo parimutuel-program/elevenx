@@ -283,15 +283,22 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         
         const programId = new PublicKey(instruction.programId || '4epUYJPwoPhG9RPoQ6qT9dsAewJCDBSCGUpR1Xj9UxTm');
         
-        // Build keys in the EXACT order required by the Rust PlaceBet struct:
-        // market, lp_offer, position, bettor (signer), system_program
-        const keys = [
-          { pubkey: new PublicKey(instruction.marketPda), isSigner: false, isWritable: true },
-          { pubkey: new PublicKey(instruction.lpOfferPda), isSigner: false, isWritable: true },
-          { pubkey: new PublicKey(instruction.bettorPositionPda), isSigner: false, isWritable: true },
-          { pubkey: provider.publicKey, isSigner: true, isWritable: true }, // bettor signer
-          { pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false }, // system_program
-        ];
+        // Build keys - handle parimutuel mode (no LP offer PDA)
+        const keys = [];
+        keys.push({ pubkey: new PublicKey(instruction.marketPda), isSigner: false, isWritable: true });
+        
+        // Only include lpOfferPda if it exists (fixed-odds mode)
+        if (instruction.lpOfferPda) {
+          keys.push({ pubkey: new PublicKey(instruction.lpOfferPda), isSigner: false, isWritable: true });
+        } else {
+          // Parimutuel mode: use zero pubkey as placeholder or skip
+          console.log('[SolanaTransactionSigner] Parimutuel bet - no LP offer PDA');
+          // Skip lp_offer account for pending pool bets
+        }
+        
+        keys.push({ pubkey: new PublicKey(instruction.bettorPositionPda), isSigner: false, isWritable: true });
+        keys.push({ pubkey: provider.publicKey, isSigner: true, isWritable: true }); // bettor signer
+        keys.push({ pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false }); // system_program
         
         // Anchor discriminator (8 bytes) + outcome (u8) + amount (u64 LE) = 17 bytes
         const disc = await anchorDiscriminator('place_bet');
