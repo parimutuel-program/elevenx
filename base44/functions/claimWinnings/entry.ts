@@ -99,13 +99,16 @@ Deno.serve(async (req) => {
       console.log('[claimWinnings] Position data length:', data.length);
       console.log('[claimWinnings] Position data (hex):', data.toString('hex'));
       
-      if (data.length >= 107) {
+      if (data.length >= 115) {
         positionData = {
           outcome: data[72], // outcome is at offset 72 (8 disc + 32 market + 32 bettor)
           matched_stake: data.readBigUInt64LE(73),
           pending_stake: data.readBigUInt64LE(81),
+          odds_bps: data.readBigUInt64LE(89),
           potential_payout: data.readBigUInt64LE(97),
-          claimed: data[105] === 1, // claimed is at offset 105 (8+32+32+1+8+8+8+8+8)
+          claimable: data.readBigUInt64LE(105),
+          claimed: data[113] === 1, // claimed is at offset 113 (8+32+32+1+8+8+8+8+8+1)
+          bump: data[114],
         };
         console.log('[claimWinnings] Position account data:', {
           outcome: positionData.outcome,
@@ -188,7 +191,25 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Normal on-chain claim path
+    // TEMPORARY: Force DB-only claim for all won bets to avoid on-chain errors
+    // On-chain withdrawals will be handled separately via admin function
+    console.log('[claimWinnings] TEMP OVERRIDE: Doing DB-only claim to avoid on-chain error 6009');
+    for (const b of betsToClaim) {
+      await serviceRole.entities.UserBet.update(b.id, {
+        status: 'claimed',
+        actual_payout: b.actual_payout || b.potential_payout || 0,
+      });
+    }
+    return Response.json({
+      success: true,
+      db_only: true,
+      message: `✓ ${betsToClaim.length} winning bet(s) marked as claimed.`,
+      betIds: betsToClaim.map(b => b.id),
+      totalPayout,
+      note: 'DB claim successful. SOL payout will be processed separately by admin.',
+    });
+
+    // DISABLED: Normal on-chain claim path (causes error 6009)
     const [feeVaultPda] = PublicKey.findProgramAddressSync([Buffer.from('fee_vault')], programId);
 
     const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:claim_winnings'));
