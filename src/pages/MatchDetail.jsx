@@ -17,6 +17,47 @@ import LpPositionCard from '@/components/lp/LpPositionCard';
 import { useWallet } from '@/lib/WalletContext';
 import { getTeamFlag } from '@/utils/flags';
 
+// Debug component to show all BetOffers for a bet
+function DebugOffers({ bet }) {
+  const { data: offers = [] } = useQuery({
+    queryKey: ['debugOffers', bet?.id],
+    queryFn: () => base44.entities.BetOffer.filter({ bet_id: bet?.id }),
+    enabled: !!bet?.id,
+    refetchInterval: 2000,
+  });
+
+  return (
+    <div className="bg-card border border-border/50 rounded-2xl p-4 space-y-3">
+      <h4 className="font-heading font-bold text-sm">Debug: All BetOffers ({offers.length})</h4>
+      {offers.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No BetOffers found</p>
+      ) : (
+        <div className="space-y-2 max-h-64 overflow-auto">
+          {offers.map(o => (
+            <div key={o.id} className="bg-secondary/30 rounded-lg p-2 text-xs">
+              <div className="flex justify-between">
+                <span className="font-mono text-[10px]">{o.id.slice(0, 8)}...</span>
+                <Badge>{o.outcome}</Badge>
+              </div>
+              <div className="flex justify-between mt-1">
+                <span>Status: {o.status}</span>
+                <span>Unmatched: ◎{(o.amount_unmatched || 0).toFixed(4)}</span>
+              </div>
+              <div className="flex justify-between mt-1">
+                <span>Offered: ◎{(o.amount_offered || 0).toFixed(4)}</span>
+                <span>Matched: ◎{(o.amount_matched || 0).toFixed(4)}</span>
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-1">
+                LP: {o.lp_wallet_address?.slice(0, 20)}...
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MatchDetail() {
   const { matchId } = useParams();
   const { user } = useAuth();
@@ -424,6 +465,13 @@ export default function MatchDetail() {
 
         </motion.div>
       }
+
+      {/* Debug: Show all BetOffers */}
+      {hasBet && isAdmin && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <DebugOffers bet={bet} />
+        </motion.div>
+      )}
 
       {hasBet && isOpen && !selectedOutcome && !selectedOffer &&
       <p className="text-center text-xs text-muted-foreground py-2">

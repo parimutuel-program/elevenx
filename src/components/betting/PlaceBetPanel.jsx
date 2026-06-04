@@ -32,13 +32,15 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
           status: o.status,
           amount_unmatched: o.amount_unmatched,
           amount_offered: o.amount_offered,
+          lp_wallet_address: o.lp_wallet_address,
         })),
       });
       return offers;
     },
     enabled: !!bet?.id,
-    staleTime: 1000,
-    refetchInterval: 3000,
+    staleTime: 500,
+    refetchInterval: 2000,
+    refetchOnWindowFocus: true,
   });
 
   // For BETTORS (mode='match'): Check total available LP liquidity for selected outcome
