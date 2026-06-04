@@ -11,50 +11,42 @@ Deno.serve(async (req) => {
 
     console.log('[clearDatabase] Starting database cleanup...');
 
-    const safeDelete = async (entityType, id, delayMs = 100) => {
-      let retries = 5;
-      while (retries > 0) {
+    let deletedCount = 0;
+
+    const deleteAll = async (entityType, delayMs = 150) => {
+      let count = 0;
+      console.log(`[clearDatabase] Fetching ${entityType}...`);
+      const records = await base44.asServiceRole.entities[entityType].list('-created_date', 1000);
+      
+      for (const r of records) {
         try {
-          await base44.asServiceRole.entities[entityType].delete(id);
+          await base44.asServiceRole.entities[entityType].delete(r.id);
+          count++;
+          deletedCount++;
           if (delayMs > 0) await new Promise(resolve => setTimeout(resolve, delayMs));
-          return;
         } catch (err) {
           if (err.status === 429) {
-            retries--;
-            if (retries === 0) throw err;
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            console.log(`[clearDatabase] Rate limited, waiting 3s...`);
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            await base44.asServiceRole.entities[entityType].delete(r.id);
+            count++;
+            deletedCount++;
           } else if (err.status !== 404) {
-            throw err;
+            console.warn(`[clearDatabase] Error deleting ${r.id}:`, err.message);
           }
         }
       }
+      
+      console.log(`[clearDatabase] Deleted ${count} ${entityType}`);
+      return count;
     };
 
-    let deletedCount = 0;
-
-    console.log('[clearDatabase] Deleting UserBets...');
-    const userBets = await base44.asServiceRole.entities.UserBet.list();
-    for (const ub of userBets) { await safeDelete('UserBet', ub.id, 50); deletedCount++; }
-    
-    console.log('[clearDatabase] Deleting BetOffers...');
-    const betOffers = await base44.asServiceRole.entities.BetOffer.list();
-    for (const bo of betOffers) { await safeDelete('BetOffer', bo.id, 50); deletedCount++; }
-    
-    console.log('[clearDatabase] Deleting LpPositions...');
-    const lpPositions = await base44.asServiceRole.entities.LpPosition.list();
-    for (const lp of lpPositions) { await safeDelete('LpPosition', lp.id, 50); deletedCount++; }
-    
-    console.log('[clearDatabase] Deleting Bets...');
-    const bets = await base44.asServiceRole.entities.Bet.list();
-    for (const bet of bets) { await safeDelete('Bet', bet.id, 80); deletedCount++; }
-    
-    console.log('[clearDatabase] Deleting FuturesMarkets...');
-    const futures = await base44.asServiceRole.entities.FuturesMarket.list();
-    for (const fm of futures) { await safeDelete('FuturesMarket', fm.id, 50); deletedCount++; }
-    
-    console.log('[clearDatabase] Deleting Matches...');
-    const matches = await base44.asServiceRole.entities.Match.list();
-    for (const m of matches) { await safeDelete('Match', m.id, 80); deletedCount++; }
+    await deleteAll('UserBets', 100);
+    await deleteAll('BetOffers', 100);
+    await deleteAll('LpPositions', 100);
+    await deleteAll('Bets', 150);
+    await deleteAll('FuturesMarkets', 100);
+    await deleteAll('Matches', 150);
 
     return Response.json({
       success: true,
