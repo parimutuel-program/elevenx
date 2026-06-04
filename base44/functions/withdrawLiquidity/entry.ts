@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
       userBet_outcome: userBet.outcome,
     });
 
-    // Check on-chain balance before allowing withdrawal
+    // Check on-chain balance - use on-chain balance as source of truth
     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
     const lpOfferPubkey = new PublicKey(offer.solana_position_pda || lpOfferPda);
     
@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
       lpOfferPubkey: lpOfferPubkey.toBase58(),
       stored_pda: offer.solana_position_pda,
       derived_pda: lpOfferPda.toBase58(),
-      withdrawAmount,
+      dbUnmatchedAmount: withdrawAmount,
     });
     
     const accountInfo = await connection.getAccountInfo(lpOfferPubkey);
@@ -115,30 +115,35 @@ Deno.serve(async (req) => {
       exists: !!accountInfo,
       lamports: accountInfo?.lamports,
       balanceSol: onChainBalance,
-      withdrawAmount,
-      minimumNeeded: withdrawAmount + 0.001,
+      dbUnmatchedAmount: withdrawAmount,
     });
     
-    // Account exists but only has rent-exempt minimum (funds already withdrawn)
-    if (onChainBalance < withdrawAmount + 0.001) {
+    // Use on-chain balance as the withdraw amount (DB may be out of sync)
+    // Rent-exempt minimum on Solana is ~0.00000204 SOL, so if balance is less than 0.001, account is empty
+    if (onChainBalance < 0.001) {
       return Response.json({ 
-        error: 'Funds already withdrawn on-chain. Check your wallet balance.',
-        hint: `On-chain balance: ◎${onChainBalance.toFixed(4)}, DB shows: ◎${withdrawAmount.toFixed(4)}`
+        error: 'No funds available on-chain. DB may be out of sync.',
+        hint: `On-chain balance: ◎${onChainBalance.toFixed(6)}, DB shows: ◎${withdrawAmount.toFixed(4)}`
       }, { status: 400 });
     }
+    
+    // Withdraw the actual on-chain balance (minus small buffer for rent if needed)
+    const actualWithdrawAmount = onChainBalance;
+    
+    console.log('Using on-chain balance as withdraw amount:', actualWithdrawAmount);
     
     return Response.json({
       success: true,
       userBetId,
       offerId: offer.id,
-      amount: withdrawAmount,
+      amount: actualWithdrawAmount,
       solana_instruction: {
         instruction_type: 'withdraw_liquidity',
         programId: SOLANA_PROGRAM_ID,
         marketPda: marketPda.toBase58(),
         lpOfferPda: lpOfferPda,
       },
-      message: `Sign to withdraw ◎${withdrawAmount}`,
+      message: `Sign to withdraw ◎${actualWithdrawAmount.toFixed(4)}`,
     });
 
   } catch (error) {
