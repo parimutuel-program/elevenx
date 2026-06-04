@@ -808,12 +808,9 @@ export default function LpDashboard() {
         }}
         bet={selectedBetForDetail?.bet}
         match={selectedBetForDetail?.match}
-        onCommit={({ bet, outcome, amount }) => {
-          setSelectedBet(bet);
-          setSelectedOutcome(outcome);
-          setAmount(String(amount));
-          setDetailModalOpen(false);
-          setSelectedBetForDetail(null);
+        onCommit={(data) => {
+          console.log('[LpDashboard] onCommit called with:', data);
+          handleDetailModalCommit(data);
         }}
       />
     </div>
