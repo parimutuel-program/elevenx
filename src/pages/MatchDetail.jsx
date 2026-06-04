@@ -416,8 +416,18 @@ export default function MatchDetail() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} key={betMode + selectedOutcome + selectedOffer?.id}>
           {betMode === 'offer' && (
             <div className="bg-accent/10 border border-accent/30 rounded-2xl p-4 mb-4">
-              <p className="text-xs text-accent font-bold">💡 New to providing offers?</p>
-              <p className="text-xs text-muted-foreground mt-1">Go to the <Link to="/lp" className="text-primary font-bold hover:underline">LP Dashboard</Link> to place your offer and earn fees when others match!</p>
+              <p className="text-xs text-accent font-bold mb-1">💼 You're Providing Liquidity</p>
+              <p className="text-xs text-muted-foreground">
+                You're creating a bet offer that others can match. Your SOL stays available until matched, and you earn <span className="text-accent font-bold">2% fees</span> when bettors match your offer.
+              </p>
+            </div>
+          )}
+          {betMode === 'match' && selectedOffer && (
+            <div className="bg-primary/10 border border-primary/30 rounded-2xl p-4 mb-4">
+              <p className="text-xs text-primary font-bold mb-1">🎯 You're Placing a Bet</p>
+              <p className="text-xs text-muted-foreground">
+                You're betting against an existing offer. Your SOL is locked immediately. Win and get paid out automatically after the match ends.
+              </p>
             </div>
           )}
           <PlaceBetPanel
