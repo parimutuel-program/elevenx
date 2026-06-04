@@ -207,7 +207,7 @@ export default function LpDashboard() {
 
   const handleTxSuccess = async (txResult) => {
     const signature = txResult.signature;
-    const committedAmount = parseFloat(amount);
+    const committedAmount = pendingTx?.amount || 0;
     
     if (pendingCommitData) {
       try {
