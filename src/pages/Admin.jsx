@@ -153,6 +153,30 @@ export default function Admin() {
     onError: (err) => alert('Error: ' + err.message),
   });
 
+  const quickTestMarketMutation = useMutation({
+    mutationFn: async () => {
+      const res = await base44.functions.invoke('quickTestMarket', {});
+      if (res.data.error) throw new Error(res.data.error);
+      return res.data;
+    },
+    onSuccess: async (data) => {
+      queryClient.invalidateQueries({ queryKey: ['matches', 'bets'] });
+      // Auto-trigger market creation after bet is created
+      try {
+        const marketRes = await base44.functions.invoke('recreateMarketWithValidDates', {
+          bet_id: data.bet_id,
+          match_id: data.match_id,
+        });
+        if (marketRes.data.solana_instruction) {
+          alert(`✓ Test market ready!\n\n${data.message}\n\nNow click "⚡ Test Mode" on the FFO vs FFO1 market to deploy it on-chain with timestamps ending in 5 minutes.`);
+        }
+      } catch (err) {
+        alert(`✓ Bet created!\n${data.message}\n\nNote: Market deployment failed: ${err.message}`);
+      }
+    },
+    onError: (err) => alert('Error: ' + err.message),
+  });
+
   const initPlatformMutation = useMutation({
     mutationFn: async () => {
       // Get wallet address from localStorage (set by WalletContext after Phantom connects)
@@ -344,6 +368,30 @@ export default function Admin() {
                 {createLiveOddsBetMutation.isPending ? 'Creating...' : 'Create with Live Odds'}
               </Button>
             </div>
+          </div>
+
+          <div className="bg-card border border-accent/30 rounded-xl p-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <Zap className="w-5 h-5 text-accent" />
+                <div>
+                  <p className="text-sm font-bold text-foreground">⚡ Quick Test: FFO vs FFO1 (5 min)</p>
+                  <p className="text-xs text-muted-foreground">Creates match + bet + market ready to settle in 5 minutes</p>
+                </div>
+              </div>
+              <Button
+                onClick={() => quickTestMarketMutation.mutate()}
+                disabled={quickTestMarketMutation.isPending}
+                className="bg-accent hover:bg-accent/90 text-accent-foreground font-heading font-bold rounded-xl h-9"
+              >
+                {quickTestMarketMutation.isPending ? 'Creating...' : 'Create Quick Test'}
+              </Button>
+            </div>
+            {quickTestMarketMutation.isSuccess && (
+              <p className="mt-3 text-xs text-accent bg-accent/10 rounded-lg px-3 py-2">
+                ✓ Test market created! Click ⚡ Test Mode on the FFO vs FFO1 market to deploy on-chain.
+              </p>
+            )}
           </div>
 
           <div className="bg-card border border-primary/20 rounded-xl p-4">
