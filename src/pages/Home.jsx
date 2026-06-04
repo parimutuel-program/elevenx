@@ -220,7 +220,7 @@ export default function Home() {
                  initial={{ opacity: 0, x: 20 }}
                  animate={{ opacity: 1, x: 0 }}
                  transition={{ delay: 0.1 + i * 0.08 }}
-                 className="flex-shrink-0 w-64 h-80 bg-card border border-border/50 rounded-2xl overflow-hidden hover:border-primary/30 transition-all group flex flex-col">
+                 className="flex-shrink-0 w-80 bg-card border border-border/50 rounded-2xl overflow-hidden hover:border-primary/30 transition-all group flex flex-col">
 
                 {/* Match photo strip */}
                 <div className="relative h-40 overflow-hidden flex-shrink-0">
@@ -239,48 +239,56 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="p-4 flex flex-col flex-1 justify-center">
+                <div className="p-5 flex flex-col flex-1">
                   {/* Teams */}
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-3">
                     <div className="text-center flex-1">
-                      <div className="text-2xl mb-1">{getTeamFlag(fm.team_a)}</div>
-                      <p className="font-heading font-bold text-xs leading-tight">{fm.team_a}</p>
+                      <div className="text-3xl mb-1">{getTeamFlag(fm.team_a)}</div>
+                      <p className="font-heading font-bold text-sm leading-tight">{fm.team_a}</p>
                     </div>
-                    <div className="flex flex-col items-center gap-0.5 px-2">
-                      <span className="font-heading font-black text-primary text-sm">VS</span>
-                      <span className="text-[9px] text-muted-foreground">{fm.date}</span>
+                    <div className="flex flex-col items-center gap-0.5 px-3">
+                      <span className="font-heading font-black text-primary text-base">VS</span>
+                      <span className="text-[10px] text-muted-foreground">{fm.date}</span>
                     </div>
                     <div className="text-center flex-1">
-                      <div className="text-2xl mb-1">{getTeamFlag(fm.team_b)}</div>
-                      <p className="font-heading font-bold text-xs leading-tight">{fm.team_b}</p>
+                      <div className="text-3xl mb-1">{getTeamFlag(fm.team_b)}</div>
+                      <p className="font-heading font-bold text-sm leading-tight">{fm.team_b}</p>
                     </div>
                   </div>
 
                   {/* Odds Multipliers */}
                   {bet && (
-                    <div className="grid grid-cols-3 gap-1.5 mb-3">
-                      <div className="bg-primary/5 border border-primary/20 rounded-lg p-1.5 text-center">
-                        <p className="text-[8px] text-muted-foreground font-medium">{fm.team_a}</p>
-                        <p className="font-heading font-bold text-xs text-primary">{bet.odds_a?.toFixed(2) || '0.00'}x</p>
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      <div className="bg-primary/5 border border-primary/20 rounded-lg p-2 text-center">
+                        <p className="text-[9px] text-muted-foreground font-medium">{fm.team_a}</p>
+                        <p className="font-heading font-bold text-sm text-primary">{bet.odds_a?.toFixed(2) || '0.00'}x</p>
                       </div>
-                      <div className="bg-secondary/50 border border-border/30 rounded-lg p-1.5 text-center">
-                        <p className="text-[8px] text-muted-foreground font-medium">Draw</p>
-                        <p className="font-heading font-bold text-xs text-foreground">{bet.odds_draw?.toFixed(2) || '0.00'}x</p>
+                      <div className="bg-secondary/50 border border-border/30 rounded-lg p-2 text-center">
+                        <p className="text-[9px] text-muted-foreground font-medium">Draw</p>
+                        <p className="font-heading font-bold text-sm text-foreground">{bet.odds_draw?.toFixed(2) || '0.00'}x</p>
                       </div>
-                      <div className="bg-primary/5 border border-primary/20 rounded-lg p-1.5 text-center">
-                        <p className="text-[8px] text-muted-foreground font-medium">{fm.team_b}</p>
-                        <p className="font-heading font-bold text-xs text-primary">{bet.odds_b?.toFixed(2) || '0.00'}x</p>
+                      <div className="bg-primary/5 border border-primary/20 rounded-lg p-2 text-center">
+                        <p className="text-[9px] text-muted-foreground font-medium">{fm.team_b}</p>
+                        <p className="font-heading font-bold text-sm text-primary">{bet.odds_b?.toFixed(2) || '0.00'}x</p>
                       </div>
                     </div>
                   )}
 
-                  <div className="mt-auto">
+                  <div className="mt-auto grid grid-cols-2 gap-2">
                     <Link to={`/match/${fm.matchId}`} className="block">
-                     <Button className="w-full h-9 text-xs font-heading font-bold rounded-xl border transition-colors"
-                       style={{ background: 'rgba(33,196,93,0.1)', color: '#21c45d', borderColor: 'rgba(33,196,93,0.25)' }}
-                       onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(33,196,93,0.2)'}
-                       onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(33,196,93,0.1)'}>
+                     <Button className="w-full h-10 text-xs font-heading font-bold rounded-xl"
+                       style={{ background: '#21c45d', color: '#fff', boxShadow: '0 0 20px rgba(33,196,93,0.3)' }}
+                       onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                       onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}>
                        Bet Now →
+                     </Button>
+                   </Link>
+                   <Link to={`/match/${fm.matchId}`} className="block">
+                     <Button className="w-full h-10 text-xs font-heading font-bold rounded-xl border"
+                       style={{ background: 'rgba(166,156,242,0.15)', color: '#a69cf2', borderColor: 'rgba(166,156,242,0.3)' }}
+                       onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(166,156,242,0.25)'}
+                       onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(166,156,242,0.15)'}>
+                       + Add LP
                      </Button>
                    </Link>
                    </div>
