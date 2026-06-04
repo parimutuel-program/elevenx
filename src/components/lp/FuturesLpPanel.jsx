@@ -181,7 +181,7 @@ function FuturesMarketLpCard({ market, onProvideLiquidity }) {
       </div>
 
       {/* Inner content container */}
-      <div className="relative z-10 rounded-2xl bg-[#0f0a1e]/95 backdrop-blur-sm m-[2px] h-full flex flex-col">
+      <div className="relative z-10 rounded-2xl bg-[#0f0a1e]/95 backdrop-blur-sm m-[2px] h-full flex flex-col pb-2">
       {/* Header with Flag & Country */}
       <div className="p-5 border-b border-border/30">
         <div className="flex items-center gap-3">
