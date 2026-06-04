@@ -98,7 +98,7 @@ export default function GroupCountryCard({ market, onSelect }) {
             </div>
 
             <div className="text-right">
-              <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-wide">LPs</p>
+              <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-wide">LP Offers</p>
               <p className="font-heading font-bold text-sm text-foreground">{totalLpOffers}</p>
             </div>
           </div>
