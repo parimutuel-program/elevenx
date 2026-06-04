@@ -228,7 +228,7 @@ export default function Home() {
                      src={fm.img || WC_PHOTOS[(i + 1) % WC_PHOTOS.length]}
                      alt="match"
                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                     style={fm.team_a === 'USA' ? { objectPosition: 'center 42%' } : {}} />
+                     style={fm.team_a === 'USA' ? { objectPosition: 'center 60%' } : {}} />
                   <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
 
                   {/* Group Badge */}
