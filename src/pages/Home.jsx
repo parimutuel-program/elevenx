@@ -20,7 +20,7 @@ const WC_PHOTOS = [
 const FEATURED_MATCHES = [
 { team_a: 'Mexico', team_b: 'South Africa', group: 'Group A', date: 'Jun 11', matchId: '6a20ec5003fec97668e1177c', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/a1d1835b2_image.png' },
 { team_a: 'South Korea', team_b: 'Czech Republic', group: 'Group A', date: 'Jun 12', matchId: '6a20ec5003fec97668e1177d', img: 'https://media.base44.com/images/public/6a1da108eb293de119e4e930/8290ef7dc_image.png' },
-{ team_a: 'Brazil', team_b: 'Morocco', group: 'Group E', date: 'Jun 12', matchId: '6a20ec5003fec97668e1177e', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/f0e42aabe_image.png' },
+{ team_a: 'Brazil', team_b: 'Morocco', group: 'Group E', date: 'Jun 12', matchId: '6a20ec5003fec97668e1177e', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/f0e42aabe_image.png', odds_a: 1.85, odds_b: 4.20, odds_draw: 3.50 },
 { team_a: 'USA', team_b: 'Uruguay', group: 'Group D', date: 'Jun 13', matchId: '6a20ec5003fec97668e1177f', img: 'https://media.base44.com/images/public/6a1da108eb293de119e4e930/6adfc36e9_image.png' }];
 
 
@@ -274,24 +274,24 @@ export default function Home() {
                  </div>
 
                  {/* Odds Section */}
-                 {bet && bet.odds_a && bet.odds_b && (
+                 {(bet && bet.odds_a && bet.odds_b) || (fm.odds_a && fm.odds_b) ? (
                    <div className="mb-4">
                      <div className="grid grid-cols-3 gap-1.5">
                        <div className="bg-primary/5 border border-primary/20 rounded-md p-1.5 text-center">
                          <p className="text-[8px] text-muted-foreground font-medium truncate mb-0.5">{fm.team_a}</p>
-                         <p className="font-heading font-bold text-xs text-primary">{bet.odds_a?.toFixed(2) || '0.00'}x</p>
+                         <p className="font-heading font-bold text-xs text-primary">{(fm.odds_a || bet.odds_a)?.toFixed(2) || '0.00'}x</p>
                        </div>
                        <div className="bg-secondary/50 border border-border/30 rounded-md p-1.5 text-center">
                          <p className="text-[8px] text-muted-foreground font-medium mb-0.5">Draw</p>
-                         <p className="font-heading font-bold text-xs text-foreground">{bet.odds_draw?.toFixed(2) || '0.00'}x</p>
+                         <p className="font-heading font-bold text-xs text-foreground">{(fm.odds_draw || bet.odds_draw)?.toFixed(2) || '0.00'}x</p>
                        </div>
                        <div className="bg-accent/5 border border-accent/20 rounded-md p-1.5 text-center">
                          <p className="text-[8px] text-muted-foreground font-medium truncate mb-0.5">{fm.team_b}</p>
-                         <p className="font-heading font-bold text-xs text-accent">{bet.odds_b?.toFixed(2) || '0.00'}x</p>
+                         <p className="font-heading font-bold text-xs text-accent">{(fm.odds_b || bet.odds_b)?.toFixed(2) || '0.00'}x</p>
                        </div>
                      </div>
                    </div>
-                 )}
+                 ) : null}
 
                  {/* Action Buttons */}
                  <div className="grid grid-cols-2 gap-2">
