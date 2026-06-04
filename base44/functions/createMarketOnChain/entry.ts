@@ -65,9 +65,15 @@ Deno.serve(async (req) => {
     const discriminator = Buffer.from(sha256("global:create_market")).slice(0, 8);
 
     // Betting window: opens NOW (when initialized), closes 1 hour after match starts
-    const matchStartTime = new Date(match.match_time).getTime();
-    const bettingCloseTime = matchStartTime + (60 * 60 * 1000); // 1 hour after match begins
-    const openUntil = Math.floor(bettingCloseTime / 1000);
+    // Use bet.open_until if available, otherwise calculate from match_time
+    let openUntil;
+    if (bet.open_until) {
+      openUntil = Math.floor(new Date(bet.open_until).getTime() / 1000);
+    } else {
+      const matchStartTime = new Date(match.match_time).getTime();
+      const bettingCloseTime = matchStartTime + (60 * 60 * 1000); // 1 hour after match begins
+      openUntil = Math.floor(bettingCloseTime / 1000);
+    }
     const settleAfter = openUntil + 300; // 5 minutes after betting closes for settlement
 
     const outcomeNames = [

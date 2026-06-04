@@ -842,11 +842,44 @@ function CreateMatchDialog() {
   }, []);
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Match.create(data),
+    mutationFn: async (data) => {
+      // Create match first
+      const match = await base44.entities.Match.create(data);
+      
+      // Auto-create bet with betting window: opens now, closes 1 hour after match starts
+      const matchStartTime = new Date(data.match_time).getTime();
+      const bettingCloseTime = matchStartTime + (60 * 60 * 1000); // 1 hour after match begins
+      const openUntil = new Date(bettingCloseTime).toISOString();
+      
+      await base44.entities.Bet.create({
+        match_id: match.id,
+        title: `${data.team_a} vs ${data.team_b}`,
+        outcome_a: data.team_a,
+        outcome_b: data.team_b,
+        outcome_draw: 'Draw',
+        open_until: openUntil,
+        status: 'open',
+        odds_a: 2.0,
+        odds_b: 2.0,
+        odds_draw: 3.0,
+        odds_bookmaker: 'manual',
+        odds_updated_at: new Date().toISOString(),
+        pool_a: 0,
+        pool_b: 0,
+        pool_draw: 0,
+        total_pool: 0,
+        total_bettors: 0,
+        fee_percent: 0,
+        solana_market_created: false,
+      });
+      
+      return { match, betCreated: true };
+    },
     onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ['matches'] });
-    setOpen(false);
-    setForm({ team_a: '', team_b: '', team_a_flag: '', team_b_flag: '', group_stage: '', match_time: '', match_end_time: '', venue: '', status: 'upcoming' });
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
+      queryClient.invalidateQueries({ queryKey: ['bets'] });
+      setOpen(false);
+      setForm({ team_a: '', team_b: '', team_a_flag: '', team_b_flag: '', group_stage: '', match_time: '', match_end_time: '', venue: '', status: 'upcoming' });
     },
   });
 
