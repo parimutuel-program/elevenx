@@ -187,8 +187,22 @@ export default function AdminMatchRow({ match, bets, index }) {
                   bet_id: existingBet.id,
                   match_id: match.id,
                 });
-                console.log('[Init On-Chain] Response:', marketRes.data);
+                console.log('[Init On-Chain] Full response:', marketRes);
+                console.log('[Init On-Chain] Response data:', marketRes.data);
+
+                // Check if response has the expected structure
+                if (!marketRes.data) {
+                  alert('Error: No response data from server');
+                  return;
+                }
+
+                if (marketRes.data.error) {
+                  alert('Error: ' + marketRes.data.error);
+                  return;
+                }
+
                 if (marketRes.data.needsPlatformInit && marketRes.data.solana_instruction) {
+                  console.log('[Init On-Chain] Platform init needed, showing instruction');
                   setPendingMarketInit({
                     instruction: marketRes.data.solana_instruction,
                     createMarketInstruction: marketRes.data.createMarketInstruction,
@@ -196,6 +210,7 @@ export default function AdminMatchRow({ match, bets, index }) {
                     step: 'platform_init',
                   });
                 } else if (marketRes.data.createMarketInstruction) {
+                  console.log('[Init On-Chain] Showing create market instruction');
                   setPendingMarketInit({
                     instruction: marketRes.data.createMarketInstruction,
                     betId: existingBet.id,
@@ -207,10 +222,12 @@ export default function AdminMatchRow({ match, bets, index }) {
                   queryClient.invalidateQueries({ queryKey: ['marketStatus', match.id] });
                   alert('Market already exists on-chain!');
                 } else {
-                  alert(marketRes.data.error || 'Failed to get instruction');
+                  console.error('[Init On-Chain] Unexpected response:', marketRes.data);
+                  alert('Failed to get instruction - check console for details');
                 }
               } catch (err) {
                 console.error('[Init On-Chain] Error:', err);
+                console.error('[Init On-Chain] Error message:', err.message);
                 alert('Failed to initialize market: ' + err.message);
               }
             }}
