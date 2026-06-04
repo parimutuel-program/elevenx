@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
     const bet  = bets[0];
     if (!bet) return Response.json({ error: 'Bet not found' }, { status: 400 });
 
-    // Check on-chain market state — if voided or settled-via-db-override, do DB-only claim
+    // Check on-chain market state
     const { Connection: SolanaConnection } = await import('npm:@solana/web3.js@1.98.4');
     const connection = new SolanaConnection('https://api.devnet.solana.com', 'confirmed');
     const programId = new PublicKey(SOLANA_PROGRAM_ID);
@@ -81,13 +81,30 @@ Deno.serve(async (req) => {
     const marketInfo = await connection.getAccountInfo(marketPda);
     const isVoided = marketInfo && marketInfo.data.length >= 249 && marketInfo.data[245] === 1;
     const isSettledOnChain = marketInfo && marketInfo.data.length >= 249 && marketInfo.data[244] === 1;
+    
+    // Check if position exists on-chain
+    const bettorPubkey = new PublicKey(trimmedWallet);
+    const [positionPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('position'), marketPda.toBuffer(), bettorPubkey.toBuffer()],
+      programId
+    );
+    const positionInfo = await connection.getAccountInfo(positionPda);
+    const positionExists = !!positionInfo;
+    
+    console.log('[claimWinnings] Market state:', {
+      marketExists: !!marketInfo,
+      isVoided,
+      isSettledOnChain,
+      positionExists,
+      positionPda: positionPda.toBase58(),
+    });
 
     const totalPayout = betsToClaim.reduce((sum, b) => sum + (b.actual_payout || b.potential_payout || 0), 0);
     console.log(`✓ Claim: wallet=${trimmedWallet.slice(0, 8)}... | bets=${betsToClaim.length} | total=${totalPayout} SOL | voided=${isVoided}`);
 
-    // If market is voided on-chain, do DB-only claim (no on-chain tx possible)
-    if (!marketInfo || isVoided || !isSettledOnChain) {
-      console.log('[claimWinnings] Market voided or not settled on-chain — doing DB-only claim');
+    // If market is voided, not settled on-chain, or position doesn't exist, do DB-only claim
+    if (!marketInfo || isVoided || !isSettledOnChain || !positionExists) {
+      console.log('[claimWinnings] Market voided/not settled/position missing — doing DB-only claim');
       for (const b of betsToClaim) {
         await serviceRole.entities.UserBet.update(b.id, {
           status: 'claimed',
@@ -97,7 +114,7 @@ Deno.serve(async (req) => {
       return Response.json({
         success: true,
         db_only: true,
-        message: `✓ ${betsToClaim.length} winning bet(s) marked as claimed`,
+        message: `✓ ${betsToClaim.length} winning bet(s) marked as claimed. Market not settled on-chain yet.`,
         betIds: betsToClaim.map(b => b.id),
         totalPayout,
         note: 'Market was settled via DB override. SOL payout is handled separately by admin.',
@@ -105,11 +122,6 @@ Deno.serve(async (req) => {
     }
 
     // Normal on-chain claim path
-    const bettorPubkey = new PublicKey(trimmedWallet);
-    const [positionPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('position'), marketPda.toBuffer(), bettorPubkey.toBuffer()],
-      programId
-    );
     const [feeVaultPda] = PublicKey.findProgramAddressSync([Buffer.from('fee_vault')], programId);
 
     const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:claim_winnings'));
