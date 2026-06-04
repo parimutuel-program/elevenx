@@ -18,10 +18,10 @@ const TelegramIcon = () => (
 
 const navItems = [
   { path: '/', icon: Home, label: 'Home' },
-  { path: '/my-bets', icon: BarChart3, label: 'My Bets' },
   { path: '/matches', icon: Trophy, label: 'Matches' },
   { path: '/futures', icon: Flame, label: 'Futures' },
   { path: '/lp', icon: TrendingUp, label: 'LP' },
+  { path: '/my-bets', icon: BarChart3, label: 'My Bets' },
   { path: '/profile', icon: User, label: 'Profile' },
 ];
 
