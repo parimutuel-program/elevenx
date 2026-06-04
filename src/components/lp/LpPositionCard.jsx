@@ -81,7 +81,7 @@ export default function LpPositionCard({ offer, match, onWithdraw }) {
             <Badge className={`${currentStatus.bg} ${currentStatus.border} ${currentStatus.color} text-[9px] sm:text-[10px] font-bold border`}>
               {offer.status.replace('_', ' ')}
             </Badge>
-            <BetCountdown openUntil={match.match_end_time} className="text-[8px]" />
+            <BetCountdown openUntil={match.match_end_time} label="Betting closes" className="text-[8px]" />
           </div>
         </div>
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export default function BetCountdown({ openUntil, className = '' }) {
+export default function BetCountdown({ openUntil, className = '', label = 'Betting closes' }) {
   const [timeLeft, setTimeLeft] = useState(null);
   const [isUrgent, setIsUrgent] = useState(false);
 
@@ -66,6 +66,7 @@ export default function BetCountdown({ openUntil, className = '' }) {
       className={`flex items-center gap-1.5 ${isUrgent ? 'text-destructive' : 'text-muted-foreground'} ${className}`}
     >
       <Clock className={`w-3 h-3 ${isUrgent ? 'animate-pulse' : ''}`} />
+      <span className="text-[9px] sm:text-[10px] font-bold">{label}:</span>
       <span className="text-[9px] sm:text-[10px] font-bold font-mono">
         {formatTime()}
       </span>

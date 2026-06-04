@@ -69,7 +69,7 @@ export default function FuturesCard({ market, index, selected, onSelect, onBet }
             <Globe className="w-3 h-3" /> 
             On-chain
           </div>
-          <BetCountdown openUntil={market.open_until} />
+          <BetCountdown openUntil={market.open_until} label="Betting closes" />
         </div>
       </div>
 
