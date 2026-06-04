@@ -54,14 +54,6 @@ export default function Home() {
 
   const betByMatch = {};
   bets.forEach(b => { betByMatch[b.match_id] = b; });
-  
-  // Helper to find bet by team names (fallback when matchId lookup fails)
-  const findBetByTeams = (teamA, teamB) => {
-    return matches.find(m => 
-      (m.team_a === teamA && m.team_b === teamB) || 
-      (m.team_a === teamB && m.team_b === teamA)
-    );
-  };
 
   const totalVolume = bets.reduce((s, b) => s + (b.total_pool || 0), 0);
   const activeBettors = new Set(userBets.map(ub => ub.created_by_id)).size;
@@ -221,11 +213,8 @@ export default function Home() {
 
         <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
            {FEATURED_MATCHES.map((fm, i) => {
-             // Try direct matchId lookup first, then fallback to team name matching
              const matchBet = betByMatch[fm.matchId];
-             const matchedMatch = matchBet ? null : findBetByTeams(fm.team_a, fm.team_b);
-             const finalBet = matchedMatch ? betByMatch[matchedMatch.id] : null;
-             const betUrl = finalBet ? `/bet/${finalBet.id}` : `/matches`;
+             const betUrl = matchBet ? `/bet/${matchBet.id}` : `/matches`;
              return (
              <motion.div
                key={i}
