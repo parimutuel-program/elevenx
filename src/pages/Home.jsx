@@ -18,10 +18,10 @@ const WC_PHOTOS = [
 ];
 
 const FEATURED_MATCHES = [
-  { team_a: 'Mexico', team_b: 'South Africa', group: 'Group A', date: 'Jun 11', matchId: '6a20783be76a39e8d6c1ebbe', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/a1d1835b2_image.png' },
-  { team_a: 'South Korea', team_b: 'Czechia', group: 'Group A', date: 'Jun 12', matchId: '6a20783be76a39e8d6c1ebbd', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/cf05870f3_image.png' },
-  { team_a: 'Canada', team_b: 'Bosnia & Herzegovina', group: 'Group B', date: 'Jun 12', matchId: '6a20783be76a39e8d6c1ebbc', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/f0e42aabe_image.png' },
-  { team_a: 'USA', team_b: 'Paraguay', group: 'Group D', date: 'Jun 13', matchId: '6a20783be76a39e8d6c1ebbb', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/e4dbfaa4c_image.png' },
+  { team_a: 'Mexico', team_b: 'South Africa', group: 'Group A', date: 'Jun 11', betId: '6a20978b62199368217a8c9a', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/a1d1835b2_image.png' },
+  { team_a: 'South Korea', team_b: 'Czechia', group: 'Group A', date: 'Jun 12', betId: '6a209ce0ade99189606530ba', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/cf05870f3_image.png' },
+  { team_a: 'Canada', team_b: 'Bosnia & Herzegovina', group: 'Group B', date: 'Jun 12', betId: '6a209cb2079192f6f62c6f74', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/f0e42aabe_image.png' },
+  { team_a: 'USA', team_b: 'Paraguay', group: 'Group D', date: 'Jun 13', betId: '6a209cce4891074ca3e0009c', img: 'https://media.base44.com/images/public/6a1baa5af6f6dc0afc776c3f/e4dbfaa4c_image.png' },
 ];
 
 
@@ -213,8 +213,7 @@ export default function Home() {
 
         <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
            {FEATURED_MATCHES.map((fm, i) => {
-             const matchBet = betByMatch[fm.matchId];
-             const betUrl = matchBet ? `/bet/${matchBet.id}` : `/matches`;
+             const betUrl = `/bet/${fm.betId}`;
              return (
              <motion.div
                key={i}
