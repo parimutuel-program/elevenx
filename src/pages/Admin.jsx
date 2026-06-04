@@ -408,32 +408,89 @@ export default function Admin() {
             )}
           </div>
 
-          <div className="bg-card border border-destructive/30 rounded-xl p-4">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-3">
-                <RefreshCcw className="w-5 h-5 text-destructive" />
-                <div>
-                  <p className="text-sm font-bold text-foreground">⚠️ Complete Reset & Fresh Sync</p>
-                  <p className="text-xs text-muted-foreground">Deletes ALL test data and re-syncs fresh World Cup matches with real odds from API</p>
+          <div className="bg-card border border-primary/20 rounded-xl p-4">
+            <div className="mb-3">
+              <h3 className="font-heading font-bold text-sm text-primary flex items-center gap-2">
+                <RefreshCcw className="w-4 h-4" />
+                3-Step Setup Wizard
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">Clean database and rebuild in 3 safe steps</p>
+            </div>
+            
+            <div className="grid gap-3">
+              <div className="flex items-center justify-between bg-secondary/30 rounded-lg p-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">1</div>
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Clear Database</p>
+                    <p className="text-xs text-muted-foreground">Wipe all matches, bets, futures</p>
+                  </div>
                 </div>
+                <Button
+                  onClick={async () => {
+                    if (!confirm('⚠️ This will DELETE all matches, bets, futures, user bets, and LP positions!\n\nContinue?')) return;
+                    const res = await base44.functions.invoke('clearDatabase', {});
+                    if (res.data.error) {
+                      alert('❌ Error: ' + res.data.error);
+                    } else {
+                      alert(res.data.message);
+                      queryClient.invalidateQueries({ queryKey: ['matches', 'bets', 'futuresMarkets'] });
+                    }
+                  }}
+                  variant="destructive"
+                  className="font-heading font-bold rounded-lg h-8 text-xs"
+                >
+                  Clear All
+                </Button>
               </div>
-              <Button
-                onClick={async () => {
-                  if (!confirm('⚠️ WARNING: This will DELETE all matches, bets, futures, user bets, and LP positions!\n\nThen it will re-sync fresh data from the API with correct timestamps and live odds.\n\nContinue?')) {
-                    return;
-                  }
-                  const res = await base44.functions.invoke('resetAndSync', {});
-                  if (res.data.error) {
-                    alert('❌ Error: ' + res.data.error);
-                  } else {
-                    alert(res.data.message);
-                    queryClient.invalidateQueries({ queryKey: ['matches', 'bets', 'futuresMarkets'] });
-                  }
-                }}
-                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-heading font-bold rounded-xl h-9"
-              >
-                Reset Everything
-              </Button>
+
+              <div className="flex items-center justify-between bg-secondary/30 rounded-lg p-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center text-accent text-xs font-bold">2</div>
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Build Futures Markets</p>
+                    <p className="text-xs text-muted-foreground">Create country futures with calculated odds</p>
+                  </div>
+                </div>
+                <Button
+                  onClick={async () => {
+                    const res = await base44.functions.invoke('fetchAndCalculateOdds', {});
+                    if (res.data.error) {
+                      alert('❌ Error: ' + res.data.error);
+                    } else {
+                      alert(`✅ Success! ${res.data.countriesProcessed} countries processed.`);
+                      queryClient.invalidateQueries({ queryKey: ['futuresMarkets'] });
+                    }
+                  }}
+                  className="bg-accent hover:bg-accent/90 text-accent-foreground font-heading font-bold rounded-lg h-8 text-xs"
+                >
+                  Build Futures
+                </Button>
+              </div>
+
+              <div className="flex items-center justify-between bg-secondary/30 rounded-lg p-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">3</div>
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Fetch Match Markets</p>
+                    <p className="text-xs text-muted-foreground">Sync matches & live odds from API</p>
+                  </div>
+                </div>
+                <Button
+                  onClick={async () => {
+                    const res = await base44.functions.invoke('syncWorldCupMatches', {});
+                    if (res.data.error) {
+                      alert('❌ Error: ' + res.data.error);
+                    } else {
+                      alert(`✅ Success! ${res.data.created} new matches created.`);
+                      queryClient.invalidateQueries({ queryKey: ['matches', 'bets'] });
+                    }
+                  }}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-heading font-bold rounded-lg h-8 text-xs"
+                >
+                  Fetch Matches
+                </Button>
+              </div>
             </div>
           </div>
 
