@@ -32,9 +32,11 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
       if (diff <= 0) {
         setTimeRemaining(0);
       } else {
-        const minutes = Math.floor(diff / 60000);
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / 60000);
         const seconds = Math.floor((diff % 60000) / 1000);
-        setTimeRemaining({ minutes, seconds, total: diff });
+        setTimeRemaining({ days, hours, minutes, seconds, total: diff });
       }
     };
 
@@ -257,7 +259,12 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
           {timeRemaining && timeRemaining.total > 0 && (
             <div className="flex items-center gap-1.5 bg-destructive/10 text-destructive px-2.5 py-1 rounded-full text-xs font-bold animate-pulse">
               <Clock className="w-3.5 h-3.5" />
-              {timeRemaining.minutes}:{String(timeRemaining.seconds).padStart(2, '0')}
+              {timeRemaining.days > 0 
+                ? `${timeRemaining.days}d ${timeRemaining.hours}h`
+                : timeRemaining.hours > 0 
+                  ? `${timeRemaining.hours}h ${timeRemaining.minutes}m`
+                  : `${timeRemaining.minutes}:${String(timeRemaining.seconds).padStart(2, '0')}`
+              }
             </div>
           )}
         </div>
