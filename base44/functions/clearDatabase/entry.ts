@@ -16,28 +16,48 @@ Deno.serve(async (req) => {
     const deleteAll = async (entityType, delayMs = 150) => {
       let count = 0;
       console.log(`[clearDatabase] Fetching ${entityType}...`);
-      const records = await base44.asServiceRole.entities[entityType].list('-created_date', 1000);
       
-      for (const r of records) {
-        try {
-          await base44.asServiceRole.entities[entityType].delete(r.id);
-          count++;
-          deletedCount++;
-          if (delayMs > 0) await new Promise(resolve => setTimeout(resolve, delayMs));
-        } catch (err) {
-          if (err.status === 429) {
-            console.log(`[clearDatabase] Rate limited, waiting 3s...`);
-            await new Promise(resolve => setTimeout(resolve, 3000));
+      try {
+        const records = await base44.asServiceRole.entities[entityType].list('-created_date', 1000);
+        
+        for (const r of records) {
+          try {
             await base44.asServiceRole.entities[entityType].delete(r.id);
             count++;
             deletedCount++;
-          } else if (err.status !== 404) {
-            console.warn(`[clearDatabase] Error deleting ${r.id}:`, err.message);
+            if (delayMs > 0) await new Promise(resolve => setTimeout(resolve, delayMs));
+          } catch (err) {
+            // Handle rate limiting with exponential backoff
+            if (err.status === 429) {
+              console.log(`[clearDatabase] Rate limited on ${entityType}, waiting 5s...`);
+              await new Promise(resolve => setTimeout(resolve, 5000));
+              try {
+                await base44.asServiceRole.entities[entityType].delete(r.id);
+                count++;
+                deletedCount++;
+              } catch (retryErr) {
+                if (retryErr.status !== 404) {
+                  console.warn(`[clearDatabase] Retry failed for ${r.id}:`, retryErr.message);
+                }
+              }
+            } 
+            // Ignore 404 - record already deleted
+            else if (err.status !== 404) {
+              console.warn(`[clearDatabase] Error deleting ${r.id}:`, err.message);
+            }
           }
         }
+        
+        console.log(`[clearDatabase] Deleted ${count} ${entityType}`);
+      } catch (listErr) {
+        // Handle case where entity type doesn't exist or is empty
+        if (listErr.status === 404 || listErr.message?.includes('not found')) {
+          console.log(`[clearDatabase] ${entityType} entity not found or empty, skipping...`);
+          return 0;
+        }
+        throw listErr;
       }
       
-      console.log(`[clearDatabase] Deleted ${count} ${entityType}`);
       return count;
     };
 
