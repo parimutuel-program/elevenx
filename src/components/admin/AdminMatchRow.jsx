@@ -59,17 +59,35 @@ export default function AdminMatchRow({ match, bets, index }) {
       });
       
       console.log('[createBetMutation] Bet created:', bet.id);
-      console.log('[createBetMutation] Calling createMarketOnChain with bet_id:', bet.id, 'match_id:', match.id);
       
-      const marketRes = await base44.functions.invoke('createMarketOnChain', {
-        bet_id: bet.id,
-        match_id: match.id,
-      });
+      // Retry logic for rate limits
+      let marketRes;
+      let retries = 0;
+      const maxRetries = 3;
+      
+      while (retries < maxRetries) {
+        try {
+          console.log('[createBetMutation] Calling createMarketOnChain (attempt', retries + 1, ')');
+          marketRes = await base44.functions.invoke('createMarketOnChain', {
+            bet_id: bet.id,
+            match_id: match.id,
+          });
+          break; // Success, exit retry loop
+        } catch (err) {
+          if (err.response?.status === 429 && retries < maxRetries - 1) {
+            retries++;
+            const delay = 2000 * retries; // 2s, 4s, 6s
+            console.log('[createBetMutation] Rate limited, waiting', delay, 'ms...');
+            await new Promise(resolve => setTimeout(resolve, delay));
+          } else {
+            throw err;
+          }
+        }
+      }
       
       console.log('[createBetMutation] createMarketOnChain response:', marketRes.data);
       
       if (marketRes.data.needsPlatformInit && marketRes.data.solana_instruction) {
-        // Store both instructions - platform init first, then create market
         setPendingMarketInit({
           instruction: marketRes.data.solana_instruction,
           createMarketInstruction: marketRes.data.createMarketInstruction,
@@ -94,7 +112,11 @@ export default function AdminMatchRow({ match, bets, index }) {
     },
     onError: (error) => {
       console.error('[createBetMutation] Error:', error);
-      alert('Failed to create market: ' + error.message);
+      if (error.response?.status === 429) {
+        alert('Rate limit exceeded. Please wait 30 seconds and try again.');
+      } else {
+        alert('Failed to create market: ' + error.message);
+      }
     },
   });
 
