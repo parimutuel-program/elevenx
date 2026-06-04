@@ -26,15 +26,29 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Wallet address required' }, { status: 400 });
     }
 
+    // CRITICAL: Must have EITHER offer_id (fixed-odds) OR bet_id+match_id+outcome (parimutuel)
+    if (!offer_id && (!bet_id || !match_id || !outcome)) {
+      return Response.json({
+        error: 'Missing offer_id or amount',
+        hint: 'You must select an outcome first by clicking on the odds, then enter an amount',
+        received: { offer_id, bet_id, match_id, outcome, amount }
+      }, { status: 400 });
+    }
+
     // PARIMUTUEL MODE: No offer_id required - bet goes to pending pool
+    // Must have bet_id, match_id, and outcome instead
     if (!offer_id) {
+      console.log('[matchBet] Parimutuel mode detected - checking required fields:', { bet_id, match_id, outcome, amount });
+      
       if (!bet_id || !match_id || !outcome) {
+        console.error('[matchBet] Missing required fields for parimutuel bet:', { bet_id, match_id, outcome });
         return Response.json({ 
           error: 'Missing bet_id, match_id, or outcome for parimutuel bet',
-          hint: 'Provide offer_id for fixed-odds OR bet_id+match_id+outcome for parimutuel'
+          hint: 'You must select an outcome (click on odds) before placing a bet',
+          received: { bet_id, match_id, outcome, amount, offer_id }
         }, { status: 400 });
       }
-      console.log('[matchBet] Parimutuel bet - no LP offer, bet will go to pending pool');
+      console.log('[matchBet] ✓ Parimutuel bet - no LP offer, bet will go to pending pool');
       // Continue with parimutuel logic below
     }
 
