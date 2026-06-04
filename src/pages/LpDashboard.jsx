@@ -438,78 +438,78 @@ export default function LpDashboard() {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-5xl mx-auto w-full px-0 sm:px-4">
+    <div className="space-y-6">
       <SuccessDialog open={!!successDialog} data={successDialog} onClose={() => setSuccessDialog(null)} />
       <SuccessDialog open={!!withdrawSuccessDialog} data={withdrawSuccessDialog} onClose={() => setWithdrawSuccessDialog(null)} isWithdraw={true} />
       
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-heading font-black text-xl sm:text-2xl mb-1">LP Dashboard</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">Provide liquidity for matches & futures</p>
-        </div>
-      </div>
-
-      {/* ── BRANDED LP EXPLANATION BANNER ── */}
-      <motion.div 
+      {/* Hero Section - Full Width like Matches/Futures */}
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-[#1a1040]/80 via-[#0f0a1e]/90 to-[#12102a]/80 border border-primary/20 rounded-2xl p-4 sm:p-6 relative overflow-hidden mb-4 sm:mb-6"
+        transition={{ duration: 0.5 }}
+        className="relative overflow-hidden rounded-2xl sm:rounded-3xl p-4 sm:p-8"
+        style={{ background: 'linear-gradient(135deg, #1a1040 0%, #0f0a1e 50%, #12102a 100%)' }}
       >
-        {/* Decorative Glow Orbs */}
-        <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 rounded-full blur-2xl opacity-25 bg-[#a69cf2]" />
-        <div className="absolute bottom-0 left-0 w-20 h-20 sm:w-24 sm:h-24 rounded-full blur-2xl opacity-15 bg-[#14f195]" />
+        <div className="absolute top-0 right-0 w-56 h-56 rounded-full blur-3xl opacity-30" style={{ background: '#a69cf2' }} />
+        <div className="absolute bottom-0 left-0 w-40 h-40 rounded-full blur-3xl opacity-20" style={{ background: '#14f195' }} />
+        
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-1.5 bg-primary/20 border border-primary/30 px-2.5 sm:px-3 py-1 rounded-full">
+              <Trophy className="w-3 h-3 text-primary" />
+              <span className="text-[10px] sm:text-[11px] font-bold text-primary tracking-widest">LIQUIDITY PROVIDER</span>
+            </div>
+          </div>
+          <h1 className="font-heading font-black text-2xl sm:text-3xl md:text-4xl leading-tight mb-2 text-white">
+            LP Dashboard
+          </h1>
+          <p className="text-white/50 text-xs sm:text-sm max-w-md mb-4">
+            Provide liquidity for matches & futures. Earn fees and back your team.
+          </p>
 
-        <div className="relative z-10 space-y-4">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-1.5 bg-primary/20 border border-primary/30 px-2.5 sm:px-3 py-1 rounded-full text-primary text-[8px] sm:text-[10px] font-bold tracking-widest uppercase">
-              👑 Be the House
+          {/* How LP Works - Integrated into Hero */}
+          <div className="border-t border-white/10 pt-4">
+            <div className="inline-flex items-center gap-1.5 bg-primary/20 border border-primary/30 px-2.5 sm:px-3 py-1 rounded-full text-primary text-[9px] sm:text-[10px] font-bold tracking-widest uppercase mb-3">
+              👑 How Liquidity Providing Works
             </div>
-            <h2 className="font-heading font-black text-base sm:text-lg md:text-xl text-white">How Liquidity Providing Works</h2>
-            <p className="text-[10px] sm:text-xs text-white/70 leading-relaxed">
-              ElevenX has no house edge. Instead, <strong>YOU</strong> act as the bookmaker and take the other side!
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:gap-4 mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-white/10 relative z-10">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <span className="text-lg sm:text-xl">🎯</span>
-              <h3 className="font-heading font-bold text-xs sm:text-xs text-primary">1. Back Your Team</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+              <div className="space-y-1.5">
+                <span className="text-lg sm:text-xl">🎯</span>
+                <h3 className="font-heading font-bold text-[11px] sm:text-xs text-primary">Back Your Team</h3>
+                <p className="text-[10px] sm:text-[11px] text-white/60 leading-relaxed">
+                  Provide liquidity on outcomes you believe will <strong>WIN</strong>. If it wins, you profit! If it loses, bettors take the pool.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <span className="text-lg sm:text-xl">💰</span>
+                <h3 className="font-heading font-bold text-[11px] sm:text-xs text-accent">Earn Fees + Winnings</h3>
+                <p className="text-[10px] sm:text-[11px] text-white/60 leading-relaxed">
+                  Earn <strong>2% fees</strong> on every bet matched against your liquidity, plus keep the pool if your outcome wins!
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <span className="text-lg sm:text-xl">🔓</span>
+                <h3 className="font-heading font-bold text-[11px] sm:text-xs text-yellow-400">Full Control</h3>
+                <p className="text-[10px] sm:text-[11px] text-white/60 leading-relaxed">
+                  Withdraw unmatched liquidity <strong>instantly anytime</strong>. Only locked when matched. <strong>Instant DB claims</strong> — no on-chain delays.
+                </p>
+              </div>
             </div>
-            <p className="text-[9px] sm:text-[11px] text-muted-foreground leading-relaxed">
-              Provide liquidity on the outcome you believe will WIN. If it wins, you profit! If it loses, bettors take the pool.
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <span className="text-lg sm:text-xl">💰</span>
-              <h3 className="font-heading font-bold text-xs sm:text-xs text-accent">2. Earn Fees + Winnings</h3>
-            </div>
-            <p className="text-[9px] sm:text-[11px] text-muted-foreground leading-relaxed">
-              Earn <strong>2% fees</strong> on every bet matched against your liquidity, plus keep the pool if your outcome wins!
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <span className="text-lg sm:text-xl">🔓</span>
-              <h3 className="font-heading font-bold text-xs sm:text-xs text-yellow-400">3. Full Control</h3>
-            </div>
-            <p className="text-[9px] sm:text-[11px] text-muted-foreground leading-relaxed">
-              Withdraw unmatched liquidity <strong>instantly anytime</strong>. Only locked when matched. <strong>Instant DB claims</strong> — no on-chain delays.
-            </p>
           </div>
         </div>
       </motion.div>
 
       {!isConnected && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-primary/20 p-6 sm:p-8 text-center"
-          style={{ background: 'linear-gradient(145deg, #1a1040 0%, #0f0a1e 100%)' }}>
-          <Wallet className="w-10 h-10 sm:w-12 sm:h-12 text-primary mx-auto mb-4" />
-          <h3 className="font-heading font-black text-lg sm:text-xl text-white mb-2">Connect Wallet to Provide Liquidity</h3>
-          <p className="text-white/50 text-xs sm:text-sm mb-5 max-w-xs mx-auto px-4">Connect Phantom to start providing LP liquidity.</p>
-          <Button onClick={connect} className="font-heading font-bold px-6 sm:px-8 h-10 sm:h-11 rounded-xl text-sm"
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-primary/20 p-8 text-center"
+          style={{ background: 'linear-gradient(145deg, #1a1040 0%, #0f0a1e 100%)' }}
+        >
+          <Wallet className="w-12 h-12 text-primary mx-auto mb-4" />
+          <h3 className="font-heading font-black text-xl text-white mb-2">Connect Wallet to Provide Liquidity</h3>
+          <p className="text-white/50 text-sm mb-5 max-w-xs mx-auto">Connect Phantom to start providing LP liquidity.</p>
+          <Button onClick={connect} className="font-heading font-bold px-8 h-11 rounded-xl text-sm"
             style={{ background: 'linear-gradient(135deg, #a69cf2, #8b84e8)' }}>
             <Wallet className="w-4 h-4 mr-2" /> Connect Phantom
           </Button>
@@ -519,38 +519,29 @@ export default function LpDashboard() {
       {isConnected && (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid grid-cols-3 mb-6 bg-secondary/30 p-1.5 rounded-xl gap-2 h-auto">
-            <TabsTrigger 
-              value="matches" 
-              className="font-heading font-bold flex items-center justify-center py-2.5 rounded-lg transition-all data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary"
-            >
+            <TabsTrigger value="matches" className="font-heading font-bold flex items-center justify-center py-2.5 rounded-lg transition-all data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary">
               <TrendingUp className="w-4 h-4 mr-2 text-primary" /> Match LP
             </TabsTrigger>
-            <TabsTrigger 
-              value="futures" 
-              className="font-heading font-bold flex items-center justify-center py-2.5 rounded-lg transition-all data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400 data-[state=active]:border-b-2 data-[state=active]:border-yellow-400"
-            >
+            <TabsTrigger value="futures" className="font-heading font-bold flex items-center justify-center py-2.5 rounded-lg transition-all data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400 data-[state=active]:border-b-2 data-[state=active]:border-yellow-400">
               <Trophy className="w-4 h-4 mr-2 text-yellow-400" /> Futures LP
             </TabsTrigger>
-            <TabsTrigger 
-              value="positions" 
-              className="font-heading font-bold flex items-center justify-center py-2.5 rounded-lg transition-all data-[state=active]:bg-accent/20 data-[state=active]:text-accent data-[state=active]:border-b-2 data-[state=active]:border-accent"
-            >
+            <TabsTrigger value="positions" className="font-heading font-bold flex items-center justify-center py-2.5 rounded-lg transition-all data-[state=active]:bg-accent/20 data-[state=active]:text-accent data-[state=active]:border-b-2 data-[state=active]:border-accent">
               <DollarSign className="w-4 h-4 mr-2 text-accent" /> My LP
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="matches" className="space-y-4 sm:space-y-6">
+          <TabsContent value="matches" className="space-y-6">
             {/* Stats row */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {[
-                { label: 'Total Committed', value: `◎${totalCommitted.toFixed(4)}`, icon: DollarSign, color: 'text-primary' },
-                { label: 'Matched', value: `◎${totalMatched.toFixed(4)}`, icon: CheckCircle2, color: 'text-accent' },
-                { label: 'Unmatched', value: `◎${totalUnmatched.toFixed(4)}`, icon: Clock, color: 'text-yellow-400' },
+                { label: 'Committed', value: `◎${totalCommitted.toFixed(4)}`, color: 'text-primary' },
+                { label: 'Matched', value: `◎${totalMatched.toFixed(4)}`, color: 'text-accent' },
+                { label: 'Unmatched', value: `◎${totalUnmatched.toFixed(4)}`, color: 'text-yellow-400' },
               ].map((s, i) => (
                 <motion.div key={i} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                  className="bg-card border border-border/50 rounded-xl sm:rounded-2xl p-2.5 sm:p-4">
-                  <p className="text-[8px] sm:text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{s.label}</p>
-                  <p className={`font-heading font-bold text-sm sm:text-lg ${s.color}`}>{s.value}</p>
+                  className="bg-card border border-border/50 rounded-xl p-4">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{s.label}</p>
+                  <p className={`font-heading font-bold text-lg ${s.color}`}>{s.value}</p>
                 </motion.div>
               ))}
             </div>
@@ -568,147 +559,52 @@ export default function LpDashboard() {
               )}
 
               <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="font-heading font-bold text-sm">Provide Liquidity</h2>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setMatchViewMode(matchViewMode === 'all' ? 'dropdown' : 'all')}
-                      className="h-6 text-xs"
-                    >
-                      {matchViewMode === 'all' ? 'Show as List' : 'Show as Grid'}
-                    </Button>
-                  </div>
+                <h2 className="font-heading font-bold text-sm">Provide Liquidity</h2>
                   
-                  {matchViewMode === 'dropdown' ? (
-                    <div className="space-y-3">
-                      <Select onValueChange={(val) => {
-                        const bet = filteredOpenBets.find(b => b.id === val);
-                        setSelectedBet(bet || null);
-                        setSelectedOutcome('a');
-                        setError(null);
-                      }}>
-                        <SelectTrigger className="bg-secondary/50 border-border/50 h-11">
-                          <SelectValue placeholder="Choose an open market..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {filteredOpenBets.map(bet => (
-                            <SelectItem key={bet.id} value={bet.id}>
-                              {bet.outcome_a} vs {bet.outcome_b}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                {/* Group Navigation */}
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                  <button
+                    onClick={() => setActiveGroup('all')}
+                    className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all shrink-0 ${
+                      activeGroup === 'all'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
+                    }`}
+                  >
+                    All Groups
+                  </button>
+                  {groups.filter(g => g !== 'all' && g !== 'World Cup 2026').map(group => (
+                    <button
+                      key={group}
+                      onClick={() => setActiveGroup(group)}
+                      className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all shrink-0 ${
+                        activeGroup === group
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
+                      }`}
+                    >
+                      {group}
+                    </button>
+                  ))}
+                </div>
 
-                      {selectedBet && (
-                        <>
-                          <div>
-                            <label className="text-xs text-muted-foreground mb-1.5 block">Select Outcome to Cover</label>
-                            <div className="grid grid-cols-3 gap-2">
-                              {[
-                                { key: 'a', label: selectedBet.outcome_a, odds: selectedBet.odds_a || selectedBet.oracle_odds_a },
-                                { key: 'draw', label: 'Draw', odds: selectedBet.odds_draw || selectedBet.oracle_odds_draw },
-                                { key: 'b', label: selectedBet.outcome_b, odds: selectedBet.odds_b || selectedBet.oracle_odds_b },
-                              ].map(o => {
-                                let displayOdds = '—';
-                                if (o.odds) {
-                                  const oddsNum = typeof o.odds === 'string' ? parseFloat(o.odds) : o.odds;
-                                  displayOdds = oddsNum.toFixed(2) + 'x';
-                                }
-                                return (
-                                  <button key={o.key}
-                                    onClick={() => setSelectedOutcome(o.key)}
-                                    className={`rounded-lg sm:rounded-xl p-2 sm:p-3 border-2 text-center transition-all ${
-                                      selectedOutcome === o.key
-                                        ? 'border-primary bg-primary/10'
-                                        : 'border-border/50 bg-secondary/30 hover:border-border'
-                                    }`}>
-                                    <p className="font-heading font-bold text-[10px] sm:text-xs">{o.label}</p>
-                                    <p className="text-primary font-bold text-xs sm:text-sm mt-0.5">{displayOdds}</p>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="text-xs text-muted-foreground mb-1.5 block">Amount (◎ SOL)</label>
-                            <Input type="number" placeholder="0.00" value={amount}
-                              onChange={e => setAmount(e.target.value)}
-                              className="bg-secondary/50 border-border/50 text-lg font-heading font-bold h-12" />
-                            <div className="flex gap-2 mt-2">
-                              {[0.5, 1, 5, 10].map(qa => (
-                                <button key={qa} onClick={() => setAmount(String(qa))}
-                                  className="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 rounded-lg">◎{qa}</button>
-                              ))}
-                            </div>
-                          </div>
-
-                          <Button
-                            onClick={() => provideLiquidityMutation.mutate({
-                              walletAddress,
-                              bet_id: selectedBet.id,
-                              match_id: selectedBet.match_id,
-                              outcome: selectedOutcome,
-                              amount,
-                            })}
-                            disabled={!amount || parseFloat(amount) <= 0 || provideLiquidityMutation.isPending}
-                            className="w-full h-12 font-heading font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl">
-                            {provideLiquidityMutation.isPending ? (
-                              <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                            ) : `Commit ◎${parseFloat(amount) || 0} Liquidity`}
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {/* Group Navigation */}
-                      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                        <button
-                          onClick={() => setActiveGroup('all')}
-                          className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all shrink-0 ${
-                            activeGroup === 'all'
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
-                          }`}
-                        >
-                          All Groups
-                        </button>
-                        {groups.filter(g => g !== 'all' && g !== 'World Cup 2026').map(group => (
-                          <button
-                            key={group}
-                            onClick={() => setActiveGroup(group)}
-                            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all shrink-0 ${
-                              activeGroup === group
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
-                            }`}
-                          >
-                            {group}
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                        {filteredOpenBets.map(bet => {
-                          const match = matches.find(m => m.id === bet.match_id);
-                          return (
-                            <MatchLiquidityCard
-                              key={bet.id}
-                              bet={bet}
-                              match={match}
-                              isSelected={selectedBet?.id === bet.id}
-                              onClick={() => {
-                                setSelectedBetForDetail({ bet, match });
-                                setDetailModalOpen(true);
-                              }}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                  {filteredOpenBets.map(bet => {
+                    const match = matches.find(m => m.id === bet.match_id);
+                    return (
+                      <MatchLiquidityCard
+                        key={bet.id}
+                        bet={bet}
+                        match={match}
+                        isSelected={selectedBet?.id === bet.id}
+                        onClick={() => {
+                          setSelectedBetForDetail({ bet, match });
+                          setDetailModalOpen(true);
+                        }}
+                      />
+                    );
+                  })}
+                </div>
               </div>
             </motion.div>
 
