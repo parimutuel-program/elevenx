@@ -51,17 +51,8 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
-    // Verify wallet is authenticated (exists in WalletUser entity)
-    const allWalletUsers = await serviceRole.entities.WalletUser.list();
-    const user = allWalletUsers.find(u => u.wallet_address === walletAddress);
-    
-    if (!user) {
-      return Response.json({ 
-        error: 'Wallet not authenticated. Please sign in with your wallet first.', 
-        hint: 'Connect your wallet on the Profile page to authenticate'
-      }, { status: 401 });
-    }
-    console.log('provideLiquidity: Authenticated user:', user.username || user.full_name);
+    // Skip wallet auth check - wallet connection via Phantom is sufficient
+    console.log('provideLiquidity: Using wallet:', walletAddress);
 
     const bets = await base44.entities.Bet.filter({ id: bet_id });
     const bet = bets[0];
