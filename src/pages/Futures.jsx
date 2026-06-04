@@ -314,7 +314,7 @@ export default function Futures() {
             </div>
           </motion.div>
 
-          {/* How Futures Work Banner - Moved to top */}
+          {/* How Futures Work Banner */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -325,87 +325,38 @@ export default function Futures() {
             <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl opacity-25 bg-[#a69cf2]" />
             <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full blur-2xl opacity-15 bg-[#14f195]" />
 
-            <div className="relative z-10">
-              <div className="inline-flex items-center gap-1.5 bg-primary/20 border border-primary/30 px-3 py-1 rounded-full text-primary text-[10px] font-bold tracking-widest uppercase mb-3">
-                🏆 How Futures Work
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-2 max-w-xl">
+                <div className="inline-flex items-center gap-1.5 bg-primary/20 border border-primary/30 px-3 py-1 rounded-full text-primary text-[10px] font-bold tracking-widest uppercase">
+                  🏆 Futures Betting
+                </div>
+                <h2 className="font-heading font-black text-lg md:text-xl text-white">Bet on Tournament Outcomes</h2>
+                <p className="text-xs text-white/70 leading-relaxed">
+                  Back any team to finish 1st, 2nd, or 3rd in their group. Odds are locked when you bet — if your team finishes in that position, you get paid out based on the multiplier!
+                </p>
               </div>
-              <h2 className="font-heading font-black text-lg text-white mb-4">Bet on Tournament Outcomes or Be the House</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div className="space-y-2">
-                  <h3 className="font-heading font-bold text-xs text-accent flex items-center gap-2">
-                    <span className="text-lg">🎯</span> As a Bettor
-                  </h3>
-                  <p className="text-[11px] text-white/70 leading-relaxed">
-                    Back any team to finish 1st, 2nd, or 3rd in their group. Your odds are locked when you bet, and if your team finishes in that position, you get paid out based on the multiplier!
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="font-heading font-bold text-xs text-primary flex items-center gap-2">
-                    <span className="text-lg">👑</span> As an LP
-                  </h3>
-                  <p className="text-[11px] text-white/70 leading-relaxed">
-                    Provide liquidity for outcomes you think WON'T happen. Earn <strong>2% fees</strong> on all matched bets plus keep bettors' stakes when they lose. Withdraw unmatched funds anytime!
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="font-heading font-bold text-xs text-yellow-400 flex items-center gap-2">
-                    <span className="text-lg">💡</span> How It Works
-                  </h3>
-                  <p className="text-[11px] text-white/70 leading-relaxed">
-                    <strong>Bets require LP liquidity.</strong> LPs deposit SOL to cover potential payouts. When you bet, your stake goes into the pool. Winners share the pool proportionally after the tournament ends.
-                  </p>
-                </div>
-              </div>
+            </div>
 
-              <div className="bg-black/30 border border-white/10 rounded-xl p-4">
-                <h4 className="font-heading font-bold text-xs text-white/90 mb-2 flex items-center gap-2">
-                  <span className="text-base">📋</span> Step-by-Step Process
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] font-bold text-primary">1</div>
-                      <span className="text-[10px] font-bold text-white/80">LP Provides Liquidity</span>
-                    </div>
-                    <p className="text-[10px] text-white/50 pl-7">
-                      LP backs an outcome (e.g., "Brazil 1st") with SOL to cover potential payouts.
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] font-bold text-primary">2</div>
-                      <span className="text-[10px] font-bold text-white/80">Bettor Places Bet</span>
-                    </div>
-                    <p className="text-[10px] text-white/50 pl-7">
-                      You stake SOL on an outcome. Your bet is instantly matched against LP liquidity.
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] font-bold text-primary">3</div>
-                      <span className="text-[10px] font-bold text-white/80">Tournament Plays</span>
-                    </div>
-                    <p className="text-[10px] text-white/50 pl-7">
-                      Matches are played. Your odds are locked — no matter how they change, your payout is fixed.
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] font-bold text-primary">4</div>
-                      <span className="text-[10px] font-bold text-white/80">Winners Get Paid</span>
-                    </div>
-                    <p className="text-[10px] text-white/50 pl-7">
-                      If your outcome hits, claim your payout (stake × odds). LPs lose the matched portion.
-                    </p>
-                  </div>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-white/10 relative z-10">
+              <div className="space-y-1.5">
+                <span className="text-xl">💡</span>
+                <h3 className="font-heading font-bold text-xs text-primary">How It Works</h3>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  <strong>Bets require LP liquidity.</strong> LPs deposit SOL to cover potential payouts. When you bet, your stake goes into the pool. Winners share the pool after the tournament ends.
+                </p>
               </div>
-
-              <div className="mt-4 bg-primary/10 border border-primary/30 rounded-xl p-3">
-                <p className="text-[10px] text-primary/90 leading-relaxed">
-                  <strong>⚠️ Important:</strong> You can only place a bet if there's enough LP liquidity covering that outcome. 
-                  No LP = no betting. LPs earn fees on every bet matched against their stake, and keep losing bettors' stakes as profit!
+              <div className="space-y-1.5">
+                <span className="text-xl">👑</span>
+                <h3 className="font-heading font-bold text-xs text-accent">Be the House (LP)</h3>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Provide liquidity for outcomes you think WON'T happen. Earn <strong>2% fees</strong> on matched bets plus keep losing bettors' stakes. Withdraw unmatched funds anytime!
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <span className="text-xl">⚠️</span>
+                <h3 className="font-heading font-bold text-xs text-yellow-400">Important</h3>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  You can only bet if there's enough LP liquidity. <strong>No LP = no betting.</strong> LPs earn fees on every bet and keep losing stakes as profit!
                 </p>
               </div>
             </div>
