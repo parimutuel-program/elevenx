@@ -14,13 +14,26 @@ export default function AdminMatchRow({ match, bets, index }) {
   const existingBet = bets.find(b => b.match_id === match.id);
   const [pendingMarketInit, setPendingMarketInit] = useState(null);
 
-  const { data: marketStatus, isLoading: isLoadingStatus } = useQuery({
+  const { data: marketStatus, isLoading: isLoadingStatus, error: marketStatusError } = useQuery({
     queryKey: ['marketStatus', match.id],
     queryFn: async () => {
-      const res = await base44.functions.invoke('checkMarketStatus', { match_id: match.id });
-      return res.data;
+      try {
+        const res = await base44.functions.invoke('checkMarketStatus', { match_id: match.id });
+        return res.data;
+      } catch (err) {
+        if (err.response?.status === 429) {
+          console.warn('Rate limited - skipping market status check for match:', match.id);
+          return null;
+        }
+        throw err;
+      }
     },
-    staleTime: 30000, // Cache for 30 seconds
+    staleTime: 60000, // Cache for 60 seconds to reduce API calls
+    retry: (failureCount, error) => {
+      // Don't retry on 429 rate limit errors
+      if (error.response?.status === 429) return false;
+      return failureCount < 2;
+    },
   });
 
   // Use on-chain status if available, otherwise fall back to DB
@@ -210,17 +223,27 @@ export default function AdminMatchRow({ match, bets, index }) {
           <Button
             size="sm"
             onClick={async () => {
-              const marketRes = await base44.functions.invoke('createMarketOnChain', {
-                bet_id: existingBet.id,
-                match_id: match.id,
-                force_recreate: true,
-              });
-              if (marketRes.data.createMarketInstruction) {
-                setPendingMarketInit({
-                  instruction: marketRes.data.createMarketInstruction,
-                  betId: existingBet.id,
-                  step: 'create_market',
+              try {
+                const marketRes = await base44.functions.invoke('createMarketOnChain', {
+                  bet_id: existingBet.id,
+                  match_id: match.id,
+                  force_recreate: true,
                 });
+                if (marketRes.data.createMarketInstruction) {
+                  setPendingMarketInit({
+                    instruction: marketRes.data.createMarketInstruction,
+                    betId: existingBet.id,
+                    step: 'create_market',
+                  });
+                } else if (marketRes.data.error) {
+                  alert('Failed to recreate market: ' + marketRes.data.error);
+                }
+              } catch (err) {
+                if (err.response?.status === 429) {
+                  alert('Rate limit exceeded. Please wait a moment and try again.');
+                } else {
+                  alert('Error: ' + err.message);
+                }
               }
             }}
             className="h-8 text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/30 font-heading rounded-lg"
@@ -233,17 +256,27 @@ export default function AdminMatchRow({ match, bets, index }) {
           <Button
             size="sm"
             onClick={async () => {
-              const marketRes = await base44.functions.invoke('createMarketOnChain', {
-                bet_id: existingBet.id,
-                match_id: match.id,
-                force_recreate: true,
-              });
-              if (marketRes.data.createMarketInstruction) {
-                setPendingMarketInit({
-                  instruction: marketRes.data.createMarketInstruction,
-                  betId: existingBet.id,
-                  step: 'create_market',
+              try {
+                const marketRes = await base44.functions.invoke('createMarketOnChain', {
+                  bet_id: existingBet.id,
+                  match_id: match.id,
+                  force_recreate: true,
                 });
+                if (marketRes.data.createMarketInstruction) {
+                  setPendingMarketInit({
+                    instruction: marketRes.data.createMarketInstruction,
+                    betId: existingBet.id,
+                    step: 'create_market',
+                  });
+                } else if (marketRes.data.error) {
+                  alert('Failed to re-init market: ' + marketRes.data.error);
+                }
+              } catch (err) {
+                if (err.response?.status === 429) {
+                  alert('Rate limit exceeded. Please wait a moment and try again.');
+                } else {
+                  alert('Error: ' + err.message);
+                }
               }
             }}
             className="h-8 text-xs bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 font-heading rounded-lg"
