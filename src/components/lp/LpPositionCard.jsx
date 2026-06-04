@@ -1,5 +1,5 @@
 import React from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -7,9 +7,26 @@ import { TrendingUp, Wallet, ExternalLink, ArrowUpCircle, DollarSign, Percent } 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { getFlagEmoji } from '@/utils/flags';
 
 export default function LpPositionCard({ position, index, walletAddress, onWithdrawRequest }) {
   const queryClient = useQueryClient();
+  
+  const { data: match } = useQuery({
+    queryKey: ['match', position.match_id],
+    queryFn: () => base44.entities.Match.get(position.match_id),
+    enabled: !!position.match_id,
+  });
+  
+  // Get flag code from match data
+  const getFlagCode = () => {
+    if (!match) return 'us';
+    if (position.outcome === 'a') return match.team_a_flag || 'us';
+    if (position.outcome === 'b') return match.team_b_flag || 'us';
+    return 'us';
+  };
+  
+  const flagCode = getFlagCode();
   const matchRate = position.liquidity_deposited > 0 
     ? Math.round((position.liquidity_matched / position.liquidity_deposited) * 100) 
     : 0;
@@ -48,8 +65,22 @@ export default function LpPositionCard({ position, index, walletAddress, onWithd
             {/* Header */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3 flex-1">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center flex-shrink-0">
-                  <TrendingUp className="w-6 h-6 text-primary" />
+                <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
+                  {position.outcome === 'a' || position.outcome === 'b' ? (
+                    <img 
+                      src={`https://flagcdn.com/w80/${flagCode.toLowerCase()}.png`}
+                      alt={position.outcome_label}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextElementSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div className="w-full h-full flex items-center justify-center text-primary absolute inset-0" style={{ display: position.outcome === 'draw' ? 'flex' : 'none' }}>
+                    <span className="text-2xl">🤝</span>
+                  </div>
+                  <TrendingUp className="w-6 h-6 text-primary absolute inset-0 flex items-center justify-center" style={{ display: position.outcome !== 'draw' ? 'none' : 'flex' }} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -57,7 +88,7 @@ export default function LpPositionCard({ position, index, walletAddress, onWithd
                     <Badge className="text-[10px] border bg-primary/10 text-primary border-primary/20">LP Position</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Provided liquidity for <span className="text-primary font-semibold">{position.outcome_label}</span> pool
+                    Backing <span className="text-primary font-semibold">{position.outcome_label}</span>
                   </p>
                 </div>
               </div>
