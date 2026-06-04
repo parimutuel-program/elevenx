@@ -469,29 +469,29 @@ export default function LpDashboard() {
         <div className="grid grid-cols-1 gap-3 sm:gap-4 mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-white/10 relative z-10">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
-              <span className="text-lg sm:text-xl">🎲</span>
-              <h3 className="font-heading font-bold text-xs sm:text-xs text-primary">1. Underwrite an Outcome</h3>
+              <span className="text-lg sm:text-xl">🎯</span>
+              <h3 className="font-heading font-bold text-xs sm:text-xs text-primary">1. Back Your Team</h3>
             </div>
             <p className="text-[9px] sm:text-[11px] text-muted-foreground leading-relaxed">
-              Provide liquidity on an outcome. If it loses, you win the bettors' money!
+              Provide liquidity on the outcome you believe will WIN. If it wins, you profit! If it loses, bettors take the pool.
             </p>
           </div>
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
-              <span className="text-lg sm:text-xl">📈</span>
-              <h3 className="font-heading font-bold text-xs sm:text-xs text-accent">2. Earn 2% Fees</h3>
+              <span className="text-lg sm:text-xl">💰</span>
+              <h3 className="font-heading font-bold text-xs sm:text-xs text-accent">2. Earn Fees + Winnings</h3>
             </div>
             <p className="text-[9px] sm:text-[11px] text-muted-foreground leading-relaxed">
-              Earn <strong>2% fees</strong> on bets matched against your liquidity.
+              Earn <strong>2% fees</strong> on every bet matched against your liquidity, plus keep the pool if your outcome wins!
             </p>
           </div>
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
               <span className="text-lg sm:text-xl">🔓</span>
-              <h3 className="font-heading font-bold text-xs sm:text-xs text-yellow-400">3. Flexible Withdrawals</h3>
+              <h3 className="font-heading font-bold text-xs sm:text-xs text-yellow-400">3. Full Control</h3>
             </div>
             <p className="text-[9px] sm:text-[11px] text-muted-foreground leading-relaxed">
-              Withdraw unmatched liquidity <strong>instantly at any time</strong>.
+              Withdraw unmatched liquidity <strong>instantly anytime</strong>. Only locked when matched. <strong>Instant DB claims</strong> — no on-chain delays.
             </p>
           </div>
         </div>
