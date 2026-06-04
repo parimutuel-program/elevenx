@@ -296,12 +296,35 @@ export default function LpDashboard() {
     enabled: !!walletAddress,
   });
   
-  const offersWithUserBet = myOffers
-    .map(offer => {
+  // Group offers by match_id + outcome, aggregating amounts and collecting all userBetIds
+  const offersWithUserBet = (() => {
+    const grouped = new Map();
+    
+    myOffers.forEach(offer => {
       const userBet = allUserBets.find(ub => ub.offer_id === offer.id);
-      return { ...offer, userBetId: userBet?.id };
-    })
-    .filter(offer => offer.userBetId); // Only include offers that have a linked UserBet
+      if (!userBet) return; // Skip offers without a linked UserBet
+      
+      const groupKey = `${offer.match_id}-${offer.outcome}`;
+      
+      if (!grouped.has(groupKey)) {
+        grouped.set(groupKey, {
+          ...offer,
+          userBetIds: [userBet.id],
+          amount_offered: offer.amount_offered || 0,
+          amount_matched: offer.amount_matched || 0,
+          amount_unmatched: offer.amount_unmatched || 0,
+        });
+      } else {
+        const existing = grouped.get(groupKey);
+        existing.userBetIds.push(userBet.id);
+        existing.amount_offered += offer.amount_offered || 0;
+        existing.amount_matched += offer.amount_matched || 0;
+        existing.amount_unmatched += offer.amount_unmatched || 0;
+      }
+    });
+    
+    return Array.from(grouped.values());
+  })();
 
   const getMatchTitle = (matchId) => {
     const m = matches.find(m => m.id === matchId);
@@ -757,8 +780,8 @@ export default function LpDashboard() {
 
                     return (
                       <LpPositionCard
-                        key={offer.id}
-                        offer={offer}
+                        key={`${offer.match_id}-${offer.outcome}`}
+                        offer={{...offer, userBetId: offer.userBetIds[0]}} // Pass first userBetId for withdrawal
                         match={match}
                         potentialEarnings={potentialEarnings}
                         matchPct={matchPct}
