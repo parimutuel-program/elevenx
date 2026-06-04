@@ -917,10 +917,10 @@ function CreateMatchDialog() {
 
   const createQuickTestMatch = async () => {
     const now = new Date();
-    // CRITICAL: Always create timestamps in the future to avoid "betting window closed" errors
-    const startTime = new Date(now.getTime() + 10 * 60 * 1000); // 10 minutes from now
-    const bettingClosesAt = new Date(startTime.getTime() + 10 * 60 * 1000); // 10 min AFTER kickoff (20 min total from now)
-    const settleAfter = new Date(bettingClosesAt.getTime() + 5 * 60 * 1000); // 5 min after betting closes
+    // CRITICAL: Always create timestamps FAR in the future to avoid "betting window closed" errors
+    const startTime = new Date(now.getTime() + 60 * 60 * 1000); // 60 minutes from now
+    const bettingClosesAt = new Date(startTime.getTime() + 30 * 60 * 1000); // 30 min AFTER kickoff (90 min total from now)
+    const settleAfter = new Date(bettingClosesAt.getTime() + 30 * 60 * 1000); // 30 min after betting closes
     
     console.log('[createQuickTestMatch] Timestamps:', {
       now: now.toISOString(),
@@ -961,7 +961,7 @@ function CreateMatchDialog() {
       
       queryClient.invalidateQueries({ queryKey: ['matches', 'bets'] });
       setOpen(false);
-      alert('✅ READY TO TEST!\n\nMatch starts: 10 min from now\nBetting closes: 20 min from now (10 min after kickoff)\nMatch ends: 25 min from now\n\nGo to Matches tab → Initialize Market (NO timestamp errors!)');
+      alert('✅ READY TO TEST!\n\nMatch starts: 60 min from now\nBetting closes: 90 min from now (30 min after kickoff)\nMatch ends: 120 min from now\n\nGo to Matches tab → Initialize Market (NO timestamp errors!)');
     } catch (err) {
       alert('Failed: ' + err.message);
     }
@@ -984,7 +984,7 @@ function CreateMatchDialog() {
             disabled={createMutation.isPending}
             className="w-full bg-accent text-accent-foreground font-heading font-bold rounded-xl h-10"
           >
-            <Zap className="w-4 h-4 mr-2" /> Quick Test: FFO vs FFO1 (4min)
+            <Zap className="w-4 h-4 mr-2" /> Quick Test: FFO vs FFO1 (60min)
           </Button>
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
