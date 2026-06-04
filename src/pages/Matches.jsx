@@ -93,7 +93,7 @@ export default function Matches() {
   const groupedByDate = {};
   sortedMatches.forEach(m => {
     const dateKey = m.match_time ? format(new Date(m.match_time), 'yyyy-MM-dd') : 'TBD';
-    const dateLabel = m.match_time ? format(new Date(m.match_time), 'EEE, MMM d') : 'TBD';
+    const dateLabel = m.match_time ? format(new Date(m.match_time), 'EEEE, MMM d · yyyy') : 'TBD';
     if (!groupedByDate[dateKey]) groupedByDate[dateKey] = { label: dateLabel, matches: [] };
     groupedByDate[dateKey].matches.push(m);
   });
@@ -224,14 +224,14 @@ export default function Matches() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: dateIndex * 0.05, duration: 0.4 }}
                   >
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-lg px-2.5 py-1">
-                        <span className="font-heading font-bold text-[10px] text-primary">{label}</span>
+                    <div className="flex items-center gap-2.5 sm:gap-3 mb-4 sm:mb-5">
+                      <div className="flex items-center gap-2 sm:gap-2.5 bg-gradient-to-r from-primary/15 to-primary/5 border border-primary/30 rounded-xl sm:rounded-2xl px-3 sm:px-4 py-1.5 sm:py-2">
+                        <span className="font-heading font-bold text-xs sm:text-sm text-primary">{label}</span>
                       </div>
-                      <div className="flex-1 h-px bg-border/50" />
+                      <div className="flex-1 h-px bg-border/30" />
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                       {dateMatches.map((m, i) => (
                         <div
                           key={m.id}
@@ -266,14 +266,14 @@ export default function Matches() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: dateIndex * 0.05, duration: 0.4 }}
                 >
-                  <div className="flex items-center gap-2 mb-3 sticky top-14 sm:top-16 z-10 bg-background/95 backdrop-blur-sm py-2">
-                    <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-lg px-2.5 py-1">
-                      <span className="font-heading font-bold text-[10px] text-primary">{label}</span>
+                  <div className="flex items-center gap-2.5 sm:gap-3 mb-4 sm:mb-5 sticky top-14 sm:top-16 z-10 bg-background/95 backdrop-blur-sm py-2 sm:py-3">
+                    <div className="flex items-center gap-2 sm:gap-2.5 bg-gradient-to-r from-primary/15 to-primary/5 border border-primary/30 rounded-xl sm:rounded-2xl px-3 sm:px-4 py-1.5 sm:py-2 shadow-lg">
+                      <span className="font-heading font-bold text-xs sm:text-base text-primary">{label}</span>
                     </div>
-                    <div className="flex-1 h-px bg-border/50" />
+                    <div className="flex-1 h-px bg-gradient-to-r from-border/50 to-transparent" />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     {dateMatches.map((m, i) => (
                       <div
                         key={m.id}
