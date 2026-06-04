@@ -182,19 +182,11 @@ export default function AdminMatchRow({ match, bets, index }) {
           <Button
             size="sm"
             onClick={async () => {
-              console.log('[Force Recreate] Market missing on-chain, recreating...');
               const marketRes = await base44.functions.invoke('createMarketOnChain', {
                 bet_id: existingBet.id,
                 match_id: match.id,
                 force_recreate: true,
               });
-              console.log('[Force Recreate] Response:', marketRes.data);
-
-              if (marketRes.data.error) {
-                alert('Error: ' + marketRes.data.error);
-                return;
-              }
-
               if (marketRes.data.createMarketInstruction) {
                 setPendingMarketInit({
                   instruction: marketRes.data.createMarketInstruction,
@@ -206,6 +198,29 @@ export default function AdminMatchRow({ match, bets, index }) {
             className="h-8 text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/30 font-heading rounded-lg"
           >
             ⚡ Force Recreate
+          </Button>
+        )}
+        
+        {existingBet && marketStatus?.status === 'initialized' && !pendingMarketInit && (
+          <Button
+            size="sm"
+            onClick={async () => {
+              const marketRes = await base44.functions.invoke('createMarketOnChain', {
+                bet_id: existingBet.id,
+                match_id: match.id,
+                force_recreate: true,
+              });
+              if (marketRes.data.createMarketInstruction) {
+                setPendingMarketInit({
+                  instruction: marketRes.data.createMarketInstruction,
+                  betId: existingBet.id,
+                  step: 'create_market',
+                });
+              }
+            }}
+            className="h-8 text-xs bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 font-heading rounded-lg"
+          >
+            🔄 Re-Init On-Chain
           </Button>
         )}
         {pendingMarketInit && (
@@ -225,21 +240,9 @@ export default function AdminMatchRow({ match, bets, index }) {
           </Badge>
         )}
         
-        {existingBet && marketStatus?.status === 'initialized' && !pendingMarketInit && (
-          <Badge className="bg-accent/20 text-accent text-[10px] py-1 px-3 rounded-lg">
-            <CheckCircle2 className="w-3 h-3 mr-1" /> Market Initialized
-          </Badge>
-        )}
-        
         {existingBet && marketStatus?.status === 'not_created' && !pendingMarketInit && (
           <Badge className="bg-destructive/20 text-destructive text-[10px] py-1 px-3 rounded-lg">
             <AlertCircle className="w-3 h-3 mr-1" /> DB Sync Error
-          </Badge>
-        )}
-        
-        {existingBet && !marketStatus && existingBet.solana_market_created && !pendingMarketInit && (
-          <Badge className="bg-accent/20 text-accent text-[10px] py-1 px-3 rounded-lg">
-            <CheckCircle2 className="w-3 h-3 mr-1" /> Market Initialized
           </Badge>
         )}
       </div>
