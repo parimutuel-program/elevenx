@@ -402,54 +402,24 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
           </button>
         </div>
 
-        {/* Block betting when mode='match' but no LP liquidity exists */}
+        {/* Simple no LP message */}
         {mode === 'match' && selectedOutcome && !hasLiquidityForOutcome &&
-        <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 space-y-3">
-            <div className="flex items-start gap-2">
-              <span className="text-xl">🚫</span>
-              <div className="flex-1">
-                <p className="text-xs font-bold text-destructive mb-1">No Liquidity Available</p>
-                <p className="text-[10px] text-muted-foreground leading-relaxed">
-                  No LP has been provided for <strong>{selectedOutcome === 'a' ? bet?.outcome_a : selectedOutcome === 'b' ? bet?.outcome_b : 'Draw'}</strong> yet.
-                </p>
-              </div>
-            </div>
-            <div className="bg-card/50 rounded-lg p-3 space-y-2">
-              <p className="text-[10px] font-medium text-foreground">To enable betting on this outcome:</p>
-              <ol className="text-[10px] text-muted-foreground space-y-1 list-decimal list-inside">
-                <li>Go to <strong>LP Dashboard</strong></li>
-                <li>Select this match</li>
-                <li>Choose <strong>{selectedOutcome === 'a' ? bet?.outcome_a : selectedOutcome === 'b' ? bet?.outcome_b : 'Draw'}</strong></li>
-                <li>Add liquidity (minimum ◎0.1)</li>
-              </ol>
-            </div>
-            <a href="/lp" className="block text-center bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary font-bold text-xs py-2 rounded-lg transition-colors">
-              → Go to LP Dashboard
-            </a>
-          </div>
+        <div className="bg-secondary/30 border border-border/30 rounded-xl p-3 text-center">
+          <p className="text-xs text-muted-foreground mb-2">No LP for <strong>{selectedOutcome === 'a' ? bet?.outcome_a : selectedOutcome === 'b' ? bet?.outcome_b : 'Draw'}</strong></p>
+          <a href={`/lp?matchId=${matchId}`} className="inline-block bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary font-bold text-xs py-1.5 px-4 rounded-lg transition-colors">
+            Go to LP Dashboard
+          </a>
+        </div>
         }
         
         {/* Block betting when mode='match' and selectedOffer but no unmatched liquidity */}
         {mode === 'match' && selectedOffer && (selectedOffer.amount_unmatched || 0) <= 0 &&
-        <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 space-y-3">
-            <div className="flex items-start gap-2">
-              <span className="text-xl">⚠️</span>
-              <div className="flex-1">
-                <p className="text-xs font-bold text-destructive mb-1">Offer Fully Matched</p>
-                <p className="text-[10px] text-muted-foreground leading-relaxed">
-                  This offer for <strong>{selectedOffer.outcome_label}</strong> has no remaining liquidity.
-                </p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-[10px] text-muted-foreground">
-                Choose another offer from the Liquidity Pool, or go to <strong>LP Dashboard</strong> to add your own liquidity.
-              </p>
-              <a href="/lp" className="block text-center bg-accent/10 hover:bg-accent/20 border border-accent/30 text-accent font-bold text-xs py-2 rounded-lg transition-colors">
-                → Add Liquidity Instead
-              </a>
-            </div>
-          </div>
+        <div className="bg-secondary/30 border border-border/30 rounded-xl p-3 text-center">
+          <p className="text-xs text-muted-foreground mb-2">Offer fully matched</p>
+          <a href={`/lp?matchId=${matchId}`} className="inline-block bg-accent/10 hover:bg-accent/20 border border-accent/30 text-accent font-bold text-xs py-1.5 px-4 rounded-lg transition-colors">
+            Add Liquidity Instead
+          </a>
+        </div>
         }
         
 
@@ -559,23 +529,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
         }
       </AnimatePresence>
 
-      {/* Block betting ONLY when truly no liquidity exists (not in dynamic pool mode) */}
-      {bettingMode === 'no_liquidity' && (
-        <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 space-y-3">
-          <div className="flex items-start gap-2">
-            <span className="text-xl">🚫</span>
-            <div className="flex-1">
-              <p className="text-xs font-bold text-destructive mb-1">No Liquidity Available</p>
-              <p className="text-[10px] text-muted-foreground leading-relaxed">
-                No LP has been provided for <strong>{outcomeLabel}</strong> yet.
-              </p>
-            </div>
-          </div>
-          <a href="/lp" className="block text-center bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary font-bold text-xs py-2 rounded-lg transition-colors">
-            → Go to LP Dashboard
-          </a>
-        </div>
-      )}
+
       
 
 
@@ -661,11 +615,6 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
         <>
               <Clock className="w-4 h-4 mr-2" />
               Betting Closed
-            </> :
-        bettingMode === 'no_liquidity' ?
-        <>
-              <X className="w-4 h-4 mr-2" />
-              No LP — Go to LP Dashboard
             </> :
         bettingMode === 'dynamic_pool' ?
         <>
