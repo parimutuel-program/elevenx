@@ -11,8 +11,14 @@ Deno.serve(async (req) => {
     if (!API_KEY) return Response.json({ error: 'THE_ODDS_API_KEY not set' }, { status: 500 });
 
     // Fetch all odds from The Odds API
-    const url = `https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup/odds/?apiKey=${API_KEY}&regions=eu,us&markets=h2h&oddsFormat=decimal`;
-    const response = await fetch(url);
+    const url = `https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup/odds/`;
+    const params = new URLSearchParams({
+        apiKey: API_KEY,
+        regions: 'eu,us',
+        markets: 'h2h',
+        oddsFormat: 'decimal'
+    });
+    const response = await fetch(`${url}?${params}`);
     
     if (!response.ok) {
       return Response.json({ 
@@ -103,9 +109,13 @@ Deno.serve(async (req) => {
       }
     }
 
+    const message = updated.length > 0 
+      ? `✅ Updated ${updated.length} bets with live odds`
+      : `⚠️ No odds found. Matches might not be in API yet. Check team names match exactly.`;
+
     return Response.json({
-      success: true,
-      message: `Updated ${updated.length} bets with live odds from The Odds API`,
+      success: updated.length > 0,
+      message,
       updated,
       errors: errors.length > 0 ? errors : undefined,
     });

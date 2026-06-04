@@ -27,12 +27,14 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Match not found' }, { status: 404 });
         }
 
-        // Call fetchTheOddsApi to get all matches
-        const oddsRes = await fetch('https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup/odds/', {
-            headers: {
-                'X-API-Key': Deno.env.get('THE_ODDS_API_KEY') || ''
-            }
-        });
+        // Call The Odds API
+        const apiKey = Deno.env.get('THE_ODDS_API_KEY');
+        if (!apiKey) {
+            return Response.json({ error: 'THE_ODDS_API_KEY not configured' }, { status: 500 });
+        }
+
+        const url = `https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup/odds/?apiKey=${apiKey}&regions=eu,us&markets=h2h&oddsFormat=decimal`;
+        const oddsRes = await fetch(url);
 
         if (!oddsRes.ok) {
             return Response.json({ 

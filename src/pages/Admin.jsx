@@ -243,7 +243,7 @@ export default function Admin() {
                 <RefreshCw className="w-5 h-5 text-primary" />
                 <div>
                   <p className="text-sm font-bold text-foreground">Fetch Live Odds Now</p>
-                  <p className="text-xs text-muted-foreground">Updates odds for all open bets from TheStatsAPI.</p>
+                  <p className="text-xs text-muted-foreground">Updates odds for all open bets from The Odds API.</p>
                 </div>
               </div>
               <Button
@@ -254,7 +254,11 @@ export default function Admin() {
                 {fetchOddsMutation.isPending ? 'Fetching...' : 'Fetch Odds Now'}
               </Button>
             </div>
-            {fetchOddsResult && <p className="mt-3 text-xs text-primary bg-primary/10 rounded-lg px-3 py-2">{fetchOddsResult}</p>}
+            {fetchOddsResult && (
+              <p className={`mt-3 text-xs rounded-lg px-3 py-2 ${fetchOddsResult.includes('Error') ? 'text-destructive bg-destructive/10' : 'text-primary bg-primary/10'}`}>
+                {fetchOddsResult}
+              </p>
+            )}
           </div>
 
           <div className="bg-card border border-border/50 rounded-xl p-4">
