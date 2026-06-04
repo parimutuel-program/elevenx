@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { getTeamFlag } from '@/utils/flags';
 import { DollarSign } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
 
 export default function LiquidityDetailModal({ 
   open, 
@@ -47,15 +48,28 @@ export default function LiquidityDetailModal({
   const selectedOdds = outcomes.find(o => o.key === selectedOutcome)?.odds || 1;
   const potentialLiability = (parseFloat(amount || 0) * selectedOdds).toFixed(2);
 
-  const handleCommit = () => {
-    if (amount && parseFloat(amount) > 0) {
-      onCommit({
-        bet,
-        outcome: selectedOutcome,
-        amount: parseFloat(amount),
-        potentialLiability: parseFloat(potentialLiability)
-      });
+  const handleCommit = async () => {
+    if (!amount || parseFloat(amount) <= 0) return;
+    
+    // Check market status first
+    try {
+      const statusRes = await base44.functions.invoke('checkMarketStatus', { match_id: bet.match_id });
+      console.log('[LiquidityDetailModal] Market status:', statusRes.data);
+      
+      if (statusRes.data.status === 'not_created') {
+        alert('Market not initialized on-chain. Please go to Admin panel and initialize the market first.');
+        return;
+      }
+    } catch (err) {
+      console.error('[LiquidityDetailModal] Failed to check market status:', err);
     }
+    
+    onCommit({
+      bet,
+      outcome: selectedOutcome,
+      amount: parseFloat(amount),
+      potentialLiability: parseFloat(potentialLiability)
+    });
   };
 
   return (
@@ -151,19 +165,19 @@ export default function LiquidityDetailModal({
 
           {/* Potential liability */}
           {amount && parseFloat(amount) > 0 && (
-            <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4">
+            <div className="bg-primary/10 border border-primary/30 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-4 h-4 rounded-full bg-destructive/30 flex items-center justify-center text-[10px] font-bold text-destructive">!</div>
-                <p className="text-xs font-bold text-destructive">Maximum Liability</p>
+                <div className="w-4 h-4 rounded-full bg-primary/30 flex items-center justify-center text-[10px] font-bold text-primary">💰</div>
+                <p className="text-xs font-bold text-primary">Potential Payout</p>
               </div>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-muted-foreground">If {outcomes.find(o => o.key === selectedOutcome)?.label} wins:</p>
-                  <p className="text-xs text-muted-foreground">You could lose up to</p>
+                  <p className="text-xs text-muted-foreground">You pay out</p>
                 </div>
-                <p className="font-heading font-bold text-xl text-destructive">◎{potentialLiability}</p>
+                <p className="font-heading font-bold text-xl text-primary">◎{potentialLiability}</p>
               </div>
-              <div className="mt-2 pt-2 border-t border-destructive/20">
+              <div className="mt-2 pt-2 border-t border-primary/20">
                 <p className="text-[9px] text-muted-foreground">
                   You keep your ◎{amount} stake + earn fees if they lose
                 </p>

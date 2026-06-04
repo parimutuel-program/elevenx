@@ -138,6 +138,14 @@ export default function LpDashboard() {
       if (!selectedBet) throw new Error('No bet selected');
       if (!walletAddress) throw new Error('Wallet not connected');
 
+      console.log('[provideLiquidity] Calling with:', {
+        walletAddress,
+        bet_id: selectedBet.id,
+        match_id: selectedBet.match_id,
+        outcome: selectedOutcome,
+        amount: amt,
+      });
+
       const res = await base44.functions.invoke('provideLiquidity', {
         walletAddress,
         bet_id: selectedBet.id,
@@ -146,6 +154,8 @@ export default function LpDashboard() {
         amount: amt,
       });
 
+      console.log('[provideLiquidity] Response:', res.data);
+
       if (res.data.error) throw new Error(res.data.error);
       if (!res.data.solana_instruction) {
         throw new Error(res.data.hint || 'Market not initialized on-chain.');
@@ -153,6 +163,7 @@ export default function LpDashboard() {
       return res.data;
     },
     onSuccess: (data) => {
+      console.log('[provideLiquidity] Success, setting pending tx');
       setPendingTx({
         instruction: data.solana_instruction,
         amount: parseFloat(amount),
@@ -161,6 +172,7 @@ export default function LpDashboard() {
       setPendingCommitData(data.commit_data);
     },
     onError: (err) => {
+      console.error('[provideLiquidity] Error:', err);
       setError(err.message || 'Failed to provide liquidity');
     },
   });
@@ -363,10 +375,11 @@ export default function LpDashboard() {
     setSelectedOutcome(outcome);
     setAmount(String(amount));
     setDetailModalOpen(false);
-    // Trigger the mutation after a short delay to allow state to update
+    // Use setTimeout to allow state to update first
     setTimeout(() => {
+      console.log('[handleDetailModalCommit] Triggering mutation with:', { bet, outcome, amount });
       provideLiquidityMutation.mutate();
-    }, 100);
+    }, 50);
   };
 
   return (
