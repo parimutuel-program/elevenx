@@ -8,10 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Trophy, Shield, Radio, CheckCircle2, Zap, Download, BarChart3, List, Flame, Target, RefreshCw, TestTube, RefreshCcw, Rocket, Loader } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Plus, Trophy, Shield, Radio, CheckCircle2, Zap, Download, BarChart3, List, Flame, Target, RefreshCw, TestTube, RefreshCcw, Rocket, Loader, Calendar as CalendarIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
 import AdminMatchRow from '@/components/admin/AdminMatchRow';
@@ -829,7 +832,14 @@ function CreateMatchDialog() {
     team_a: '', team_b: '', team_a_flag: '', team_b_flag: '',
     group_stage: '', match_time: '', match_end_time: '', venue: '', status: 'upcoming',
   });
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [calendarOpen, setCalendarOpen] = useState({ start: false, end: false });
   const queryClient = useQueryClient();
+
+  React.useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Match.create(data),
@@ -892,6 +902,13 @@ function CreateMatchDialog() {
               <span className="bg-card px-2 text-muted-foreground">Or create custom</span>
             </div>
           </div>
+
+          <div className="bg-secondary/30 rounded-lg p-3 mb-3">
+            <p className="text-[10px] text-muted-foreground font-mono">
+              Current Time: {format(currentTime, 'yyyy-MM-dd HH:mm:ss')} (UTC-{currentTime.getTimezoneOffset() / -60})
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">Team A</Label>
@@ -916,16 +933,103 @@ function CreateMatchDialog() {
             <Label className="text-xs">Group / Round</Label>
             <Input value={form.group_stage} onChange={e => setForm({...form, group_stage: e.target.value})} className="bg-secondary/50" placeholder="Group A" />
           </div>
+
           <div className="grid grid-cols-2 gap-3">
-            <div>
+            <div className="space-y-2">
               <Label className="text-xs">Match Start</Label>
-              <Input type="datetime-local" value={form.match_time} onChange={e => setForm({...form, match_time: e.target.value})} className="bg-secondary/50" />
+              <Popover open={calendarOpen.start} onOpenChange={(o) => setCalendarOpen({...calendarOpen, start: o})}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal h-10 bg-secondary/50",
+                      !form.match_time && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {form.match_time ? format(new Date(form.match_time), 'PPP pp') : 'Pick start time'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={form.match_time ? new Date(form.match_time) : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        const timeString = form.match_time ? new Date(form.match_time).toTimeString().slice(0, 5) : '12:00';
+                        const newDate = new Date(date);
+                        newDate.setHours(parseInt(timeString.split(':')[0]), parseInt(timeString.split(':')[1]));
+                        setForm({...form, match_time: newDate.toISOString()});
+                      }
+                      setCalendarOpen({...calendarOpen, start: false});
+                    }}
+                    initialFocus
+                  />
+                  <div className="border-t p-3">
+                    <Input
+                      type="time"
+                      value={form.match_time ? new Date(form.match_time).toTimeString().slice(0, 5) : ''}
+                      onChange={(e) => {
+                        const [hours, minutes] = e.target.value.split(':');
+                        const date = form.match_time ? new Date(form.match_time) : new Date();
+                        date.setHours(parseInt(hours), parseInt(minutes));
+                        setForm({...form, match_time: date.toISOString()});
+                      }}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
-            <div>
+
+            <div className="space-y-2">
               <Label className="text-xs">Match End</Label>
-              <Input type="datetime-local" value={form.match_end_time} onChange={e => setForm({...form, match_end_time: e.target.value})} className="bg-secondary/50" />
+              <Popover open={calendarOpen.end} onOpenChange={(o) => setCalendarOpen({...calendarOpen, end: o})}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal h-10 bg-secondary/50",
+                      !form.match_end_time && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {form.match_end_time ? format(new Date(form.match_end_time), 'PPP pp') : 'Pick end time'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={form.match_end_time ? new Date(form.match_end_time) : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        const timeString = form.match_end_time ? new Date(form.match_end_time).toTimeString().slice(0, 5) : '12:00';
+                        const newDate = new Date(date);
+                        newDate.setHours(parseInt(timeString.split(':')[0]), parseInt(timeString.split(':')[1]));
+                        setForm({...form, match_end_time: newDate.toISOString()});
+                      }
+                      setCalendarOpen({...calendarOpen, end: false});
+                    }}
+                    initialFocus
+                  />
+                  <div className="border-t p-3">
+                    <Input
+                      type="time"
+                      value={form.match_end_time ? new Date(form.match_end_time).toTimeString().slice(0, 5) : ''}
+                      onChange={(e) => {
+                        const [hours, minutes] = e.target.value.split(':');
+                        const date = form.match_end_time ? new Date(form.match_end_time) : new Date();
+                        date.setHours(parseInt(hours), parseInt(minutes));
+                        setForm({...form, match_end_time: date.toISOString()});
+                      }}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
+
           <div>
             <Label className="text-xs">Venue</Label>
             <Input value={form.venue} onChange={e => setForm({...form, venue: e.target.value})} className="bg-secondary/50" placeholder="MetLife Stadium" />
