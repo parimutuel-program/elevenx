@@ -85,6 +85,7 @@ export default function LpDashboard() {
   const [successDialog, setSuccessDialog] = useState(null);
   const [withdrawSuccessDialog, setWithdrawSuccessDialog] = useState(null);
   const [error, setError] = useState(null);
+  const [activeGroup, setActiveGroup] = useState('all');
   const [matchViewMode, setMatchViewMode] = useState('all');
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedBetForDetail, setSelectedBetForDetail] = useState(null);
@@ -105,6 +106,22 @@ export default function LpDashboard() {
   const { data: matches = [] } = useQuery({
     queryKey: ['matches'],
     queryFn: () => base44.entities.Match.list(),
+  });
+
+  // Extract unique groups from open bets
+  const groupSet = new Set(openBets.map(bet => {
+    const match = matches.find(m => m.id === bet.match_id);
+    return match?.group_stage;
+  }).filter(Boolean));
+  const groups = ['all', ...Array.from(groupSet).sort()];
+
+  // Filter open bets by active group
+  const filteredOpenBets = openBets.filter(bet => {
+    if (activeGroup !== 'all') {
+      const match = matches.find(m => m.id === bet.match_id);
+      if (!match || match.group_stage !== activeGroup) return false;
+    }
+    return true;
   });
 
   const { data: futuresMarkets = [] } = useQuery({
@@ -443,7 +460,7 @@ export default function LpDashboard() {
                     
                     {matchViewMode === 'dropdown' ? (
                       <Select onValueChange={(val) => {
-                        const bet = openBets.find(b => b.id === val);
+                        const bet = filteredOpenBets.find(b => b.id === val);
                         setSelectedBet(bet || null);
                         setSelectedOutcome('a');
                         setError(null);
@@ -452,7 +469,7 @@ export default function LpDashboard() {
                           <SelectValue placeholder="Choose an open market..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {openBets.map(bet => (
+                          {filteredOpenBets.map(bet => (
                             <SelectItem key={bet.id} value={bet.id}>
                               {bet.outcome_a} vs {bet.outcome_b}
                             </SelectItem>
@@ -460,22 +477,51 @@ export default function LpDashboard() {
                         </SelectContent>
                       </Select>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-                        {openBets.map(bet => {
-                          const match = matches.find(m => m.id === bet.match_id);
-                          return (
-                            <MatchLiquidityCard
-                              key={bet.id}
-                              bet={bet}
-                              match={match}
-                              isSelected={selectedBet?.id === bet.id}
-                              onClick={() => {
-                                setSelectedBetForDetail({ bet, match });
-                                setDetailModalOpen(true);
-                              }}
-                            />
-                          );
-                        })}
+                      <div>
+                        {/* Group Navigation */}
+                        <div className="flex gap-2 overflow-x-auto pb-2 mb-3 scrollbar-hide">
+                          <button
+                            onClick={() => setActiveGroup('all')}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                              activeGroup === 'all'
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
+                            }`}
+                          >
+                            All Groups
+                          </button>
+                          {groups.filter(g => g !== 'all').map(group => (
+                            <button
+                              key={group}
+                              onClick={() => setActiveGroup(group)}
+                              className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                                activeGroup === group
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
+                              }`}
+                            >
+                              {group}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-96 overflow-y-auto">
+                          {filteredOpenBets.map(bet => {
+                            const match = matches.find(m => m.id === bet.match_id);
+                            return (
+                              <MatchLiquidityCard
+                                key={bet.id}
+                                bet={bet}
+                                match={match}
+                                isSelected={selectedBet?.id === bet.id}
+                                onClick={() => {
+                                  setSelectedBetForDetail({ bet, match });
+                                  setDetailModalOpen(true);
+                                }}
+                              />
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
