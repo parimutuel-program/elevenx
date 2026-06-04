@@ -1,5 +1,5 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
-import { PublicKey } from 'npm:@solana/web3.js@1.98.4';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { Connection, PublicKey } from 'npm:@solana/web3.js@1.98.4';
 import { Buffer } from 'node:buffer';
 
 /**
@@ -48,17 +48,15 @@ Deno.serve(async (req) => {
     
     console.log('Withdraw check - Offer status:', offer.status, 'amount_unmatched:', offer.amount_unmatched, 'userBet.status:', userBet.status);
     
-    // Only allow withdrawal if offer is still open in our DB
-    // If offer is cancelled/settled, the on-chain withdrawal already happened
-    if (offer.status === 'cancelled' || offer.status === 'settled') {
-      return Response.json({ error: 'This offer has already been withdrawn or settled. Funds are already in your wallet.' }, { status: 400 });
-    }
-    
-    // Verify there's unmatched liquidity
+    // Check if there's unmatched liquidity in DB
     const withdrawAmount = offer.amount_unmatched || 0;
     if (withdrawAmount <= 0) {
-      return Response.json({ error: 'No unmatched liquidity remaining (offer may be fully matched)' }, { status: 400 });
+      return Response.json({ error: 'No unmatched liquidity remaining' }, { status: 400 });
     }
+    
+    // Allow withdrawal even if offer is cancelled/settled - on-chain check will verify funds exist
+    
+
 
     // Fetch Bet and Match
     const bets = await base44.entities.Bet.filter({ id: userBet.bet_id });
@@ -102,6 +100,20 @@ Deno.serve(async (req) => {
       userBet_outcome: userBet.outcome,
     });
 
+    // Check on-chain balance before allowing withdrawal
+    const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+    const lpOfferPubkey = new PublicKey(offer.solana_position_pda || lpOfferPda);
+    const accountInfo = await connection.getAccountInfo(lpOfferPubkey);
+    const onChainBalance = (accountInfo?.lamports || 0) / 1e9;
+    
+    // Account exists but only has rent-exempt minimum (funds already withdrawn)
+    if (onChainBalance < withdrawAmount + 0.001) {
+      return Response.json({ 
+        error: 'Funds already withdrawn on-chain. Check your wallet balance.',
+        hint: `On-chain balance: ◎${onChainBalance.toFixed(4)}, DB shows: ◎${withdrawAmount.toFixed(4)}`
+      }, { status: 400 });
+    }
+    
     return Response.json({
       success: true,
       userBetId,
@@ -111,7 +123,7 @@ Deno.serve(async (req) => {
         instruction_type: 'withdraw_liquidity',
         programId: SOLANA_PROGRAM_ID,
         marketPda: marketPda.toBase58(),
-        lpOfferPda: lpOfferPda, // Already a string from database
+        lpOfferPda: lpOfferPda,
       },
       message: `Sign to withdraw ◎${withdrawAmount}`,
     });

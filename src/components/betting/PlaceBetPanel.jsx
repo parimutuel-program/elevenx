@@ -54,18 +54,16 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
   (selectedOutcome === 'a' ? bet?.odds_a : selectedOutcome === 'b' ? bet?.odds_b : bet?.odds_draw) || 0 :
   0;
 
-  // For match mode: max stake is what the LP offer covers (amount_unmatched * (odds - 1))
+  // For match mode: max stake is what the LP offer covers (amount_unmatched / (odds - 1))
+  // This ensures the LP's liability covers the bettor's potential winnings
   const maxMatcherStake = mode === 'match' && selectedOffer ?
-    selectedOffer.amount_unmatched * (selectedOffer.odds_at_creation - 1) :
+    selectedOffer.amount_unmatched / (selectedOffer.odds_at_creation - 1) :
     null;
-
-  // For LP mode: no limit - LPs can add as much liquidity as they want
-  const maxLpAmount = mode === 'offer' ? null : null;
 
   const lpPayout = mode === 'offer' ? stakeNum * odds : 0;
   const matcherPayout = mode === 'match' && selectedOffer ?
-  stakeNum + stakeNum / (selectedOffer.odds_at_creation - 1) :
-  0;
+    stakeNum * selectedOffer.odds_at_creation :
+    0;
 
   const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
@@ -268,7 +266,9 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
         <p className="text-xs text-muted-foreground">
           {mode === 'offer' ?
           `Odds: ${odds.toFixed(2)}x — Add any amount — your offer goes into the orderbook until matched` :
-          `Max stake: ◎${maxMatcherStake?.toFixed(4)} — locked immediately once confirmed`
+          selectedOffer ?
+          `Max stake: ◎${maxMatcherStake?.toFixed(4)} @ ${selectedOffer.odds_at_creation.toFixed(2)}x — locked immediately` :
+          'No liquidity available for this outcome'
           }
         </p>
         
@@ -309,22 +309,27 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
           className="bg-secondary/50 border-border/50 text-lg font-heading font-bold h-12" />
         
         <div className="flex gap-2 mt-2 flex-wrap">
-          {QUICK_AMOUNTS.map((qa) => {
-            const capped = maxMatcherStake ? Math.min(qa, maxMatcherStake) : qa;
-            return (
-              <button key={qa} onClick={() => setAmount(String(capped))}
-              className="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 rounded-lg transition-colors">
-                ◎{qa}
-              </button>);
+          {mode === 'match' && maxMatcherStake !== null && maxMatcherStake <= 0 ? (
+            <p className="text-xs text-destructive font-bold">No liquidity available - LP must provide liquidity first</p>
+          ) : (
+            <>
+              {QUICK_AMOUNTS.map((qa) => {
+                const capped = maxMatcherStake !== null ? Math.min(qa, maxMatcherStake) : qa;
+                return (
+                  <button key={qa} onClick={() => setAmount(String(capped))}
+                  className="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 rounded-lg transition-colors">
+                    ◎{qa}
+                  </button>);
 
-          })}
-          {maxMatcherStake &&
-          <button onClick={() => setAmount(String(maxMatcherStake))}
-          className="px-3 py-1.5 text-xs font-medium bg-accent/10 text-accent hover:bg-accent/20 rounded-lg transition-colors">
-              Max ◎{maxMatcherStake.toFixed(4)}
-            </button>
-          }
-
+              })}
+              {maxMatcherStake !== null && maxMatcherStake > 0 &&
+              <button onClick={() => setAmount(String(maxMatcherStake))}
+              className="px-3 py-1.5 text-xs font-medium bg-accent/10 text-accent hover:bg-accent/20 rounded-lg transition-colors">
+                  Max ◎{maxMatcherStake.toFixed(4)}
+                </button>
+              }
+            </>
+          )}
         </div>
       </div>
 
@@ -369,6 +374,12 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
         }
       </AnimatePresence>
 
+      {mode === 'match' && maxMatcherStake !== null && maxMatcherStake <= 0 &&
+      <p className="text-xs text-destructive text-center font-bold bg-destructive/10 border border-destructive/30 rounded-lg p-3">
+        ⚠️ No liquidity available - An LP must provide liquidity for this outcome first
+      </p>
+      }
+      
       {stakeNum > 0 && mode === 'match' && maxMatcherStake && stakeNum > maxMatcherStake &&
       <p className="text-xs text-destructive text-center font-semibold">Not enough liquidity to place bet</p>
       }
@@ -427,13 +438,18 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
 
       <Button
         onClick={handleGetInstruction}
-        disabled={stakeNum <= 0 || isPreparing || timeRemaining && timeRemaining.total <= 0 || mode === 'match' && maxMatcherStake && stakeNum > maxMatcherStake}
+        disabled={stakeNum <= 0 || isPreparing || timeRemaining && timeRemaining.total <= 0 || mode === 'match' && maxMatcherStake !== null && maxMatcherStake <= 0 || mode === 'match' && maxMatcherStake && stakeNum > maxMatcherStake}
         className="w-full h-12 font-heading font-bold text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
         
           {timeRemaining && timeRemaining.total <= 0 ?
         <>
               <Clock className="w-4 h-4 mr-2" />
               Betting Closed
+            </> :
+        mode === 'match' && maxMatcherStake !== null && maxMatcherStake <= 0 ?
+        <>
+              <X className="w-4 h-4 mr-2" />
+              No Liquidity Available
             </> :
         isPreparing ? 'Preparing...' : mode === 'offer' ?
         `Place Offer ◎${stakeNum > 0 ? stakeNum.toFixed(2) : '0.00'}` :
