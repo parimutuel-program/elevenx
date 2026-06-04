@@ -94,19 +94,29 @@ Deno.serve(async (req) => {
     let positionData = null;
     if (positionInfo) {
       // Parse position account data (8 byte discriminator + 87 bytes data = 95 bytes total)
+      // Layout: market(32) + bettor(32) + outcome(1) + matched_stake(8) + pending_stake(8) + odds_bps(8) + potential_payout(8) + claimable(8) + claimed(1) + bump(1) = 99 bytes + 8 discriminator = 107 total
       const data = positionInfo.data;
-      positionData = {
-        outcome: data[73], // outcome is at offset 73 (after 8+32+32)
-        matched_stake: data.readBigUInt64LE(74),
-        potential_payout: data.readBigUInt64LE(82),
-        claimed: data[94] === 1, // claimed is at offset 94
-      };
-      console.log('[claimWinnings] Position account data:', {
-        outcome: positionData.outcome,
-        matched_stake: positionData.matched_stake.toString(),
-        potential_payout: positionData.potential_payout.toString(),
-        claimed: positionData.claimed,
-      });
+      console.log('[claimWinnings] Position data length:', data.length);
+      console.log('[claimWinnings] Position data (hex):', data.toString('hex'));
+      
+      if (data.length >= 107) {
+        positionData = {
+          outcome: data[72], // outcome is at offset 72 (8 disc + 32 market + 32 bettor)
+          matched_stake: data.readBigUInt64LE(73),
+          pending_stake: data.readBigUInt64LE(81),
+          potential_payout: data.readBigUInt64LE(97),
+          claimed: data[105] === 1, // claimed is at offset 105 (8+32+32+1+8+8+8+8+8)
+        };
+        console.log('[claimWinnings] Position account data:', {
+          outcome: positionData.outcome,
+          matched_stake: positionData.matched_stake.toString(),
+          pending_stake: positionData.pending_stake.toString(),
+          potential_payout: positionData.potential_payout.toString(),
+          claimed: positionData.claimed,
+        });
+      } else {
+        console.log('[claimWinnings] Position data too short, skipping parse');
+      }
     }
     
     console.log('[claimWinnings] Market state:', {
