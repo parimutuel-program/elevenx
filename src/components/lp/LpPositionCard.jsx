@@ -1,183 +1,173 @@
 import React from 'react';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
-import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { TrendingUp, Wallet, ExternalLink, ArrowUpCircle, DollarSign, Percent } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { DollarSign, TrendingUp, Clock, CheckCircle, ArrowRight, Percent, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { getFlagEmoji } from '@/utils/flags';
+import { Badge } from '@/components/ui/badge';
+import { Link } from 'react-router-dom';
+import BetCountdown from '@/components/betting/BetCountdown';
 
-export default function LpPositionCard({ position, index, walletAddress, onWithdrawRequest }) {
-  const queryClient = useQueryClient();
-  
-  const { data: match } = useQuery({
-    queryKey: ['match', position.match_id],
-    queryFn: () => base44.entities.Match.get(position.match_id),
-    enabled: !!position.match_id,
-  });
-  
-  // Get flag code from match data
-  const getFlagCode = () => {
-    if (!match) return 'us';
-    if (position.outcome === 'a') return match.team_a_flag || 'us';
-    if (position.outcome === 'b') return match.team_b_flag || 'us';
-    return 'us';
-  };
-  
-  const flagCode = getFlagCode();
-  const matchRate = position.liquidity_deposited > 0 
-    ? Math.round((position.liquidity_matched / position.liquidity_deposited) * 100) 
+export default function LpPositionCard({ offer, match, onWithdraw }) {
+  if (!offer || !match) return null;
+
+  const matchPct = offer.amount_offered > 0
+    ? Math.round((offer.amount_matched / offer.amount_offered) * 100)
     : 0;
 
-  const withdrawMutation = useMutation({
-    mutationFn: async () => {
-      const res = await base44.functions.invoke('withdrawLiquidity', { 
-        walletAddress, 
-        userBetId: position.id 
-      });
-      if (res.data.error) throw new Error(res.data.error);
-      return res.data;
-    },
-    onSuccess: (data) => {
-      onWithdrawRequest({
-        positionId: position.id,
-        offerId: data.offerId,
-        withdrawAmount: position.liquidity_unmatched,
-        solanaInstruction: data.solana_instruction,
-      });
-    },
-  });
+  const hasUnmatched = (offer.amount_unmatched || 0) > 0;
+  const isFullyMatched = offer.status === 'fully_matched';
+  const isPartiallyMatched = offer.status === 'partially_matched';
 
-  const canWithdraw = position.liquidity_unmatched > 0 && position.status !== 'settled';
+  // Calculate potential earnings (2% fee on matched portion)
+  const potentialEarnings = offer.amount_matched * 0.02;
+
+  const getOutcomeLabel = () => {
+    if (offer.outcome === 'a') return offer.outcome_label || match.team_a;
+    if (offer.outcome === 'b') return offer.outcome_label || match.team_b;
+    return 'Draw';
+  };
+
+  const statusConfig = {
+    open: { color: 'text-muted-foreground', bg: 'bg-secondary/20', border: 'border-secondary/30' },
+    partially_matched: { color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30' },
+    fully_matched: { color: 'text-accent', bg: 'bg-accent/10', border: 'border-accent/30' },
+  };
+
+  const currentStatus = statusConfig[offer.status] || statusConfig.open;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className="h-full"
+      className="relative rounded-2xl overflow-hidden border border-white/10"
+      style={{
+        background: 'linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)'
+      }}
     >
-      <Card className="bg-card border border-primary/30 rounded-2xl overflow-hidden h-full">
-        <CardContent className="p-0 h-full">
-          <div className="p-5 space-y-4 h-full flex flex-col">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3 flex-1">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
-                  {position.outcome === 'a' || position.outcome === 'b' ? (
-                    <img 
-                      src={`https://flagcdn.com/w80/${flagCode.toLowerCase()}.png`}
-                      alt={position.outcome_label}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextElementSibling.style.display = 'flex';
-                      }}
-                    />
-                  ) : null}
-                  <div className="w-full h-full flex items-center justify-center text-primary absolute inset-0" style={{ display: position.outcome === 'draw' ? 'flex' : 'none' }}>
-                    <span className="text-2xl">🤝</span>
-                  </div>
-                  <TrendingUp className="w-6 h-6 text-primary absolute inset-0 flex items-center justify-center" style={{ display: position.outcome !== 'draw' ? 'none' : 'flex' }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <h3 className="font-heading font-bold text-lg truncate">{position.match_title || 'Market'}</h3>
-                    <Badge className="text-[10px] border bg-primary/10 text-primary border-primary/20">LP Position</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Backing <span className="text-primary font-semibold">{position.outcome_label}</span>
-                  </p>
-                </div>
-              </div>
-              <Link to={`/match/${position.match_id}`}>
-                <Button variant="ghost" size="icon" className="rounded-xl">
-                  <ExternalLink className="w-4 h-4" />
-                </Button>
-              </Link>
+      {/* Glow effect */}
+      <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-10`} 
+        style={{ background: isFullyMatched ? '#14f195' : isPartiallyMatched ? '#fbbf24' : '#a69cf2' }} />
+
+      <div className="relative p-4 sm:p-5 space-y-3">
+        {/* Header - Outcome & Status */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-lg sm:text-xl filter drop-shadow-lg">
+                {offer.outcome === 'a' ? match.team_a_flag : offer.outcome === 'b' ? match.team_b_flag : '🤝'}
+              </span>
+              <h3 className="font-heading font-bold text-sm sm:text-base text-white truncate">
+                {getOutcomeLabel()}
+              </h3>
             </div>
+            <p className="text-[9px] sm:text-[10px] text-white/50 truncate">
+              {match.group_stage || 'World Cup 2026'}
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <Badge className={`${currentStatus.bg} ${currentStatus.border} ${currentStatus.color} text-[9px] sm:text-[10px] font-bold border`}>
+              {offer.status.replace('_', ' ')}
+            </Badge>
+            <BetCountdown openUntil={match.match_end_time} className="text-[8px]" />
+          </div>
+        </div>
 
-            {/* Liquidity Stats Grid */}
-            <div className="grid grid-cols-3 gap-3 bg-secondary/30 rounded-xl p-4">
-              <div>
-                <p className="text-[10px] text-muted-foreground mb-1 flex items-center gap-1">
-                  <DollarSign className="w-3 h-3" /> Capital Deposited
-                </p>
-                <p className="font-heading font-bold text-foreground">◎{position.liquidity_deposited?.toFixed(4)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground mb-1 flex items-center gap-1">
-                  <ArrowUpCircle className="w-3 h-3" /> Matched
-                </p>
-                <p className="font-heading font-bold text-accent">◎{position.liquidity_matched?.toFixed(4)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground mb-1 flex items-center gap-1">
-                  <Wallet className="w-3 h-3" /> Available to Withdraw
-                </p>
-                <p className="font-heading font-bold text-yellow-400">◎{position.liquidity_unmatched?.toFixed(4)}</p>
-              </div>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
+          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-2.5 border border-white/10">
+            <div className="flex items-center gap-1 mb-1">
+              <DollarSign className="w-2.5 h-2.5 text-muted-foreground" />
+              <span className="text-[8px] sm:text-[9px] text-white/40 uppercase tracking-wider">Committed</span>
             </div>
+            <p className="font-heading font-bold text-white text-xs sm:text-sm">
+              ◎{(offer.amount_offered || 0).toFixed(4)}
+            </p>
+          </div>
 
-            {/* Match Rate Progress */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Utilization Rate</span>
-                <span className="font-bold text-primary">{matchRate}%</span>
-              </div>
-              <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all" 
-                  style={{ width: `${matchRate}%` }} 
-                />
-              </div>
+          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-2.5 border border-white/10">
+            <div className="flex items-center gap-1 mb-1">
+              <CheckCircle className="w-2.5 h-2.5 text-accent" />
+              <span className="text-[8px] sm:text-[9px] text-white/40 uppercase tracking-wider">Matched</span>
             </div>
+            <p className="font-heading font-bold text-accent text-xs sm:text-sm">
+              ◎{(offer.amount_matched || 0).toFixed(4)}
+            </p>
+          </div>
 
-            {/* Potential Yield */}
-            {position.potential_yield > 0 && (
-              <div className="bg-accent/5 border border-accent/20 rounded-xl p-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Percent className="w-4 h-4 text-accent" />
-                  <span className="text-xs text-muted-foreground">Estimated Yield</span>
-                </div>
-                <span className="font-bold text-accent">◎{position.potential_yield?.toFixed(4)}</span>
-              </div>
-            )}
+          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-2.5 border border-white/10">
+            <div className="flex items-center gap-1 mb-1">
+              <Clock className="w-2.5 h-2.5 text-yellow-400" />
+              <span className="text-[8px] sm:text-[9px] text-white/40 uppercase tracking-wider">Unmatched</span>
+            </div>
+            <p className="font-heading font-bold text-yellow-400 text-xs sm:text-sm">
+              ◎{(offer.amount_unmatched || 0).toFixed(4)}
+            </p>
+          </div>
+        </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-2">
-              {canWithdraw ? (
-                <Button
-                  onClick={() => withdrawMutation.mutate()}
-                  disabled={withdrawMutation.isPending}
-                  className="flex-1 h-11 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 font-bold rounded-xl border border-yellow-500/30"
-                >
-                  {withdrawMutation.isPending ? (
-                    <div className="w-5 h-5 border-2 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Wallet className="w-4 h-4 mr-2" />
-                      Remove Liquidity
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <div className="flex-1 text-center py-2 text-sm text-muted-foreground bg-secondary/30 rounded-xl">
-                  {position.status === 'fully_matched' ? 'Fully Utilized' : 
-                   position.status === 'settled' ? 'Position Settled' : 'No Liquidity Available'}
-                </div>
-              )}
-              <Link to={`/match/${position.match_id}`} className="flex-1">
-                <Button variant="outline" className="w-full h-11 rounded-xl border-border/50">
-                  View Market
-                </Button>
-              </Link>
+        {/* Earnings & Progress */}
+        <div className="space-y-2 pt-2 border-t border-white/10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Percent className="w-3 h-3 text-primary" />
+              <span className="text-[9px] sm:text-[10px] text-white/50">Fees Earned</span>
+            </div>
+            <p className="font-heading font-bold text-primary text-xs sm:text-sm">
+              ◎{potentialEarnings.toFixed(4)}
+            </p>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between text-[8px] sm:text-[10px] text-white/40 mb-1.5">
+              <span>Match Rate</span>
+              <span className="font-bold text-white/60">{matchPct}%</span>
+            </div>
+            <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/10">
+              <div 
+                className={`h-full rounded-full transition-all duration-500 ${
+                  isFullyMatched ? 'bg-gradient-to-r from-accent to-emerald-400' : 
+                  isPartiallyMatched ? 'bg-gradient-to-r from-yellow-500 to-yellow-400' : 
+                  'bg-gradient-to-r from-primary/50 to-primary'
+                }`}
+                style={{ width: `${matchPct}%` }}
+              />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-2 border-t border-white/10">
+          {hasUnmatched && onWithdraw ? (
+            <Button
+              onClick={() => onWithdraw(offer)}
+              variant="outline"
+              className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 rounded-xl font-heading font-bold"
+            >
+              <Clock className="w-3 h-3 mr-1" />
+              Withdraw ◎{(offer.amount_unmatched || 0).toFixed(4)}
+            </Button>
+          ) : (
+            <Button
+              disabled
+              variant="outline"
+              className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-accent/30 text-accent bg-accent/10 rounded-xl font-heading font-bold"
+            >
+              <CheckCircle className="w-3 h-3 mr-1" />
+              Fully Locked
+            </Button>
+          )}
+          
+          <Link to={`/match/${offer.match_id}`} className="flex-1">
+            <Button
+              variant="outline"
+              className="w-full h-8 sm:h-9 text-[10px] sm:text-xs border-border/50 text-white/70 hover:text-white hover:bg-white/5 rounded-xl font-heading font-bold"
+            >
+              View Market
+              <ArrowRight className="w-3 h-3 ml-1" />
+            </Button>
+          </Link>
+        </div>
+      </div>
     </motion.div>
   );
 }

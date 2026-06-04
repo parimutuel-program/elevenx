@@ -17,6 +17,7 @@ import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner
 import FuturesLpPanel from '@/components/lp/FuturesLpPanel';
 import MatchLiquidityCard from '@/components/lp/MatchLiquidityCard';
 import LiquidityDetailModal from '@/components/lp/LiquidityDetailModal';
+import LpPositionCard from '@/components/lp/LpPositionCard';
 
 const SuccessDialog = ({ open, onClose, data, isWithdraw }) => {
   const solscanUrl = `https://solscan.io/tx/${data?.signature}?cluster=devnet`;
@@ -473,12 +474,15 @@ export default function LpDashboard() {
 
       {isConnected && (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-2 mb-6 bg-secondary/50">
+          <TabsList className="grid grid-cols-3 mb-6 bg-secondary/50">
             <TabsTrigger value="matches" className="font-heading font-bold">
               <TrendingUp className="w-4 h-4 mr-2" /> Match LP
             </TabsTrigger>
             <TabsTrigger value="futures" className="font-heading font-bold">
               <Trophy className="w-4 h-4 mr-2" /> Futures LP
+            </TabsTrigger>
+            <TabsTrigger value="positions" className="font-heading font-bold">
+              <DollarSign className="w-4 h-4 mr-2" /> My LP
             </TabsTrigger>
           </TabsList>
 
@@ -664,104 +668,7 @@ export default function LpDashboard() {
               )}
             </motion.div>
 
-            {/* My active offers */}
-            {activeOffers.length > 0 && (
-              <section>
-                <h2 className="font-heading font-bold text-sm mb-3 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-primary" /> Active LP Positions ({activeOffers.length})
-                </h2>
-                <div className="space-y-2">
-                  {activeOffers.map((offer, i) => {
-                    const offerWithUserBet = offersWithUserBet.find(o => o.id === offer.id) || offer;
-                    const matchPct = offer.amount_offered > 0
-                      ? Math.round((offer.amount_matched / offer.amount_offered) * 100)
-                      : 0;
-                    const hasUnmatched = (offer.amount_unmatched || 0) > 0;
-                    
-                    return (
-                      <motion.div key={offer.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-                        className="bg-card border border-border/50 rounded-xl p-3 sm:p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-heading font-bold text-xs sm:text-sm truncate">{getOutcomeLabel(offer)}</p>
-                            <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{getMatchTitle(offer.match_id)}</p>
-                          </div>
-                          <Badge className={`text-[8px] sm:text-[10px] shrink-0 ${
-                            offer.status === 'fully_matched' ? 'bg-accent/20 text-accent' :
-                            offer.status === 'partially_matched' ? 'bg-yellow-500/20 text-yellow-400' :
-                            'bg-secondary text-secondary-foreground'
-                          }`}>{offer.status}</Badge>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2 sm:gap-3 text-[10px] sm:text-xs mt-2">
-                          <div>
-                            <p className="text-muted-foreground">Committed</p>
-                            <p className="font-bold">◎{(offer.amount_offered || 0).toFixed(4)}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Matched</p>
-                            <p className="font-bold text-accent">◎{(offer.amount_matched || 0).toFixed(4)}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Unmatched</p>
-                            <p className="font-bold text-yellow-400">◎{(offer.amount_unmatched || 0).toFixed(4)}</p>
-                          </div>
-                        </div>
-                        <div className="mt-3">
-                          <div className="flex justify-between text-[8px] sm:text-[10px] text-muted-foreground mb-1">
-                            <span>Match rate</span><span>{matchPct}%</span>
-                          </div>
-                          <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                            <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${matchPct}%` }} />
-                          </div>
-                        </div>
-                        
-                        {hasUnmatched && (
-                          <div className="mt-3">
-                            {pendingTx && pendingTx?.userBetId === offerWithUserBet.userBetId ? (
-                              <SolanaTransactionSigner
-                                instruction={pendingTx.instruction}
-                                amount={pendingTx.amount}
-                                onSuccess={handleWithdrawSuccess}
-                                onError={handleTxError}
-                              />
-                            ) : (
-                              <Button
-                                onClick={() => withdrawLiquidityMutation.mutate(offerWithUserBet)}
-                                disabled={withdrawLiquidityMutation.isPending}
-                                variant="outline"
-                                className="w-full h-7 sm:h-8 text-[10px] sm:text-xs border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 rounded-lg"
-                              >
-                                {withdrawLiquidityMutation.isPending ? (
-                                  <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin" />
-                                ) : (
-                                  <>Withdraw ◎{(offer.amount_unmatched || 0).toFixed(4)}</>
-                                )}
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                        
-                        <Link to={`/match/${offer.match_id}`}>
-                          <Button size="sm" variant="outline" className="w-full mt-3 h-7 sm:h-8 text-[10px] sm:text-xs border-border/50 rounded-lg">
-                            <span className="hidden sm:inline">View Market</span>
-                            <span className="sm:hidden">View</span>
-                            <ArrowRight className="w-2.5 h-2.5 sm:w-3 sm:h-3 ml-1" />
-                          </Button>
-                        </Link>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
 
-            {myOffers.length === 0 && (
-              <div className="text-center py-12 sm:py-16">
-                <TrendingUp className="w-8 h-8 sm:w-10 sm:h-10 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">No LP positions yet</p>
-                <p className="text-xs text-muted-foreground/60 mt-1">Select a market to provide liquidity</p>
-              </div>
-            )}
           </TabsContent>
 
           <TabsContent value="futures" className="space-y-6">
@@ -795,6 +702,90 @@ export default function LpDashboard() {
               isConnected={isConnected}
               connect={connect}
             />
+          </TabsContent>
+
+          <TabsContent value="positions" className="space-y-4 sm:space-y-6">
+            {/* My LP Positions Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+              {[
+                { label: 'Total Committed', value: `◎${totalCommitted.toFixed(4)}`, icon: DollarSign, color: 'text-primary' },
+                { label: 'Matched', value: `◎${totalMatched.toFixed(4)}`, icon: CheckCircle2, color: 'text-accent' },
+                { label: 'Unmatched', value: `◎${totalUnmatched.toFixed(4)}`, icon: Clock, color: 'text-yellow-400' },
+                { label: 'Active Offers', value: activeOffers.length.toString(), icon: TrendingUp, color: 'text-chart-2' },
+              ].map((s, i) => (
+                <motion.div key={i} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                  className="bg-card border border-border/50 rounded-xl sm:rounded-2xl p-3 sm:p-4">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <s.icon className={`w-3 h-3 sm:w-4 sm:h-4 ${s.color}`} />
+                    <p className="text-[8px] sm:text-[10px] text-muted-foreground uppercase tracking-wider">{s.label}</p>
+                  </div>
+                  <p className={`font-heading font-bold text-base sm:text-lg ${s.color}`}>{s.value}</p>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* LP Positions List */}
+            <div className="space-y-3">
+              <h2 className="font-heading font-bold text-sm text-muted-foreground">Your LP Positions</h2>
+              {offersWithUserBet.length === 0 ? (
+                <div className="bg-card border border-border/50 rounded-2xl p-8 text-center">
+                  <TrendingUp className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                  <p className="font-heading font-bold text-sm text-muted-foreground mb-1">No LP positions yet</p>
+                  <p className="text-xs text-muted-foreground">Provide liquidity to start earning fees</p>
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:gap-4">
+                  {offersWithUserBet.map((offer) => {
+                    const match = matches.find(m => m.id === offer.match_id);
+                    const potentialEarnings = (offer.amount_matched || 0) * 0.02; // 2% fee
+                    const matchPct = offer.amount_offered > 0 ? ((offer.amount_matched || 0) / offer.amount_offered * 100) : 0;
+                    const isFullyMatched = offer.status === 'fully_matched';
+                    const isPartiallyMatched = offer.status === 'partially_matched';
+                    const hasUnmatched = (offer.amount_unmatched || 0) > 0;
+
+                    const getOutcomeLabel = () => {
+                      if (offer.outcome === 'a') return offer.outcome_label || match?.team_a || 'Team A';
+                      if (offer.outcome === 'b') return offer.outcome_label || match?.team_b || 'Team B';
+                      return 'Draw';
+                    };
+
+                    const currentStatus = {
+                      open: { bg: 'bg-primary/10', border: 'border-primary/30', color: 'text-primary' },
+                      partially_matched: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', color: 'text-yellow-400' },
+                      fully_matched: { bg: 'bg-accent/10', border: 'border-accent/30', color: 'text-accent' },
+                    }[offer.status] || { bg: 'bg-muted/10', border: 'border-muted/30', color: 'text-muted-foreground' };
+
+                    return (
+                      <LpPositionCard
+                        key={offer.id}
+                        offer={offer}
+                        match={match}
+                        potentialEarnings={potentialEarnings}
+                        matchPct={matchPct}
+                        isFullyMatched={isFullyMatched}
+                        isPartiallyMatched={isPartiallyMatched}
+                        hasUnmatched={hasUnmatched}
+                        currentStatus={currentStatus}
+                        getOutcomeLabel={getOutcomeLabel}
+                        onWithdraw={(o) => {
+                          withdrawLiquidityMutation.mutate(o);
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Withdraw Transaction Signer */}
+            {pendingTx && pendingTx.type === 'withdraw_liquidity' && (
+              <SolanaTransactionSigner
+                instruction={pendingTx.instruction}
+                amount={pendingTx.amount}
+                onSuccess={handleWithdrawSuccess}
+                onError={() => setPendingTx(null)}
+              />
+            )}
           </TabsContent>
         </Tabs>
       )}

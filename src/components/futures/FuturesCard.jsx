@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Clock, Zap, Globe, Star, Lock, ChevronRight, Droplets, Trophy, Flag } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import BetCountdown from '@/components/betting/BetCountdown';
 
 export default function FuturesCard({ market, index, selected, onSelect, onBet }) {
   const [expanded, setExpanded] = useState(false);
@@ -59,19 +60,16 @@ export default function FuturesCard({ market, index, selected, onSelect, onBet }
           </div>
         </div>
 
-        <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Clock className="w-3 h-3" /> 
-            Closes {new Date(market.open_until).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-          </span>
-          <span className="flex items-center gap-1">
+        <div className="flex items-center justify-between gap-3 text-[10px] text-muted-foreground">
+          <div className="flex items-center gap-1">
             <Zap className="w-3 h-3 text-primary" /> 
             Fixed odds
-          </span>
-          <span className="flex items-center gap-1">
+          </div>
+          <div className="flex items-center gap-1">
             <Globe className="w-3 h-3" /> 
             On-chain
-          </span>
+          </div>
+          <BetCountdown openUntil={market.open_until} />
         </div>
       </div>
 
