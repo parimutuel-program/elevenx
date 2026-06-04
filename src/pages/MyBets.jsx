@@ -298,20 +298,21 @@ export default function MyBets() {
         onSignSuccess={handleRefundSuccess} />
       
       
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="font-heading font-black text-3xl mb-1">My Bets Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Track your World Cup betting performance</p>
+          <h1 className="font-heading font-black text-2xl sm:text-3xl mb-1">My Bets Dashboard</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Track your World Cup betting performance</p>
         </div>
         <Link to="/matches">
-          <Button variant="outline" className="gap-2 rounded-xl">
+          <Button variant="outline" className="gap-2 rounded-xl h-10 px-4 text-xs sm:text-sm">
             <Activity className="w-4 h-4" />
-            Browse Matches
+            <span className="hidden sm:inline">Browse Matches</span>
+            <span className="sm:hidden">Matches</span>
           </Button>
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <StatCard
           label="Total Bet"
           value={`◎${totalStaked.toFixed(4)}`}
@@ -344,7 +345,7 @@ export default function MyBets() {
       
       {/* LP Stats */}
       {myLpPositions.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
           <QuickStat
             label="Liquidity Provided"
             value={`◎${myLpPositions.reduce((s, lp) => s + (lp.liquidity_deposited || lp.amount || 0), 0).toFixed(4)}`}
@@ -365,7 +366,7 @@ export default function MyBets() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
         <QuickStat
           label="Active Bets"
           value={activeBets.length}
@@ -388,23 +389,26 @@ export default function MyBets() {
 
       <Tabs defaultValue="bets" className="space-y-4">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 bg-card border border-border/50 rounded-xl">
-          <TabsTrigger value="bets" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground rounded-lg">
-            <Trophy className="w-4 h-4 mr-2" />
-            My Bets ({myMatcherBets.length})
+          <TabsTrigger value="bets" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground rounded-lg text-xs sm:text-sm">
+            <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+            <span className="hidden sm:inline">My Bets ({myMatcherBets.length})</span>
+            <span className="sm:hidden">Bets ({myMatcherBets.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="liquidity" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg">
-            <TrendingUp className="w-4 h-4 mr-2" />
-            Liquidity ({myLpPositions.length})
+          <TabsTrigger value="liquidity" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg text-xs sm:text-sm">
+            <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+            <span className="hidden sm:inline">Liquidity ({myLpPositions.length})</span>
+            <span className="sm:hidden">LP ({myLpPositions.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="history" className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground rounded-lg">
-            <BarChart3 className="w-4 h-4 mr-2" />
-            History ({completedBets.length})
+          <TabsTrigger value="history" className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground rounded-lg text-xs sm:text-sm">
+            <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+            <span className="hidden sm:inline">History ({completedBets.length})</span>
+            <span className="sm:hidden">History</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="bets" className="space-y-4">
+        <TabsContent value="bets" className="space-y-3">
           {myMatcherBets.filter(b => b.status === 'active' || b.status === 'pending' || b.status === 'won').length > 0 ?
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {myMatcherBets.filter(b => b.status === 'active' || b.status === 'pending' || b.status === 'won').map((bet, i) =>
             <BetCard
               key={bet.id}
@@ -420,9 +424,9 @@ export default function MyBets() {
           }
         </TabsContent>
 
-        <TabsContent value="liquidity" className="space-y-4">
+        <TabsContent value="liquidity" className="space-y-3">
           {myLpPositions.length > 0 ?
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {myLpPositions.map((lp, i) => (
                 <LpPositionCard
                   key={lp.id}
@@ -446,9 +450,9 @@ export default function MyBets() {
           }
         </TabsContent>
 
-        <TabsContent value="history" className="space-y-4">
+        <TabsContent value="history" className="space-y-3">
           {myMatcherBets.filter(b => ['lost', 'claimed', 'refunded', 'void'].includes(b.status)).length > 0 ?
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {myMatcherBets.filter(b => ['lost', 'claimed', 'refunded', 'void'].includes(b.status)).map((bet, i) =>
             <BetCard
               key={bet.id}
@@ -466,14 +470,15 @@ export default function MyBets() {
       </Tabs>
 
       {myBets.length === 0 && !isLoading &&
-      <div className="text-center py-20">
-          <Trophy className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
-          <p className="text-muted-foreground text-lg mb-2">No bets yet</p>
-          <p className="text-muted-foreground text-sm mb-4">Start betting on World Cup matches!</p>
+      <div className="text-center py-16 sm:py-20">
+          <Trophy className="w-12 h-12 sm:w-16 sm:h-16 text-muted-foreground/30 mx-auto mb-4" />
+          <p className="text-muted-foreground text-base sm:text-lg mb-2">No bets yet</p>
+          <p className="text-muted-foreground text-xs sm:text-sm mb-4">Start betting on World Cup matches!</p>
           <Link to="/matches">
-            <Button className="gap-2 rounded-xl">
-              <Activity className="w-4 h-4" />
-              Browse Matches
+            <Button className="gap-2 rounded-xl h-10 px-4 text-xs sm:text-sm">
+              <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Browse Matches</span>
+              <span className="sm:hidden">Matches</span>
             </Button>
           </Link>
         </div>
