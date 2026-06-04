@@ -78,11 +78,13 @@ export default function Home() {
           <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'linear-gradient(#a69cf2 1px, transparent 1px), linear-gradient(90deg, #a69cf2 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
           <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="flex items-center gap-1.5 bg-primary/20 border border-primary/30 px-3 py-1 rounded-full">
-                <Zap className="w-3 h-3 text-primary" />
-                <span className="text-[11px] font-bold text-primary tracking-widest">SOLANA POWERED</span>
-              </div>
+            <div className="mb-6">
+              <img 
+                src="https://media.base44.com/images/public/6a1da108eb293de119e4e930/610671979_Untitled-June032026at0751431.png" 
+                alt="ElevenX" 
+                className="h-24 object-contain drop-shadow-2xl"
+                style={{ filter: 'drop-shadow(0 0 24px rgba(166,156,242,0.5))' }}
+              />
             </div>
             <h1 className="font-heading font-black text-3xl md:text-4xl leading-tight mb-3 text-white">
               Bet P2P.<br />
