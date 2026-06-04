@@ -117,12 +117,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const lp_odds = offer.odds_at_creation;
-    const max_stake = offer.amount_unmatched / (lp_odds - 1);
-    
-    if (amount > max_stake) {
-      return Response.json({ error: `Maximum stake for this offer is ◎${max_stake.toFixed(4)}` }, { status: 400 });
-    }
+    // Removed max stake validation - bets can exceed LP liquidity and go pending
 
     // Validate LP wallet address exists
     console.log('[matchBet] Offer data:', {

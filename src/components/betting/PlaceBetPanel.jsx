@@ -130,11 +130,8 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
   const fixedOdds = selectedOutcome === 'a' ? bet?.odds_a : selectedOutcome === 'b' ? bet?.odds_b : bet?.odds_draw || 0;
   const odds = bettingMode === 'dynamic_pool' && dynamicOdds ? dynamicOdds : fixedOdds;
 
-  // For BETTORS (mode='match'): max stake is limited by total LP liquidity available
-  // Bettors can only bet up to what LP holders have underwritten
-  const maxMatcherStake = mode === 'match' ?
-  (selectedOffer ? (selectedOffer.amount_unmatched || 0) : selectedOutcome ? totalLiquidityForOutcome : null) :
-  null;
+  // Removed max stake limit - bets can exceed LP liquidity and go pending
+  const maxMatcherStake = null;
 
   // Bettor payout: stake * odds from the Bet entity
   const matcherPayout = stakeNum * odds;
@@ -448,9 +445,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="text-xs font-bold text-muted-foreground">Enter Stake Amount</label>
-          {maxMatcherStake !== null && maxMatcherStake > 0 && (
-            <span className="text-[10px] text-accent font-medium">Max: ◎{Number(maxMatcherStake).toFixed(4)}</span>
-          )}
+
         </div>
         <Input
           type="number"
@@ -463,20 +458,12 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
           className="bg-secondary/50 border-border/50 text-lg font-heading font-bold h-12" />
         
         <div className="flex gap-2 mt-2 flex-wrap">
-          {QUICK_AMOUNTS.map((qa) => {
-            const capped = maxMatcherStake !== null && maxMatcherStake > 0 ? Math.min(qa, maxMatcherStake) : qa;
-            return (
-              <button key={qa} onClick={() => setAmount(String(Number(capped).toFixed(4)))}
-              className="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 rounded-lg transition-colors">
-                  ◎{qa}
-                </button>);
-          })}
-          {maxMatcherStake !== null && maxMatcherStake > 0 && (
-            <button onClick={() => setAmount(String(Number(maxMatcherStake).toFixed(4)))}
-            className="px-3 py-1.5 text-xs font-medium bg-accent/10 text-accent hover:bg-accent/20 rounded-lg transition-colors">
-                Max ◎{Number(maxMatcherStake).toFixed(4)}
+          {QUICK_AMOUNTS.map((qa) => (
+            <button key={qa} onClick={() => setAmount(String(Number(qa).toFixed(4)))}
+            className="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 rounded-lg transition-colors">
+                ◎{qa}
               </button>
-          )}
+          ))}
         </div>
       </div>
 
@@ -529,16 +516,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
 
       
       
-      {/* Warn when stake exceeds available LP coverage */}
-      {stakeNum > 0 && mode === 'match' && maxMatcherStake && stakeNum > maxMatcherStake &&
-      <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-3 space-y-1.5">
-        <p className="text-xs text-destructive font-bold text-center">⚠️ Stake Exceeds Available Liquidity</p>
-        <p className="text-[10px] text-destructive/80 text-center leading-relaxed">
-          Maximum bet for this outcome is <strong>◎{maxMatcherStake.toFixed(4)}</strong> based on current LP coverage. 
-          Reduce your stake or wait for more LP liquidity.
-        </p>
-      </div>
-      }
+
 
       {timeRemaining && timeRemaining.total <= 0 &&
       <p className="text-xs text-destructive text-center font-bold">⏰ Betting has closed for this match</p>
@@ -593,7 +571,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
 
       <Button
         onClick={handleGetInstruction}
-        disabled={stakeNum <= 0 || isPreparing || timeRemaining && timeRemaining.total <= 0 || (bettingMode === 'no_liquidity') || mode === 'match' && maxMatcherStake && stakeNum > maxMatcherStake}
+        disabled={stakeNum <= 0 || isPreparing || timeRemaining && timeRemaining.total <= 0 || (bettingMode === 'no_liquidity')}
         className="w-full h-12 font-heading font-bold text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
         
         {(() => {
