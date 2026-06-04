@@ -166,8 +166,24 @@ function FuturesMarketLpCard({ market, onProvideLiquidity }) {
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl border-2 border-border/50 bg-card overflow-hidden hover:border-primary/30 transition-all"
+      whileHover={{ scale: 1.02, y: -4 }}
+      className="relative rounded-2xl bg-card overflow-hidden transition-all group"
+      style={{
+        background: 'linear-gradient(145deg, rgba(15,10,30,0.95) 0%, rgba(26,16,64,0.9) 100%)',
+      }}
     >
+      {/* Animated gradient border frame */}
+      <div className="absolute inset-0 rounded-2xl p-[2px] pointer-events-none">
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/60 via-accent/40 to-primary/60 opacity-60 group-hover:opacity-100 transition-opacity duration-500 animate-gradient" 
+             style={{
+               background: 'linear-gradient(45deg, #a69cf2, #14f195, #a69cf2, #14f195)',
+               backgroundSize: '200% 200%',
+               animation: 'gradientShift 3s ease infinite'
+             }} />
+      </div>
+      
+      {/* Inner content container */}
+      <div className="relative z-10 rounded-2xl bg-[#0f0a1e]/95 backdrop-blur-sm m-[2px]">
       {/* Header with Flag & Country */}
       <div className="p-5 border-b border-border/30">
         <div className="flex items-center gap-3">
@@ -253,12 +269,16 @@ function FuturesMarketLpCard({ market, onProvideLiquidity }) {
             }, parseFloat(amount));
           }}
           disabled={!amount || parseFloat(amount) <= 0}
-          className="w-full h-12 font-heading font-bold rounded-xl text-base"
-          style={{ background: 'linear-gradient(135deg, #a69cf2, #8b84e8)' }}
+          className="w-full h-12 font-heading font-bold rounded-xl text-base transition-all hover:shadow-lg"
+          style={{ 
+            background: 'linear-gradient(135deg, #a69cf2, #8b84e8)',
+            boxShadow: '0 0 20px rgba(166,156,242,0.4)'
+          }}
         >
           <DollarSign className="w-5 h-5 mr-2" />
           Provide ◎{amount || '0'} LP for {activeOutcome.position}
         </Button>
+      </div>
       </div>
     </motion.div>
   );
