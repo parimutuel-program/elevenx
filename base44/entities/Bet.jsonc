@@ -52,17 +52,17 @@
     "odds_a": {
       "type": "number",
       "default": 0,
-      "description": "Fixed decimal odds for outcome A (from TheStatsAPI)"
+      "description": "Fixed decimal odds for outcome A (from The Odds API)"
     },
     "odds_b": {
       "type": "number",
       "default": 0,
-      "description": "Fixed decimal odds for outcome B (from TheStatsAPI)"
+      "description": "Fixed decimal odds for outcome B (from The Odds API)"
     },
     "odds_draw": {
       "type": "number",
       "default": 0,
-      "description": "Fixed decimal odds for Draw (from TheStatsAPI)"
+      "description": "Fixed decimal odds for Draw (from The Odds API)"
     },
     "odds_bookmaker": {
       "type": "string",
@@ -72,10 +72,6 @@
       "type": "string",
       "format": "date-time",
       "description": "When odds were last fetched"
-    },
-    "stats_api_match_id": {
-      "type": "string",
-      "description": "TheStatsAPI match ID (e.g. mt_14502) for fetching odds and results"
     },
     "pool_a": {
       "type": "number",

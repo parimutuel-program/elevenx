@@ -58,10 +58,6 @@
         ""
       ],
       "default": ""
-    },
-    "stats_api_match_id": {
-      "type": "string",
-      "description": "TheStatsAPI match ID (e.g. mt_14502) for fetching odds and results"
     }
   },
   "required": [

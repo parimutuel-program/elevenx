@@ -11,7 +11,7 @@ import { motion } from 'framer-motion';
 import OddsPanel from '@/components/betting/OddsPanel';
 import OfferBook from '@/components/betting/OfferBook';
 import PlaceBetPanel from '@/components/betting/PlaceBetPanel';
-import StatsApiMatchSearch from '@/components/betting/StatsApiMatchSearch';
+
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
 import LpPositionCard from '@/components/lp/LpPositionCard';
 import { useWallet } from '@/lib/WalletContext';
@@ -27,7 +27,7 @@ export default function MatchDetail() {
   const [selectedOffer, setSelectedOffer] = useState(null);
   const [betMode, setBetMode] = useState('offer');
   const [isRefreshingOdds, setIsRefreshingOdds] = useState(false);
-  const [statsApiMatchId, setStatsApiMatchId] = useState('');
+
   const [marketCreationTx, setMarketCreationTx] = useState(null);
   const [claimData, setClaimData] = useState(null);
   const [isBatchClaim, setIsBatchClaim] = useState(false);
@@ -95,44 +95,7 @@ export default function MatchDetail() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] })
   });
 
-  React.useEffect(() => {
-    if (bet?.stats_api_match_id && !statsApiMatchId) {
-      setStatsApiMatchId(bet.stats_api_match_id);
-    }
-  }, [bet?.stats_api_match_id]);
 
-  const refreshOdds = async () => {
-    const matchIdToUse = statsApiMatchId.trim();
-    if (!matchIdToUse) {
-      alert('Enter a TheStatsAPI match ID first');
-      return;
-    }
-    if (matchIdToUse !== bet?.stats_api_match_id) {
-      await base44.entities.Bet.update(bet.id, { stats_api_match_id: matchIdToUse });
-    }
-    setIsRefreshingOdds(true);
-    try {
-      const res = await base44.functions.invoke('fetchMatchOdds', {
-        stats_api_match_id: matchIdToUse,
-        action: 'odds'
-      });
-      if (res.data.odds) {
-        await base44.entities.Bet.update(bet.id, {
-          odds_a: res.data.odds.home,
-          odds_b: res.data.odds.away,
-          odds_draw: res.data.odds.draw,
-          odds_bookmaker: res.data.bookmaker,
-          odds_updated_at: new Date().toISOString()
-        });
-        queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
-      } else {
-        alert(res.data.message || 'No odds available yet');
-      }
-    } catch (e) {
-      alert('Failed to fetch odds: ' + e.message);
-    }
-    setIsRefreshingOdds(false);
-  };
 
   const settleMutation = useMutation({
     mutationFn: async (outcome) => {
@@ -432,33 +395,7 @@ export default function MatchDetail() {
         </div>
       }
 
-      {/* ── Admin: Create Stats API ID + Fetch Odds ── */}
-      {hasBet && isAdmin && isOpen &&
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-      className="bg-card border border-border/30 rounded-2xl p-4 space-y-2 hidden">
-          <div className="flex items-center gap-2">
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-            <span className="text-xs font-bold text-muted-foreground">Admin: Odds Management</span>
-          </div>
-          <div className="flex gap-2">
-            <input
-            value={statsApiMatchId}
-            onChange={(e) => setStatsApiMatchId(e.target.value)}
-            placeholder="TheStatsAPI match ID (e.g. mt_14502)"
-            className="flex-1 text-xs bg-secondary/50 border border-border/50 rounded-xl px-3 py-2 text-foreground placeholder:text-muted-foreground" />
-          
-            <Button size="sm" onClick={refreshOdds} disabled={isRefreshingOdds}
-          className="h-9 text-xs font-bold rounded-xl">
-              {isRefreshingOdds ? <><RefreshCw className="w-3 h-3 animate-spin mr-1" />Fetching...</> : 'Fetch Odds'}
-            </Button>
-          </div>
-          <StatsApiMatchSearch
-          teamA={match.team_a}
-          teamB={match.team_b}
-          onSelect={(id) => setStatsApiMatchId(id)} />
-        
-        </motion.div>
-      }
+
 
       {/* ── Odds Panel ── */}
       {hasBet &&
@@ -468,7 +405,7 @@ export default function MatchDetail() {
           match={match}
           selectedOutcome={betMode === 'offer' ? selectedOutcome : null}
           onSelectOutcome={isOpen ? handleSelectOutcome : undefined}
-          onRefreshOdds={isAdmin && isOpen ? refreshOdds : undefined}
+
           isRefreshing={isRefreshingOdds} />
         
         </motion.div>
