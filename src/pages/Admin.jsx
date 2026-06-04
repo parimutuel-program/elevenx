@@ -409,6 +409,33 @@ export default function Admin() {
           </div>
 
           <div className="bg-card border border-primary/20 rounded-xl p-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <Target className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="text-sm font-bold text-foreground">Create Manual Test (30min)</p>
+                  <p className="text-xs text-muted-foreground">Creates match + bet with 30-minute betting window</p>
+                </div>
+              </div>
+              <Button
+                onClick={async () => {
+                  try {
+                    const res = await base44.functions.invoke('createManualTest', {});
+                    if (res.data.error) throw new Error(res.data.error);
+                    alert(res.data.message);
+                    queryClient.invalidateQueries({ queryKey: ['matches', 'bets'] });
+                  } catch (err) {
+                    alert('Error: ' + err.message);
+                  }
+                }}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-heading font-bold rounded-xl h-9"
+              >
+                Create Test
+              </Button>
+            </div>
+          </div>
+
+          <div className="bg-card border border-primary/20 rounded-xl p-4">
             {pendingPlatformInit ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
