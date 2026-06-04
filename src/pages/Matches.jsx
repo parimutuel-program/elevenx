@@ -129,6 +129,49 @@ export default function Matches() {
         </div>
       </motion.div>
 
+      {/* How Match Betting Works Banner */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="bg-gradient-to-r from-[#1a1040]/80 via-[#0f0a1e]/90 to-[#12102a]/80 border border-primary/20 rounded-2xl p-6 relative overflow-hidden"
+      >
+        {/* Decorative Glow Orbs */}
+        <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl opacity-25 bg-[#a69cf2]" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full blur-2xl opacity-15 bg-[#14f195]" />
+
+        <div className="relative z-10">
+          <div className="inline-flex items-center gap-1.5 bg-primary/20 border border-primary/30 px-3 py-1 rounded-full text-primary text-[10px] font-bold tracking-widest uppercase mb-3">
+            ⚽ How Match Betting Works
+          </div>
+          <h2 className="font-heading font-black text-lg md:text-xl text-white mb-4">P2P Fixed-Odds Betting on Every Match</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <span className="text-xl">💡</span>
+              <h3 className="font-heading font-bold text-xs text-primary">How It Works</h3>
+              <p className="text-[11px] text-white/60 leading-relaxed">
+                <strong>Bets require LP liquidity.</strong> LPs deposit SOL to cover payouts. Your bet goes <strong>pending</strong> until matched, then <strong>locked in</strong> with fixed odds.
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <span className="text-xl">👑</span>
+              <h3 className="font-heading font-bold text-xs text-accent">Be the House (LP)</h3>
+              <p className="text-[11px] text-white/60 leading-relaxed">
+                Provide liquidity for outcomes you think WON'T happen. Earn <strong>2% fees</strong> on matched bets plus keep losing stakes! <strong>Withdraw unmatched funds anytime</strong>.
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <span className="text-xl">⚠️</span>
+              <h3 className="font-heading font-bold text-xs text-yellow-400">Important</h3>
+              <p className="text-[11px] text-white/60 leading-relaxed">
+                No LP = bet stays <strong>pending</strong>. Once matched, your bet is <strong>locked</strong>. LPs can withdraw unmatched liquidity before it's matched by bettors.
+              </p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Search & Group Filter */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}

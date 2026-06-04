@@ -313,7 +313,7 @@ export default function Futures() {
                     <span className="text-xl">👑</span>
                     <h3 className="font-heading font-bold text-xs text-accent">Be the House (LP)</h3>
                     <p className="text-[11px] text-white/60 leading-relaxed">
-                      Provide liquidity for outcomes you think WON'T happen. Earn <strong>2% fees</strong> on matched bets plus keep losing stakes!
+                      Provide liquidity for outcomes you think WON'T happen. Earn <strong>2% fees</strong> on matched bets plus keep losing stakes! <strong>Withdraw unmatched funds anytime</strong> — only locked once matched.
                     </p>
                   </div>
                   <div className="space-y-1.5">
