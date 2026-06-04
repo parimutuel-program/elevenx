@@ -54,17 +54,13 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
   (selectedOutcome === 'a' ? bet?.odds_a : selectedOutcome === 'b' ? bet?.odds_b : bet?.odds_draw) || 0 :
   0;
 
+  // For match mode: max stake is what the LP offer covers (amount_unmatched * (odds - 1))
   const maxMatcherStake = mode === 'match' && selectedOffer ?
-  selectedOffer.amount_unmatched * (selectedOffer.odds_at_creation - 1) :
-  null;
+    selectedOffer.amount_unmatched * (selectedOffer.odds_at_creation - 1) :
+    null;
 
-  // For LP mode: max is the total pool of the opposing outcome (what they're betting against)
-  const maxLpAmount = mode === 'offer' ? (() => {
-    if (selectedOutcome === 'a') return bet.pool_b || 10;
-    if (selectedOutcome === 'b') return bet.pool_a || 10;
-    if (selectedOutcome === 'draw') return Math.max(bet.pool_a || 0, bet.pool_b || 0) || 10;
-    return 10;
-  })() : null;
+  // For LP mode: no limit - LPs can add as much liquidity as they want
+  const maxLpAmount = mode === 'offer' ? null : null;
 
   const lpPayout = mode === 'offer' ? stakeNum * odds : 0;
   const matcherPayout = mode === 'match' && selectedOffer ?
@@ -271,7 +267,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
         </div>
         <p className="text-xs text-muted-foreground">
           {mode === 'offer' ?
-          `Odds: ${odds.toFixed(2)}x — Max: ◎${maxLpAmount?.toFixed(4)} — your offer goes into the orderbook until matched` :
+          `Odds: ${odds.toFixed(2)}x — Add any amount — your offer goes into the orderbook until matched` :
           `Max stake: ◎${maxMatcherStake?.toFixed(4)} — locked immediately once confirmed`
           }
         </p>
@@ -307,7 +303,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
           placeholder="0.00"
           value={amount}
           min={0}
-          max={maxMatcherStake || undefined}
+          max={mode === 'match' && maxMatcherStake ? maxMatcherStake : undefined}
           step="any"
           onChange={(e) => setAmount(e.target.value)}
           className="bg-secondary/50 border-border/50 text-lg font-heading font-bold h-12" />
@@ -328,12 +324,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
               Max ◎{maxMatcherStake.toFixed(4)}
             </button>
           }
-          {mode === 'offer' && maxLpAmount &&
-          <button onClick={() => setAmount(String(maxLpAmount))}
-          className="px-3 py-1.5 text-xs font-medium bg-accent/10 text-accent hover:bg-accent/20 rounded-lg transition-colors font-bold">
-              Max ◎{maxLpAmount.toFixed(4)}
-            </button>
-          }
+
         </div>
       </div>
 
@@ -381,9 +372,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
       {stakeNum > 0 && mode === 'match' && maxMatcherStake && stakeNum > maxMatcherStake &&
       <p className="text-xs text-destructive text-center font-semibold">Not enough liquidity to place bet</p>
       }
-      {stakeNum > 0 && mode === 'offer' && maxLpAmount && stakeNum > maxLpAmount &&
-      <p className="text-xs text-destructive text-center font-semibold">Not enough liquidity to place bet</p>
-      }
+
       {timeRemaining && timeRemaining.total <= 0 &&
       <p className="text-xs text-destructive text-center font-bold">⏰ Betting has closed for this match</p>
       }
@@ -438,7 +427,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
 
       <Button
         onClick={handleGetInstruction}
-        disabled={stakeNum <= 0 || isPreparing || timeRemaining && timeRemaining.total <= 0 || mode === 'match' && maxMatcherStake && stakeNum > maxMatcherStake || mode === 'offer' && maxLpAmount && stakeNum > maxLpAmount}
+        disabled={stakeNum <= 0 || isPreparing || timeRemaining && timeRemaining.total <= 0 || mode === 'match' && maxMatcherStake && stakeNum > maxMatcherStake}
         className="w-full h-12 font-heading font-bold text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
         
           {timeRemaining && timeRemaining.total <= 0 ?
