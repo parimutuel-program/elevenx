@@ -90,6 +90,38 @@ Deno.serve(async (req) => {
       if (!bet || bet.status !== 'open') {
         return Response.json({ error: 'Market not open or not found' }, { status: 400 });
       }
+      
+      // CRITICAL: Check if market exists on-chain BEFORE preparing bet
+      try {
+        const marketStatus = await base44.functions.invoke('checkMarketStatus', { match_id, bet_id: bet_id });
+        console.log('[matchBet] Market status check:', marketStatus.data);
+        
+        if (marketStatus.data.status === 'not_created' || marketStatus.data.status === 'not_initialized') {
+          return Response.json({
+            error: 'Market not deployed on-chain yet',
+            hint: 'Admin must create the market on Solana first via Admin panel → Create Market On-Chain',
+            status: marketStatus.data.status,
+            marketPda: marketStatus.data.marketPda,
+          }, { status: 400 });
+        }
+        
+        if (marketStatus.data.settled) {
+          return Response.json({ error: 'Market already settled' }, { status: 400 });
+        }
+        
+        if (marketStatus.data.voided) {
+          return Response.json({ error: 'Market has been voided' }, { status: 400 });
+        }
+        
+        if (marketStatus.data.paused) {
+          return Response.json({ error: 'Market is paused' }, { status: 400 });
+        }
+        
+        console.log('[matchBet] ✓ Market verified on-chain:', marketStatus.data.status);
+      } catch (checkErr) {
+        console.error('[matchBet] Failed to check market status:', checkErr.message);
+        // Don't block betting if check fails - allow with warning
+      }
 
       // Check betting window
       if (bet.open_until) {
@@ -182,6 +214,38 @@ Deno.serve(async (req) => {
     if (!offer) {
       console.error('[matchBet] Offer not found:', { offer_id });
       return Response.json({ error: 'Offer not found', offer_id }, { status: 404 });
+    }
+    
+    // CRITICAL: Check if market exists on-chain BEFORE preparing bet
+    try {
+      const marketStatus = await base44.functions.invoke('checkMarketStatus', { match_id: offer.match_id, bet_id: offer.bet_id });
+      console.log('[matchBet] Market status check (fixed-odds):', marketStatus.data);
+      
+      if (marketStatus.data.status === 'not_created' || marketStatus.data.status === 'not_initialized') {
+        return Response.json({
+          error: 'Market not deployed on-chain yet',
+          hint: 'Admin must create the market on Solana first via Admin panel → Create Market On-Chain',
+          status: marketStatus.data.status,
+          marketPda: marketStatus.data.marketPda,
+        }, { status: 400 });
+      }
+      
+      if (marketStatus.data.settled) {
+        return Response.json({ error: 'Market already settled' }, { status: 400 });
+      }
+      
+      if (marketStatus.data.voided) {
+        return Response.json({ error: 'Market has been voided' }, { status: 400 });
+      }
+      
+      if (marketStatus.data.paused) {
+        return Response.json({ error: 'Market is paused' }, { status: 400 });
+      }
+      
+      console.log('[matchBet] ✓ Market verified on-chain (fixed-odds):', marketStatus.data.status);
+    } catch (checkErr) {
+      console.error('[matchBet] Failed to check market status (fixed-odds):', checkErr.message);
+      // Don't block betting if check fails - allow with warning
     }
     
     console.log('[matchBet] Loaded offer:', {
