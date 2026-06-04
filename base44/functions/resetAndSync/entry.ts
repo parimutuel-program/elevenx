@@ -116,6 +116,34 @@ Deno.serve(async (req) => {
     // Step 3: Create fresh Match and Bet records from The Odds API data
     console.log(`[resetAndSync] Creating ${oddsData.length} fresh matches with live odds...`);
     
+    // World Cup 2026 Group mappings
+    const teamGroups = {
+      // Group A
+      'Germany': 'Group A', 'Costa Rica': 'Group A', 'Jamaica': 'Group A', 'Morocco': 'Group A',
+      // Group B
+      'Mexico': 'Group B', 'South Africa': 'Group B', 'Iraq': 'Group B', 'Denmark': 'Group B',
+      // Group C
+      'Canada': 'Group C', 'Saudi Arabia': 'Group C', 'Tahiti': 'Group C', 'Croatia': 'Group C',
+      // Group D
+      'Spain': 'Group D', 'Japan': 'Group D', 'Angola': 'Group D', 'Paraguay': 'Group D',
+      // Group E
+      'France': 'Group E', 'South Korea': 'Group E', 'Iran': 'Group E', 'Ghana': 'Group E',
+      // Group F
+      'Brazil': 'Group F', 'Cameroon': 'Group F', 'Haiti': 'Group F', 'Austria': 'Group F',
+      // Group G
+      'Argentina': 'Group G', 'Algeria': 'Group G', 'Guatemala': 'Group G', 'Italy': 'Group G',
+      // Group H
+      'England': 'Group H', 'Serbia': 'Group H', 'Tunisia': 'Group H', 'Australia': 'Group H',
+      // Group I
+      'Netherlands': 'Group I', 'Ecuador': 'Group I', 'Qatar': 'Group I', 'Senegal': 'Group I',
+      // Group J
+      'Portugal': 'Group J', 'Chile': 'Group J', 'Jamaica': 'Group J', 'Egypt': 'Group J',
+      // Group K
+      'Belgium': 'Group K', 'USA': 'Group K', 'Turkey': 'Group K', 'New Zealand': 'Group K',
+      // Group L
+      'Colombia': 'Group L', 'Greece': 'Group L', 'India': 'Group L', 'Uruguay': 'Group L',
+    };
+    
     const matchPayloads = [];
     const betPayloads = [];
     
@@ -124,6 +152,9 @@ Deno.serve(async (req) => {
       const matchTime = new Date(game.commence_time);
       const openUntil = new Date(matchTime.getTime() + 60 * 60 * 1000); // kickoff + 1 hour
       
+      // Determine group from team names
+      const groupA = teamGroups[game.home_team] || teamGroups[game.away_team] || 'Group Stage';
+      
       matchPayloads.push({
         team_a: game.home_team,
         team_b: game.away_team,
@@ -131,7 +162,7 @@ Deno.serve(async (req) => {
         team_b_flag: '',
         match_time: game.commence_time,
         status: 'upcoming',
-        group_stage: 'World Cup 2026',
+        group_stage: groupA,
         venue: '',
       });
       
