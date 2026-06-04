@@ -386,10 +386,17 @@ export default function Admin() {
               </div>
               <Button
                 onClick={async () => {
+                  console.log('[Smooth Test] Button clicked...');
                   try {
+                    console.log('[Smooth Test] Invoking smoothTest...');
                     const res = await base44.functions.invoke('smoothTest', {});
-                    if (res.data.error) throw new Error(res.data.error);
+                    console.log('[Smooth Test] Response:', res.data);
+                    if (res.data.error) {
+                      console.error('[Smooth Test] Error in response:', res.data.error);
+                      throw new Error(res.data.error);
+                    }
                     // Auto-trigger signing
+                    console.log('[Smooth Test] Setting pending deploy...');
                     setPendingBulkMatchDeploy({
                       instructions: [{
                         ...res.data.solana_instruction,
@@ -400,10 +407,13 @@ export default function Admin() {
                       marketCount: 1,
                       message: res.data.message,
                     });
+                    console.log('[Smooth Test] Pending deploy set!');
                   } catch (err) {
+                    console.error('[Smooth Test] Catch error:', err);
                     alert('Error: ' + err.message);
                   }
                 }}
+                disabled={false}
                 className="bg-green-600 hover:bg-green-700 text-white font-heading font-bold rounded-xl h-9"
               >
                 <Zap className="w-4 h-4 mr-2" /> Start Smooth Test
