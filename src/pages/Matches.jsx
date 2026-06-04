@@ -144,14 +144,14 @@ export default function Matches() {
                 <span className="text-lg sm:text-xl">👑</span>
                 <h3 className="font-heading font-bold text-[11px] sm:text-xs text-accent">Be the House (LP)</h3>
                 <p className="text-[10px] sm:text-[11px] text-white/60 leading-relaxed">
-                  Provide liquidity for outcomes you think WON'T happen. Earn <strong>2% fees</strong> on matched bets plus keep losing stakes! <strong>Withdraw unmatched funds anytime</strong> — only locked once matched.
+                  Provide liquidity for outcomes you think WON'T happen. Earn <strong>2% fees</strong> on matched bets plus keep losing stakes! <strong>Withdraw unmatched funds anytime</strong> — only locked once matched. <strong>Claims processed instantly</strong> — winnings paid via admin withdrawal.
                 </p>
               </div>
               <div className="space-y-1.5">
                 <span className="text-lg sm:text-xl">⚠️</span>
                 <h3 className="font-heading font-bold text-[11px] sm:text-xs text-yellow-400">Important</h3>
                 <p className="text-[10px] sm:text-[11px] text-white/60 leading-relaxed">
-                  Bets go into <strong>pending pool</strong> until LP matches them. Once matched, your bet is <strong>locked in</strong> with fixed odds. No LP = bet stays pending!
+                  Bets go into <strong>pending pool</strong> until LP matches them. Once matched, your bet is <strong>locked in</strong> with fixed odds. No LP = bet stays pending! <strong>Instant DB claims</strong> — no on-chain delays.
                 </p>
               </div>
             </div>
