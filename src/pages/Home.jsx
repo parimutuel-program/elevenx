@@ -63,12 +63,59 @@ export default function Home() {
 
       {/* ── HERO CARDS ── */}
       <div className="grid md:grid-cols-2 gap-4">
-        {/* Card 1 — Main CTA */}
+        {/* Card 1 — World Cup Hype (Football Image) - Shows first on mobile */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="relative overflow-hidden rounded-3xl min-h-[320px] flex flex-col justify-between order-1 md:order-2">
+          
+          <img
+            src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=800&q=80"
+            alt="World Cup"
+            className="absolute inset-0 w-full h-full object-cover" />
+          
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(10,8,20,0.97) 0%, rgba(10,8,20,0.6) 50%, rgba(10,8,20,0.2) 100%)' }} />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(166,156,242,0.12) 0%, transparent 60%)' }} />
+
+          <div className="relative z-10 p-7">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm border border-white/10 px-3 py-1 rounded-full">
+                <Globe className="w-3 h-3 text-white/70" />
+                <span className="text-[11px] font-bold text-white/80 tracking-wide">FIFA WORLD CUP 2026™</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative z-10 p-7">
+            <div className="flex items-center gap-2 mb-2">
+              <Star className="w-4 h-4 text-primary" />
+              <span className="text-xs font-bold text-primary tracking-widest uppercase">48 Teams · 104 Matches</span>
+            </div>
+            <h2 className="font-heading font-black text-3xl md:text-4xl text-white leading-tight mb-3">
+              One Trophy.<br />
+              <span className="text-primary">Your Prediction.</span>
+            </h2>
+            <p className="text-white/60 text-sm mb-5">
+              USA · Canada · Mexico hosting the biggest sporting event on Earth. Pick your winner and back it with SOL.
+            </p>
+            <div className="flex items-center gap-3">
+              <div className="flex -space-x-2">
+                {['🇧🇷', '🇫🇷', '🇩🇪', '🇦🇷', '🏴󠁧󠁢󠁥󠁮󠁧󠁿'].map((flag, i) =>
+                <div key={i} className="w-8 h-8 rounded-full bg-card border-2 border-background flex items-center justify-center text-sm">{flag}</div>
+                )}
+              </div>
+              <span className="text-xs text-white/50">+43 more nations</span>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Card 2 — Main CTA (BetP2P) - Shows second on mobile */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="relative overflow-hidden rounded-3xl min-h-[320px] flex flex-col justify-between p-7"
+          className="relative overflow-hidden rounded-3xl min-h-[320px] flex flex-col justify-between p-7 order-2 md:order-1"
           style={{ background: 'linear-gradient(135deg, #1a1040 0%, #0f0a1e 50%, #12102a 100%)' }}>
           
           {/* Glow orbs */}
@@ -116,53 +163,6 @@ export default function Home() {
             <div className="bg-white/8 backdrop-blur-md border border-white/10 rounded-xl px-3 py-1.5 flex items-center gap-2">
               <Flame className="w-3 h-3 text-primary" />
               <span className="text-[11px] text-white/80 font-medium">Instant settlement</span>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Card 2 — World Cup Hype */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="relative overflow-hidden rounded-3xl min-h-[320px] flex flex-col justify-between">
-          
-          <img
-            src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=800&q=80"
-            alt="World Cup"
-            className="absolute inset-0 w-full h-full object-cover" />
-          
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(10,8,20,0.97) 0%, rgba(10,8,20,0.6) 50%, rgba(10,8,20,0.2) 100%)' }} />
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(166,156,242,0.12) 0%, transparent 60%)' }} />
-
-          <div className="relative z-10 p-7">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm border border-white/10 px-3 py-1 rounded-full">
-                <Globe className="w-3 h-3 text-white/70" />
-                <span className="text-[11px] font-bold text-white/80 tracking-wide">FIFA WORLD CUP 2026™</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="relative z-10 p-7">
-            <div className="flex items-center gap-2 mb-2">
-              <Star className="w-4 h-4 text-primary" />
-              <span className="text-xs font-bold text-primary tracking-widest uppercase">48 Teams · 104 Matches</span>
-            </div>
-            <h2 className="font-heading font-black text-3xl md:text-4xl text-white leading-tight mb-3">
-              One Trophy.<br />
-              <span className="text-primary">Your Prediction.</span>
-            </h2>
-            <p className="text-white/60 text-sm mb-5">
-              USA · Canada · Mexico hosting the biggest sporting event on Earth. Pick your winner and back it with SOL.
-            </p>
-            <div className="flex items-center gap-3">
-              <div className="flex -space-x-2">
-                {['🇧🇷', '🇫🇷', '🇩🇪', '🇦🇷', '🏴󠁧󠁢󠁥󠁮󠁧󠁿'].map((flag, i) =>
-                <div key={i} className="w-8 h-8 rounded-full bg-card border-2 border-background flex items-center justify-center text-sm">{flag}</div>
-                )}
-              </div>
-              <span className="text-xs text-white/50">+43 more nations</span>
             </div>
           </div>
         </motion.div>
