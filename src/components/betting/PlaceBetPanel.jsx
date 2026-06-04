@@ -279,15 +279,14 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
         {/* Help text explaining the mode */}
         <div className={`rounded-xl p-3 text-[10px] ${
           mode === 'offer' 
-            ? 'bg-accent/5 border border-accent/20' 
+            ? 'bg-primary/5 border border-primary/20' 
             : 'bg-primary/5 border border-primary/20'
         }`}>
           {mode === 'offer' ? (
             <>
-              <p className="font-bold text-accent mb-1">💼 You're Providing Liquidity</p>
+              <p className="font-bold text-primary mb-1">🎯 You're Placing a Bet</p>
               <p className="text-muted-foreground">
-                You're creating a bet offer that others can match. Your SOL stays available until someone matches it. 
-                You earn fees when bettors match your offer.
+                Your bet will be matched against existing LP liquidity. Once matched, your funds are locked with fixed odds.
               </p>
             </>
           ) : (
