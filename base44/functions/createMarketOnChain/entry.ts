@@ -1,5 +1,5 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
-import { Connection, PublicKey, SystemProgram } from 'npm:@solana/web3.js@1.98.4';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { Connection, PublicKey } from 'npm:@solana/web3.js@1.98.4';
 import { Buffer } from 'node:buffer';
 import { sha256 } from 'npm:@noble/hashes@1.4.0/sha256';
 
@@ -8,7 +8,7 @@ const SOLANA_RPC_URL = 'https://api.devnet.solana.com';
 
 /**
  * Creates a pari-mutuel market on-chain for a bet entity.
- * No LP required - bettors bet directly against the pool.
+ * Betting window: 5 minutes from now. Settlement enabled immediately after.
  */
 Deno.serve(async (req) => {
   try {
@@ -41,35 +41,29 @@ Deno.serve(async (req) => {
     const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
     const accountInfo = await connection.getAccountInfo(marketPda);
     
-    if (accountInfo) {
-      const expectedMinSize = 210;
-      if (accountInfo.data.length >= expectedMinSize) {
-        console.log('Market already exists and is properly initialized at:', marketPda.toBase58());
-        
-        // Check if force recreate is requested
-        const forceRecreate = payload.force_recreate === true;
-        if (forceRecreate) {
-          console.log('Force recreating market with updated odds...');
-          // Continue to recreate instruction below
-        } else {
-          return Response.json({
-            success: true,
-            marketPda: marketPda.toBase58(),
-            alreadyExists: true,
-          });
-        }
-      }
+    if (accountInfo && accountInfo.data.length >= 249) {
+      console.log('Market already exists at:', marketPda.toBase58());
+      return Response.json({
+        success: true,
+        marketPda: marketPda.toBase58(),
+        alreadyExists: true,
+      });
     }
 
-    // Prepare create_market instruction with new discriminator
-    const discriminator = Buffer.from(sha256("global:create_market")).slice(0, 8);
+    // Set timestamps: open_until = now + 5 minutes, settle_after = open_until + 1 minute
+    // This allows smooth testing - betting window closes in 5 minutes, settlement enabled immediately
+    const now = Math.floor(Date.now() / 1000);
+    const openUntil = now + 300;  // 5 minutes from now
+    const settleAfter = openUntil + 60; // 1 minute after betting closes
 
-    // For market recreation, set open_until to 24 hours from now (not the original past date)
-    const isRecreate = payload.force_recreate === true;
-    const openUntil = isRecreate 
-      ? Math.floor(Date.now() / 1000) + 86400  // 24 hours from now for recreation
-      : (bet.open_until ? Math.floor(new Date(bet.open_until).getTime() / 1000) : Math.floor(Date.now() / 1000) + 86400);
-    const settleAfter = openUntil + 5; // 5 seconds (instant settlement after betting closes)
+    console.log('[createMarketOnChain] Timestamps:', {
+      now: new Date(now * 1000).toISOString(),
+      open_until: new Date(openUntil * 1000).toISOString(),
+      settle_after: new Date(settleAfter * 1000).toISOString(),
+    });
+
+    // Prepare create_market instruction with Anchor discriminator
+    const discriminator = Buffer.from(sha256("global:create_market")).slice(0, 8);
 
     const outcomeNames = [
       Buffer.alloc(32),
@@ -80,8 +74,7 @@ Deno.serve(async (req) => {
     Buffer.from(bet.outcome_b || 'B').copy(outcomeNames[1], 0, 0, Math.min(bet.outcome_b?.length || 1, 32));
     Buffer.from(bet.outcome_draw || 'Draw').copy(outcomeNames[2], 0, 0, Math.min(bet.outcome_draw?.length || 4, 32));
 
-    // Build instruction data: discriminator + CreateMarketParams
-    // CreateMarketParams size: 32 + 96 + 8 + 8 + 2 + 1 + 24 = 171 bytes
+    // Build instruction data: discriminator + CreateMarketParams (171 bytes)
     const paramsData = Buffer.alloc(171);
     let offset = 0;
     
@@ -107,11 +100,10 @@ Deno.serve(async (req) => {
     paramsData.writeUInt8(3, offset); // outcome_count
     offset += 1;
     
-    // oracle_odds: [u64; 3] - 24 bytes (3 x 8 bytes)
-    // Convert decimal odds to basis points (multiply by 100) before converting to BigInt
-    const oddsA = BigInt(Math.round((bet.odds_a || bet.oracle_odds_a || 0) * 100));
-    const oddsB = BigInt(Math.round((bet.odds_b || bet.oracle_odds_b || 0) * 100));
-    const oddsDraw = BigInt(Math.round((bet.odds_draw || bet.oracle_odds_draw || 0) * 100));
+    // oracle_odds: [u64; 3] - convert decimal odds to basis points (×100)
+    const oddsA = BigInt(Math.round((bet.odds_a || 0) * 100));
+    const oddsB = BigInt(Math.round((bet.odds_b || 0) * 100));
+    const oddsDraw = BigInt(Math.round((bet.odds_draw || 0) * 100));
     paramsData.writeBigUInt64LE(oddsA, offset);
     offset += 8;
     paramsData.writeBigUInt64LE(oddsB, offset);
@@ -120,9 +112,6 @@ Deno.serve(async (req) => {
     offset += 8;
 
     const instructionData = Buffer.concat([discriminator, paramsData]);
-
-    console.log('Market PDA derived:', marketPda.toBase58());
-    console.log('Instruction data length:', instructionData.length);
 
     const [voteTallyPda] = PublicKey.findProgramAddressSync(
       [Buffer.from('vote_tally'), marketPda.toBuffer()],
@@ -143,8 +132,8 @@ Deno.serve(async (req) => {
       
       const initDiscriminator = Buffer.from(sha256("global:initialize_platform")).slice(0, 8);
       const initParams = Buffer.alloc(3);
-      initParams.writeUInt16LE(200, 0); // fee_percent: 2%
-      initParams.writeUInt8(51, 2); // consensus_threshold: 51%
+      initParams.writeUInt16LE(200, 0);
+      initParams.writeUInt8(51, 2);
       const initInstructionData = Buffer.concat([initDiscriminator, initParams]);
       
       return Response.json({
@@ -167,37 +156,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    const response = {
+    return Response.json({
       success: true,
       marketPda: marketPda.toBase58(),
       alreadyExists: false,
-      forceRecreated: payload.force_recreate === true,
       solana_instruction: {
         instruction_type: 'create_market',
         programId: SOLANA_PROGRAM_ID,
-        marketPda: marketPda.toBase58(),
         instruction_data: instructionData.toString('base64'),
         accounts: {
           market: marketPda.toBase58(),
           voteTally: voteTallyPda.toBase58(),
           platformConfig: platformConfigPda.toBase58(),
-          admin: 'SIGNER_WALLET',
+          admin: 'SIGNER_WALLET', // Uses whoever's wallet is connected (admin)
         }
       },
-      message: payload.force_recreate === true 
-        ? 'Sign to RECREATE market with updated odds (this will overwrite existing market data)' 
-        : 'Sign to create pari-mutuel market on-chain',
-      // Return bet_id so frontend can commit after transaction succeeds
+      message: 'Sign to create market (betting closes in 5 minutes, settlement enabled immediately)',
       bet_id: bet.id,
-    };
-    
-    // DO NOT update database here - wait for transaction to succeed on-chain first
-    // Frontend should commit the solana_market_pda after successful transaction
-    
-    return Response.json(response);
+    });
 
   } catch (error) {
-    console.error('createMarketOnChain error:', error);
+    console.error('[createMarketOnChain] Error:', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
