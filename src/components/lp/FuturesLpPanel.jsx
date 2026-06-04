@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, TrendingUp, DollarSign, Clock, Globe, Search } from 'lucide-react';
+import { Trophy, TrendingUp, DollarSign, Globe, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import GroupNavigation, { WORLD_CUP_GROUPS_2026 } from '@/components/futures/GroupNavigation';
 import { Input } from '@/components/ui/input';
 
@@ -13,54 +12,31 @@ export default function FuturesLpPanel({
   isConnected,
   connect 
 }) {
-  const [selectedOutcome, setSelectedOutcome] = React.useState(null);
   const [activeGroup, setActiveGroup] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Flatten all country outcomes from all markets
-  const allOutcomes = React.useMemo(() => {
-    const outcomes = [];
-    futuresMarkets.forEach(market => {
-      if ((market.status === 'open' || market.status === 'coming_soon') && market.country) {
-        market.outcomes.forEach(outcome => {
-          outcomes.push({
-            ...outcome,
-            market_id: market.id,
-            market_title: market.title,
-            market_category: market.category,
-            market_icon: market.icon,
-            open_until: market.open_until,
-            country: market.country,
-            country_flag: market.country_flag,
-          });
-        });
-      }
-    });
-    return outcomes;
-  }, [futuresMarkets]);
-
-  // Filter by search query
-  const filteredOutcomes = searchQuery
-    ? allOutcomes.filter(o => 
-        o.country?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        o.label?.toLowerCase().includes(searchQuery.toLowerCase())
+  // Filter markets by search query
+  const filteredMarkets = searchQuery
+    ? futuresMarkets.filter(m => 
+        m.country?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.title?.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : allOutcomes;
+    : futuresMarkets;
 
-  // Group outcomes by World Cup groups
-  const outcomesByGroup = useMemo(() => {
-    const grouped = {};
-    Object.keys(WORLD_CUP_GROUPS_2026).forEach(groupName => {
-      const groupTeams = WORLD_CUP_GROUPS_2026[groupName].map(t => t.name);
-      grouped[groupName] = filteredOutcomes.filter(o => groupTeams.includes(o.country));
-    });
-    return grouped;
-  }, [filteredOutcomes]);
-
-  // Filter outcomes by active group
-  const displayedOutcomes = activeGroup === 'ALL' 
-    ? filteredOutcomes 
-    : (outcomesByGroup[activeGroup] || []);
+  // Filter markets by active group
+  const displayedMarkets = useMemo(() => {
+    if (activeGroup === 'ALL') {
+      return filteredMarkets.filter(m => 
+        (m.status === 'open' || m.status === 'coming_soon') && m.country
+      );
+    }
+    const groupTeams = WORLD_CUP_GROUPS_2026[activeGroup]?.map(t => t.name) || [];
+    return filteredMarkets.filter(m => 
+      (m.status === 'open' || m.status === 'coming_soon') && 
+      m.country && 
+      groupTeams.includes(m.country)
+    );
+  }, [filteredMarkets, activeGroup]);
 
   if (!isConnected) {
     return (
@@ -114,9 +90,8 @@ export default function FuturesLpPanel({
         activeGroup={activeGroup} 
       />
 
-      {/* Single Group View or All Groups View */}
+      {/* Markets Grid */}
       {activeGroup !== 'ALL' ? (
-        /* Single Group View */
         <section id={`lp-group-${activeGroup}`} className="scroll-mt-24">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 border border-primary/30 flex items-center justify-center">
@@ -124,18 +99,16 @@ export default function FuturesLpPanel({
             </div>
             <div>
               <h2 className="font-heading font-bold text-base text-foreground">Group {activeGroup}</h2>
-              <p className="text-xs text-muted-foreground">{displayedOutcomes.length} countries with LP markets</p>
+              <p className="text-xs text-muted-foreground">{displayedMarkets.length} countries with LP markets</p>
             </div>
           </div>
 
-          {displayedOutcomes.length > 0 ? (
+          {displayedMarkets.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {displayedOutcomes.map((outcome, i) => (
-                <FuturesOutcomeCard
-                  key={`${outcome.market_id}-${outcome.label}`}
-                  outcome={outcome}
-                  selectedOutcome={selectedOutcome}
-                  setSelectedOutcome={setSelectedOutcome}
+              {displayedMarkets.map((market, i) => (
+                <FuturesMarketLpCard
+                  key={market.id}
+                  market={market}
                   onProvideLiquidity={onProvideLiquidity}
                 />
               ))}
@@ -148,10 +121,11 @@ export default function FuturesLpPanel({
           )}
         </section>
       ) : (
-        /* All Groups View */
         Object.entries(WORLD_CUP_GROUPS_2026).map(([groupName, teams]) => {
-          const groupOutcomes = outcomesByGroup[groupName] || [];
-          if (groupOutcomes.length === 0) return null;
+          const groupMarkets = displayedMarkets.filter(m => 
+            teams.some(t => t.name === m.country)
+          );
+          if (groupMarkets.length === 0) return null;
 
           return (
             <section key={groupName} id={`lp-group-${groupName}`} className="scroll-mt-24">
@@ -161,17 +135,15 @@ export default function FuturesLpPanel({
                 </div>
                 <div>
                   <h2 className="font-heading font-bold text-base text-foreground">Group {groupName}</h2>
-                  <p className="text-xs text-muted-foreground">{groupOutcomes.length} countries with LP markets</p>
+                  <p className="text-xs text-muted-foreground">{groupMarkets.length} countries with LP markets</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                {groupOutcomes.map((outcome, i) => (
-                  <FuturesOutcomeCard
-                    key={`${outcome.market_id}-${outcome.label}`}
-                    outcome={outcome}
-                    selectedOutcome={selectedOutcome}
-                    setSelectedOutcome={setSelectedOutcome}
+                {groupMarkets.map((market, i) => (
+                  <FuturesMarketLpCard
+                    key={market.id}
+                    market={market}
                     onProvideLiquidity={onProvideLiquidity}
                   />
                 ))}
@@ -184,63 +156,87 @@ export default function FuturesLpPanel({
   );
 }
 
-function FuturesOutcomeCard({ outcome, selectedOutcome, setSelectedOutcome, onProvideLiquidity }) {
-  const [amount, setAmount] = React.useState('');
-  const isSelected = selectedOutcome?.label === outcome.label && selectedOutcome?.market_id === outcome.market_id;
+function FuturesMarketLpCard({ market, onProvideLiquidity }) {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [amount, setAmount] = useState('');
+
+  const activeOutcome = market.outcomes[selectedIndex];
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`rounded-2xl border-2 overflow-hidden transition-all ${
-        isSelected ? 'border-primary bg-primary/5' : 'border-border/50 bg-card hover:border-border'
-      }`}
+      className="rounded-2xl border-2 border-border/50 bg-card overflow-hidden hover:border-primary/30 transition-all"
     >
-      {/* Card Header with Flag, Country Name, and Odds */}
+      {/* Header with Flag & Country */}
       <div className="p-5 border-b border-border/30">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="text-5xl shrink-0">{outcome.country_flag || outcome.flag || '🌍'}</div>
+        <div className="flex items-center gap-3">
+          <div className="text-4xl shrink-0">{market.country_flag || '🌍'}</div>
           <div className="flex-1">
-            <h3 className="font-heading font-black text-xl text-foreground">{outcome.country}</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">{outcome.label}</p>
+            <h3 className="font-heading font-black text-lg text-foreground">{market.country}</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">{market.subtitle || 'Tournament Finish'}</p>
           </div>
-          <Badge className={`${outcome.odds >= 5 ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' : 'bg-primary/20 text-primary border-primary/30'} border text-base font-bold px-3 py-1`}>
-            {outcome.odds.toFixed(1)}x
-          </Badge>
         </div>
-        <p className="text-xs text-muted-foreground">{outcome.market_title}</p>
       </div>
 
-      {/* LP Provider Section */}
+      {/* Position Selector (1st, 2nd, 3rd) */}
       <div className="p-5 space-y-4">
+        <div>
+          <label className="text-xs text-muted-foreground mb-1.5 block font-bold">Select Finish Position</label>
+          <div className="grid grid-cols-3 gap-1.5 bg-secondary/30 p-1 rounded-xl border border-border/30">
+            {market.outcomes.map((outcome, idx) => (
+              <button
+                key={idx}
+                onClick={() => setSelectedIndex(idx)}
+                className={`py-2 text-xs font-bold rounded-lg transition-all ${
+                  selectedIndex === idx
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {outcome.position || outcome.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Dynamic Stats for Selected Position */}
+        <div className="bg-secondary/40 rounded-xl p-3.5 text-xs space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">Odds:</span>
+            <span className="font-bold text-primary text-sm">{activeOutcome.odds.toFixed(2)}x</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">Pool:</span>
+            <span className="font-bold">◎{activeOutcome.pool?.toFixed(2) || '0'}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">LP Offers:</span>
+            <span className="font-bold">{activeOutcome.lp_offers || 0}</span>
+          </div>
+        </div>
+
         {/* Explainer */}
-        <div className="bg-secondary/40 rounded-xl p-3.5 text-xs">
-          <p className="font-bold text-foreground mb-1.5">💰 Be The House</p>
-          <p className="text-muted-foreground">
-            Provide liquidity <span className="text-destructive font-bold">AGAINST</span> {outcome.label}.
-          </p>
-          <p className="text-muted-foreground mt-1.5">
-            If they <span className="text-green-400 font-bold">LOSE</span> → You profit.
-            If they <span className="text-destructive font-bold">WIN</span> → You pay {outcome.odds.toFixed(1)}x.
-          </p>
+        <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 text-[11px] text-muted-foreground leading-relaxed">
+          ⚠️ You're providing liquidity <strong className="text-destructive">AGAINST</strong> {market.country} finishing {activeOutcome.position.toLowerCase()}. If they don't reach this position, you profit!
         </div>
 
         {/* Amount Input */}
         <div>
-          <label className="text-xs text-muted-foreground mb-2 block font-bold">LP Amount (SOL)</label>
+          <label className="text-xs text-muted-foreground mb-2 block font-bold">LP Amount (◎ SOL)</label>
           <input
             type="number"
             placeholder="0.00"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-full bg-secondary/50 border-border/50 text-xl font-heading font-bold h-12 rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full bg-secondary/50 border border-border/50 text-lg font-heading font-bold h-12 rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <div className="flex gap-2 mt-2.5">
             {[0.5, 1, 5, 10].map(qa => (
               <button
                 key={qa}
                 onClick={() => setAmount(String(qa))}
-                className="px-3 py-2 text-sm font-bold bg-secondary hover:bg-secondary/80 rounded-lg flex-1 transition-colors"
+                className="px-3 py-2 text-xs font-bold bg-secondary hover:bg-secondary/80 rounded-lg flex-1 transition-colors"
               >
                 ◎{qa}
               </button>
@@ -250,36 +246,19 @@ function FuturesOutcomeCard({ outcome, selectedOutcome, setSelectedOutcome, onPr
 
         {/* Provide LP Button */}
         <Button
-          onClick={() => onProvideLiquidity(outcome, parseFloat(amount))}
+          onClick={() => {
+            onProvideLiquidity({
+              ...activeOutcome,
+              market_id: market.id,
+            }, parseFloat(amount));
+          }}
           disabled={!amount || parseFloat(amount) <= 0}
           className="w-full h-12 font-heading font-bold rounded-xl text-base"
           style={{ background: 'linear-gradient(135deg, #a69cf2, #8b84e8)' }}
         >
           <DollarSign className="w-5 h-5 mr-2" />
-          Provide ◎{amount || '0'} LP
+          Provide ◎{amount || '0'} LP for {activeOutcome.position}
         </Button>
-
-        {/* Reset amount after clicking */}
-        {amount > 0 && (
-          <button
-            onClick={() => setAmount('')}
-            className="text-xs text-muted-foreground hover:text-foreground mt-2 font-medium"
-          >
-            Clear
-          </button>
-        )}
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border/30">
-          <div>
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Pool</p>
-            <p className="font-heading font-black text-sm text-foreground">◎{outcome.pool?.toFixed(2) || '0'}</p>
-          </div>
-          <div>
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">LP Offers</p>
-            <p className="font-heading font-black text-sm text-foreground">{outcome.lp_offers || 0}</p>
-          </div>
-        </div>
       </div>
     </motion.div>
   );
