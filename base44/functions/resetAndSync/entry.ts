@@ -12,41 +12,69 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const API_KEY = Deno.env.get('THE_ODDS_API_KEY');
-    if (!API_KEY) {
+    const STATS_API_KEY = Deno.env.get('THE_ODDS_API_KEY'); // Using THE_ODDS_API_KEY for TheStatsAPI
+    const ODDS_API_KEY = Deno.env.get('THE_ODDS_API_KEY');
+    
+    if (!STATS_API_KEY) {
       return Response.json({ error: 'THE_ODDS_API_KEY not set' }, { status: 500 });
     }
 
     console.log('[resetAndSync] Starting complete database reset...');
 
     // Step 1: Delete all user-facing data (in order of dependencies)
-    console.log('[resetAndSync] Deleting UserBets...');
-    await base44.asServiceRole.entities.UserBet.delete({});
+    // First fetch all records, then delete them one by one (bulk delete with empty filter doesn't work)
+    console.log('[resetAndSync] Fetching and deleting UserBets...');
+    const userBets = await base44.asServiceRole.entities.UserBet.list();
+    for (const ub of userBets) await base44.asServiceRole.entities.UserBet.delete(ub.id);
     
-    console.log('[resetAndSync] Deleting BetOffers...');
-    await base44.asServiceRole.entities.BetOffer.delete({});
+    console.log('[resetAndSync] Fetching and deleting BetOffers...');
+    const betOffers = await base44.asServiceRole.entities.BetOffer.list();
+    for (const bo of betOffers) await base44.asServiceRole.entities.BetOffer.delete(bo.id);
     
-    console.log('[resetAndSync] Deleting LpPositions...');
-    await base44.asServiceRole.entities.LpPosition.delete({});
+    console.log('[resetAndSync] Fetching and deleting LpPositions...');
+    const lpPositions = await base44.asServiceRole.entities.LpPosition.list();
+    for (const lp of lpPositions) await base44.asServiceRole.entities.LpPosition.delete(lp.id);
     
-    console.log('[resetAndSync] Deleting Bets...');
-    await base44.asServiceRole.entities.Bet.delete({});
+    console.log('[resetAndSync] Fetching and deleting Bets...');
+    const bets = await base44.asServiceRole.entities.Bet.list();
+    for (const bet of bets) await base44.asServiceRole.entities.Bet.delete(bet.id);
     
-    console.log('[resetAndSync] Deleting FuturesMarkets...');
-    await base44.asServiceRole.entities.FuturesMarket.delete({});
+    console.log('[resetAndSync] Fetching and deleting FuturesMarkets...');
+    const futures = await base44.asServiceRole.entities.FuturesMarket.list();
+    for (const fm of futures) await base44.asServiceRole.entities.FuturesMarket.delete(fm.id);
     
-    console.log('[resetAndSync] Deleting Matches...');
-    await base44.asServiceRole.entities.Match.delete({});
+    console.log('[resetAndSync] Fetching and deleting Matches...');
+    const matches = await base44.asServiceRole.entities.Match.list();
+    for (const m of matches) await base44.asServiceRole.entities.Match.delete(m.id);
 
     // Step 2: Fetch fresh World Cup 2026 matches from API
     console.log('[resetAndSync] Fetching fresh matches from TheStatsAPI...');
     const WC_COMPETITION_ID = 'comp_6107';
     const WC_SEASON_ID = 'sn_118868';
     
-    const res = await fetch(
-      `https://api.thestatsapi.com/api/football/matches?competition_id=${WC_COMPETITION_ID}&per_page=100&page=1`,
-      { headers: { Authorization: `Bearer ${API_KEY}` } }
-    );
+    // Retry logic for rate limits
+    let res;
+    let retries = 3;
+    while (retries > 0) {
+      res = await fetch(
+        `https://api.thestatsapi.com/api/football/matches?competition_id=${WC_COMPETITION_ID}&per_page=100&page=1`,
+        { headers: { Authorization: `Bearer ${STATS_API_KEY}` } }
+      );
+      
+      if (res.status === 429) {
+        retries--;
+        if (retries === 0) {
+          return Response.json({ 
+            error: 'TheStatsAPI rate limit exceeded. Please wait a few minutes and try again.',
+            status_code: 429
+          }, { status: 429 });
+        }
+        console.log(`[resetAndSync] Rate limited, waiting 2 seconds... (${retries} retries left)`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } else {
+        break;
+      }
+    }
     
     if (!res.ok) {
       if (res.status === 403) {
@@ -117,8 +145,7 @@ Deno.serve(async (req) => {
     // Step 5: Fetch live odds for all bets
     console.log('[resetAndSync] Fetching live odds from The Odds API...');
     const oddsRes = await fetch(
-      `https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup/odds?apiKey=${API_KEY}&regions=eu&markets=h2h`,
-      { headers: { Authorization: `Bearer ${API_KEY}` } }
+      `https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h`
     );
     
     let oddsUpdated = 0;
