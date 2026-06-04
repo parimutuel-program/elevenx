@@ -55,10 +55,19 @@ export default function AdminMatchRow({ match, bets, index }) {
       
       console.log('[createBetMutation] createMarketOnChain response:', marketRes.data);
       
-      if (marketRes.data.solana_instruction) {
+      if (marketRes.data.needsPlatformInit && marketRes.data.solana_instruction) {
+        // Store both instructions - platform init first, then create market
         setPendingMarketInit({
           instruction: marketRes.data.solana_instruction,
+          createMarketInstruction: marketRes.data.createMarketInstruction,
           betId: bet.id,
+          step: 'platform_init',
+        });
+      } else if (marketRes.data.createMarketInstruction) {
+        setPendingMarketInit({
+          instruction: marketRes.data.createMarketInstruction,
+          betId: bet.id,
+          step: 'create_market',
         });
       } else if (marketRes.data.error) {
         throw new Error('Failed to get market instruction: ' + marketRes.data.error);
@@ -78,7 +87,18 @@ export default function AdminMatchRow({ match, bets, index }) {
 
   const handleMarketInitSuccess = async (txResult) => {
     const signature = txResult.signature;
-    console.log('[AdminMatchRow] Market creation transaction confirmed:', signature);
+    console.log('[AdminMatchRow] Transaction confirmed:', signature);
+    
+    // If this was platform init, now show create market instruction
+    if (pendingMarketInit?.step === 'platform_init' && pendingMarketInit?.createMarketInstruction) {
+      console.log('[AdminMatchRow] Platform initialized, now creating market...');
+      setPendingMarketInit({
+        instruction: pendingMarketInit.createMarketInstruction,
+        betId: pendingMarketInit.betId,
+        step: 'create_market',
+      });
+      return;
+    }
     
     // Commit the market data to database AFTER successful on-chain transaction
     const betIdToCommit = txResult.betId || pendingMarketInit?.betId;
@@ -169,8 +189,19 @@ export default function AdminMatchRow({ match, bets, index }) {
                   match_id: match.id,
                 });
                 console.log('[Init On-Chain] Response:', marketRes.data);
-                if (marketRes.data.solana_instruction) {
-                  setPendingMarketInit({ instruction: marketRes.data.solana_instruction, betId: existingBet.id });
+                if (marketRes.data.needsPlatformInit && marketRes.data.solana_instruction) {
+                  setPendingMarketInit({
+                    instruction: marketRes.data.solana_instruction,
+                    createMarketInstruction: marketRes.data.createMarketInstruction,
+                    betId: existingBet.id,
+                    step: 'platform_init',
+                  });
+                } else if (marketRes.data.createMarketInstruction) {
+                  setPendingMarketInit({
+                    instruction: marketRes.data.createMarketInstruction,
+                    betId: existingBet.id,
+                    step: 'create_market',
+                  });
                 } else if (marketRes.data.alreadyExists) {
                   await base44.entities.Bet.update(existingBet.id, { solana_market_created: true });
                   queryClient.invalidateQueries({ queryKey: ['bets'] });

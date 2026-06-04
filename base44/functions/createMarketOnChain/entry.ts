@@ -38,28 +38,9 @@ Deno.serve(async (req) => {
       programId
     );
 
-    const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
-    const accountInfo = await connection.getAccountInfo(marketPda);
-    
-    if (accountInfo) {
-      const expectedMinSize = 210;
-      if (accountInfo.data.length >= expectedMinSize) {
-        console.log('Market already exists and is properly initialized at:', marketPda.toBase58());
-        
-        // Check if force recreate is requested
-        const forceRecreate = payload.force_recreate === true;
-        if (forceRecreate) {
-          console.log('Force recreating market with updated odds...');
-          // Continue to recreate instruction below
-        } else {
-          return Response.json({
-            success: true,
-            marketPda: marketPda.toBase58(),
-            alreadyExists: true,
-          });
-        }
-      }
-    }
+    // Skip on-chain check to avoid rate limits - just create the instruction
+    // Frontend will handle the transaction and we'll check on-chain status after
+    console.log('Preparing create_market instruction for:', marketPda.toBase58());
 
     // Prepare create_market instruction with new discriminator
     const discriminator = Buffer.from(sha256("global:create_market")).slice(0, 8);
@@ -133,45 +114,37 @@ Deno.serve(async (req) => {
       programId
     );
 
-    const platformConfigInfo = await connection.getAccountInfo(platformConfigPda);
-    if (!platformConfigInfo) {
-      const [feeVaultPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from('fee_vault')],
-        programId
-      );
-      
-      const initDiscriminator = Buffer.from(sha256("global:initialize_platform")).slice(0, 8);
-      const initParams = Buffer.alloc(3);
-      initParams.writeUInt16LE(200, 0); // fee_percent: 2%
-      initParams.writeUInt8(51, 2); // consensus_threshold: 51%
-      const initInstructionData = Buffer.concat([initDiscriminator, initParams]);
-      
-      return Response.json({
-        success: false,
-        error: 'Platform config not initialized',
-        needsPlatformInit: true,
-        platformConfigPda: platformConfigPda.toBase58(),
-        feeVaultPda: feeVaultPda.toBase58(),
-        message: 'Platform config must be initialized first by admin',
-        solana_instruction: {
-          instruction_type: 'initialize_platform',
-          programId: SOLANA_PROGRAM_ID,
-          instruction_data: initInstructionData.toString('base64'),
-          accounts: {
-            platformConfig: platformConfigPda.toBase58(),
-            feeVault: feeVaultPda.toBase58(),
-            admin: '',
-          }
-        }
-      });
-    }
+    const [feeVaultPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('fee_vault')],
+      programId
+    );
 
+    // Return both instructions - try platform init first if needed, then create market
+    const initDiscriminator = Buffer.from(sha256("global:initialize_platform")).slice(0, 8);
+    const initParams = Buffer.alloc(3);
+    initParams.writeUInt16LE(200, 0); // fee_percent: 2%
+    initParams.writeUInt8(51, 2); // consensus_threshold: 51%
+    const initInstructionData = Buffer.concat([initDiscriminator, initParams]);
+    
     const response = {
       success: true,
       marketPda: marketPda.toBase58(),
       alreadyExists: false,
       forceRecreated: payload.force_recreate === true,
+      needsPlatformInit: true, // Always return platform init instruction first
+      platformConfigPda: platformConfigPda.toBase58(),
+      feeVaultPda: feeVaultPda.toBase58(),
       solana_instruction: {
+        instruction_type: 'initialize_platform',
+        programId: SOLANA_PROGRAM_ID,
+        instruction_data: initInstructionData.toString('base64'),
+        accounts: {
+          platformConfig: platformConfigPda.toBase58(),
+          feeVault: feeVaultPda.toBase58(),
+          admin: '',
+        }
+      },
+      createMarketInstruction: {
         instruction_type: 'create_market',
         programId: SOLANA_PROGRAM_ID,
         marketPda: marketPda.toBase58(),
@@ -183,15 +156,9 @@ Deno.serve(async (req) => {
           admin: 'SIGNER_WALLET',
         }
       },
-      message: payload.force_recreate === true 
-        ? 'Sign to RECREATE market with updated odds (this will overwrite existing market data)' 
-        : 'Sign to create pari-mutuel market on-chain',
-      // Return bet_id so frontend can commit after transaction succeeds
+      message: 'Initialize platform first, then create market',
       bet_id: bet.id,
     };
-    
-    // DO NOT update database here - wait for transaction to succeed on-chain first
-    // Frontend should commit the solana_market_pda after successful transaction
     
     return Response.json(response);
 
