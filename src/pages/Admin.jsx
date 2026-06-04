@@ -880,9 +880,9 @@ function CreateMatchDialog() {
 
   const createQuickTestMatch = async () => {
     const now = new Date();
-    const startTime = new Date(now.getTime() + 4 * 60 * 1000); // 4 minutes from now
-    const endTime = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes from now
-    const bettingClosesAt = new Date(startTime.getTime() + 60 * 60 * 1000); // 1 hour after start
+    const startTime = new Date(now.getTime() + 10 * 60 * 1000); // 10 minutes from now
+    const bettingClosesAt = new Date(startTime.getTime() + 60 * 60 * 1000); // 60 min AFTER kickoff
+    const settleAfter = new Date(bettingClosesAt.getTime() + 5 * 60 * 1000); // 5 min after
     
     try {
       const match = await base44.entities.Match.create({
@@ -890,21 +890,20 @@ function CreateMatchDialog() {
         team_b: 'FFO1',
         team_a_flag: '🔵',
         team_b_flag: '🔴',
-        group_stage: 'Test Match',
+        group_stage: 'Quick Test',
         match_time: startTime.toISOString(),
-        match_end_time: endTime.toISOString(),
+        match_end_time: settleAfter.toISOString(),
         venue: 'Test Arena',
         status: 'upcoming',
       });
       
-      // Create associated bet with proper betting window
       await base44.entities.Bet.create({
         match_id: match.id,
         title: 'FFO vs FFO1',
         outcome_a: 'FFO',
         outcome_b: 'FFO1',
         outcome_draw: 'Draw',
-        open_until: bettingClosesAt.toISOString(),
+        open_until: bettingClosesAt.toISOString(), // 60 min AFTER kickoff
         status: 'open',
         odds_a: 2.0,
         odds_b: 2.0,
@@ -917,9 +916,9 @@ function CreateMatchDialog() {
       
       queryClient.invalidateQueries({ queryKey: ['matches', 'bets'] });
       setOpen(false);
-      alert('Test match created! Starts in 4 min, betting closes in 64 min.');
+      alert('✅ READY TO TEST!\n\nMatch starts: 10 min\nBetting closes: 70 min\n\nGo to Matches tab → Initialize Market');
     } catch (err) {
-      alert('Failed to create test match: ' + err.message);
+      alert('Failed: ' + err.message);
     }
   };
 
