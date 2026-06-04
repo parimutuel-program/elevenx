@@ -40,10 +40,11 @@ export default function LpPositionCard({ position, index, walletAddress, onWithd
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
+      className="h-full"
     >
-      <Card className="bg-card border border-primary/30 rounded-2xl overflow-hidden">
-        <CardContent className="p-0">
-          <div className="p-5 space-y-4">
+      <Card className="bg-card border border-primary/30 rounded-2xl overflow-hidden h-full">
+        <CardContent className="p-0 h-full">
+          <div className="p-5 space-y-4 h-full flex flex-col">
             {/* Header */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3 flex-1">

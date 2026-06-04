@@ -19,7 +19,7 @@ export default function MatchLiquidityCard({ bet, match, isSelected, onClick }) 
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className={`p-4 rounded-xl border text-left transition-all ${
+      className={`p-4 rounded-xl border text-left transition-all h-full flex flex-col ${
         isSelected
           ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10'
           : 'border-border/50 bg-secondary/30 hover:border-primary/30'

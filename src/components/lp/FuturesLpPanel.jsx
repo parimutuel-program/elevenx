@@ -167,7 +167,7 @@ function FuturesMarketLpCard({ market, onProvideLiquidity }) {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ scale: 1.02, y: -4 }}
-      className="relative rounded-2xl bg-card overflow-hidden transition-all group"
+      className="relative rounded-2xl bg-card overflow-hidden transition-all group h-full"
       style={{
         background: 'linear-gradient(145deg, rgba(15,10,30,0.95) 0%, rgba(26,16,64,0.9) 100%)',
       }}
@@ -175,13 +175,13 @@ function FuturesMarketLpCard({ market, onProvideLiquidity }) {
       {/* Purple gradient border frame */}
       <div className="absolute inset-0 rounded-2xl p-[2px] pointer-events-none">
         <div className="absolute inset-0 rounded-2xl" 
-             style={{
-               background: 'linear-gradient(135deg, #a69cf2, #8b84e8, #6d5dd3)',
-             }} />
+              style={{
+                background: 'linear-gradient(135deg, #a69cf2, #8b84e8, #6d5dd3)',
+              }} />
       </div>
-      
+
       {/* Inner content container */}
-      <div className="relative z-10 rounded-2xl bg-[#0f0a1e]/95 backdrop-blur-sm m-[2px]">
+      <div className="relative z-10 rounded-2xl bg-[#0f0a1e]/95 backdrop-blur-sm m-[2px] h-full flex flex-col">
       {/* Header with Flag & Country */}
       <div className="p-5 border-b border-border/30">
         <div className="flex items-center gap-3">
@@ -194,7 +194,7 @@ function FuturesMarketLpCard({ market, onProvideLiquidity }) {
       </div>
 
       {/* Position Selector (1st, 2nd, 3rd) */}
-      <div className="p-5 space-y-4">
+      <div className="p-5 space-y-4 flex-1 flex flex-col justify-between">
         <div>
           <label className="text-xs text-muted-foreground mb-1.5 block font-bold">Select Finish Position</label>
           <div className="grid grid-cols-3 gap-1.5 bg-secondary/30 p-1 rounded-xl border border-border/30">
