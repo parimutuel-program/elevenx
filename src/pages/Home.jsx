@@ -243,16 +243,16 @@ export default function Home() {
                   {/* Teams */}
                   <div className="flex items-center justify-between mb-3">
                     <div className="text-center flex-1 min-w-0">
-                      <div className="text-3xl mb-1">{getTeamFlag(fm.team_a)}</div>
-                      <p className="font-heading font-bold text-sm leading-tight truncate">{fm.team_a}</p>
+                      <div className="text-2xl mb-0.5">{getTeamFlag(fm.team_a)}</div>
+                      <p className="font-heading font-bold text-[11px] leading-tight truncate">{fm.team_a}</p>
                     </div>
-                    <div className="flex flex-col items-center gap-0.5 px-2">
-                      <span className="font-heading font-black text-primary text-base">VS</span>
-                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">{fm.date}</span>
+                    <div className="flex flex-col items-center gap-0.5 px-1">
+                      <span className="font-heading font-black text-primary text-xs">VS</span>
+                      <span className="text-[9px] text-muted-foreground whitespace-nowrap">{fm.date}</span>
                     </div>
                     <div className="text-center flex-1 min-w-0">
-                      <div className="text-3xl mb-1">{getTeamFlag(fm.team_b)}</div>
-                      <p className="font-heading font-bold text-sm leading-tight truncate">{fm.team_b}</p>
+                      <div className="text-2xl mb-0.5">{getTeamFlag(fm.team_b)}</div>
+                      <p className="font-heading font-bold text-[11px] leading-tight truncate">{fm.team_b}</p>
                     </div>
                   </div>
 
