@@ -332,7 +332,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
         
         <div className="flex gap-2 mt-2 flex-wrap">
           {mode === 'match' && maxMatcherStake !== null && maxMatcherStake <= 0 ?
-          <p className="text-xs text-destructive font-bold">No liquidity available - LP must provide liquidity first</p> :
+          <p className="text-xs text-destructive font-bold hidden">No liquidity available - LP must provide liquidity first</p> :
 
           <>
               {QUICK_AMOUNTS.map((qa) => {
