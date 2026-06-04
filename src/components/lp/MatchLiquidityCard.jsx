@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { DollarSign, TrendingUp, Info } from 'lucide-react';
+import { DollarSign, TrendingUp } from 'lucide-react';
 import { getTeamFlag } from '@/utils/flags';
 
 export default function MatchLiquidityCard({ bet, match, isSelected, onClick }) {
@@ -14,59 +14,79 @@ export default function MatchLiquidityCard({ bet, match, isSelected, onClick }) 
 
   return (
     <motion.button
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      whileHover={{ scale: 1.02 }}
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -6 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className={`p-4 rounded-xl border text-left transition-all h-full flex flex-col ${
-        isSelected
-          ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10'
-          : 'border-border/50 bg-secondary/30 hover:border-primary/30'
-      }`}
+      className="relative rounded-3xl h-full overflow-hidden text-left"
+      style={{
+        background: isSelected 
+          ? 'linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%)'
+          : 'linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%)',
+        boxShadow: isSelected
+          ? '0 8px 32px rgba(33,196,93,0.2), inset 0 1px 0 rgba(255,255,255,0.1)'
+          : '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+        border: isSelected ? '1px solid rgba(33,196,93,0.3)' : '1px solid rgba(255,255,255,0.08)'
+      }}
     >
-      {/* Header - Teams with flags */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex-1 text-center">
-          <div className="text-2xl mb-0.5">{getTeamFlag(match.team_a, match.team_a_flag)}</div>
-          <p className="font-heading font-bold text-[10px] leading-tight truncate">{match.team_a}</p>
-        </div>
-        
-        <div className="flex flex-col items-center px-2">
-          <span className="text-[9px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full mb-1">VS</span>
-          <div className="flex items-center gap-1 text-[8px] text-muted-foreground">
-            <DollarSign className="w-2 h-2" />
-            {totalPool.toFixed(1)}
+      {/* Subtle glow effect */}
+      <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl transition-opacity ${
+        isSelected ? 'opacity-20' : 'opacity-5'
+      }`} style={{ background: '#21c45d' }} />
+      
+      {/* Content */}
+      <div className="relative p-5 h-full flex flex-col">
+        {/* Header - Teams */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex-1 text-center">
+            <div className="text-3xl mb-1 filter drop-shadow-lg">{getTeamFlag(match.team_a, match.team_a_flag)}</div>
+            <p className="font-heading font-bold text-[11px] text-white/90 truncate">{match.team_a}</p>
+          </div>
+          
+          <div className="flex flex-col items-center px-3">
+            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white text-[9px] font-bold px-3 py-1 rounded-full mb-2 shadow-lg shadow-emerald-500/25">
+              VS
+            </div>
+            <div className="flex items-center gap-1.5 bg-white/5 backdrop-blur-sm px-2.5 py-1.5 rounded-xl border border-white/10">
+              <DollarSign className="w-3 h-3 text-emerald-400" />
+              <span className="font-heading font-bold text-white text-xs">{totalPool.toFixed(1)}</span>
+            </div>
+          </div>
+
+          <div className="flex-1 text-center">
+            <div className="text-3xl mb-1 filter drop-shadow-lg">{getTeamFlag(match.team_b, match.team_b_flag)}</div>
+            <p className="font-heading font-bold text-[11px] text-white/90 truncate">{match.team_b}</p>
           </div>
         </div>
 
-        <div className="flex-1 text-center">
-          <div className="text-2xl mb-0.5">{getTeamFlag(match.team_b, match.team_b_flag)}</div>
-          <p className="font-heading font-bold text-[10px] leading-tight truncate">{match.team_b}</p>
+        {/* Odds Grid */}
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          <div className="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm rounded-2xl p-3 border border-white/10 text-center">
+            <p className="text-[9px] text-white/40 uppercase tracking-wider font-semibold mb-1.5 truncate">{match.team_a}</p>
+            <p className="font-heading font-bold text-emerald-400 text-sm">{oddsA.toFixed(2)}x</p>
+          </div>
+          <div className="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm rounded-2xl p-3 border border-white/10 text-center">
+            <p className="text-[9px] text-white/40 uppercase tracking-wider font-semibold mb-1.5">Draw</p>
+            <p className="font-heading font-bold text-yellow-400 text-sm">{oddsDraw.toFixed(2)}x</p>
+          </div>
+          <div className="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm rounded-2xl p-3 border border-white/10 text-center">
+            <p className="text-[9px] text-white/40 uppercase tracking-wider font-semibold mb-1.5 truncate">{match.team_b}</p>
+            <p className="font-heading font-bold text-emerald-400 text-sm">{oddsB.toFixed(2)}x</p>
+          </div>
         </div>
-      </div>
 
-      {/* Odds grid */}
-      <div className="grid grid-cols-3 gap-1.5 mb-2">
-        <div className="bg-primary/5 border border-primary/20 rounded-lg p-1.5 text-center">
-          <p className="text-[8px] text-muted-foreground truncate">{match.team_a}</p>
-          <p className="font-bold text-primary text-xs">{oddsA.toFixed(2)}x</p>
-        </div>
-        <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-1.5 text-center">
-          <p className="text-[8px] text-muted-foreground">Draw</p>
-          <p className="font-bold text-yellow-400 text-xs">{oddsDraw.toFixed(2)}x</p>
-        </div>
-        <div className="bg-accent/5 border border-accent/20 rounded-lg p-1.5 text-center">
-          <p className="text-[8px] text-muted-foreground truncate">{match.team_b}</p>
-          <p className="font-bold text-accent text-xs">{oddsB.toFixed(2)}x</p>
-        </div>
-      </div>
-
-      {/* Info */}
-      <div className="flex items-center justify-between pt-2 border-t border-border/30">
-        <span className="text-[9px] text-muted-foreground">{match.group_stage || 'World Cup'}</span>
-        <div className="flex items-center gap-1 text-[9px] text-primary font-bold">
-          Select <Info className="w-2.5 h-2.5" />
+        {/* Footer */}
+        <div className="mt-auto flex items-center justify-between pt-3 border-t border-white/10">
+          <span className="text-[9px] text-white/40 uppercase tracking-wider font-semibold">{match.group_stage || 'World Cup'}</span>
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
+            isSelected ? 'bg-emerald-500/20' : 'bg-white/5'
+          }`}>
+            <span className={`text-[10px] font-bold ${isSelected ? 'text-emerald-400' : 'text-white/50'}`}>
+              {isSelected ? 'Selected' : 'Select'}
+            </span>
+            <TrendingUp className={`w-3.5 h-3.5 ${isSelected ? 'text-emerald-400' : 'text-white/50'}`} />
+          </div>
         </div>
       </div>
     </motion.button>
