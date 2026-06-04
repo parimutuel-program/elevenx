@@ -253,9 +253,9 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
           });
           console.log('[PlaceBetPanel] matchBet response:', res.data);
         } else {
-          // No LP available - user must provide liquidity first
-          console.log('[PlaceBetPanel] No LP offer available for outcome:', selectedOutcome);
-          throw new Error(`No LP liquidity for ${selectedOutcome === 'a' ? bet?.outcome_a : selectedOutcome === 'b' ? bet?.outcome_b : 'Draw'}. Add liquidity or select another outcome.`);
+          // No LP available - user needs to add liquidity first
+          console.log('[PlaceBetPanel] No LP available for outcome:', selectedOutcome);
+          throw new Error(`No LP liquidity for ${selectedOutcome === 'a' ? bet?.outcome_a : selectedOutcome === 'b' ? bet?.outcome_b : 'Draw'}. Go to LP Dashboard to add liquidity first.`);
         }
       }
       if (res.data?.error) throw new Error(res.data.error);
