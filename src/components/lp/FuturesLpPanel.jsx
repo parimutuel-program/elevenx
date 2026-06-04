@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, TrendingUp, DollarSign, Globe, Search } from 'lucide-react';
+import { Trophy, DollarSign, Search, TrendingUp, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import GroupNavigation, { WORLD_CUP_GROUPS_2026 } from '@/components/futures/GroupNavigation';
@@ -161,100 +161,140 @@ function FuturesMarketLpCard({ market, onProvideLiquidity }) {
   const [amount, setAmount] = useState('');
 
   const activeOutcome = market.outcomes[selectedIndex];
+  const potentialReturn = amount && parseFloat(amount) > 0 && activeOutcome.odds > 0 
+    ? (parseFloat(amount) * activeOutcome.odds).toFixed(2) 
+    : '0.00';
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -6 }}
-      className="relative rounded-3xl h-full overflow-hidden"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      whileHover={{ y: -8, scale: 1.02 }}
+      className="relative rounded-3xl h-full overflow-hidden group"
       style={{
-        background: 'linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)'
+        background: 'linear-gradient(145deg, rgba(20,30,48,0.95) 0%, rgba(15,10,30,0.98) 100%)',
+        boxShadow: '0 12px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)'
       }}
     >
-      {/* Subtle glow effect */}
-      <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-10" style={{ background: '#21c45d' }} />
+      {/* Animated glow effects */}
+      <div className="absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl opacity-20 group-hover:opacity-30 transition-opacity duration-500" style={{ background: 'radial-gradient(circle, #21c45d 0%, transparent 70%)' }} />
+      <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full blur-3xl opacity-15 group-hover:opacity-25 transition-opacity duration-500" style={{ background: 'radial-gradient(circle, #a69cf2 0%, transparent 70%)' }} />
       
       {/* Content */}
-      <div className="relative p-5 h-full flex flex-col">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="text-4xl filter drop-shadow-lg">{market.country_flag || '🌍'}</div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-heading font-bold text-lg text-white truncate">{market.country}</h3>
-            <p className="text-[10px] text-white/40 uppercase tracking-wider font-semibold">Tournament Finish</p>
+      <div className="relative p-6 h-full flex flex-col">
+        {/* Header with Country Flag */}
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="text-5xl filter drop-shadow-2xl transform group-hover:scale-110 transition-transform duration-300">{market.country_flag || '🌍'}</div>
+            <div>
+              <h3 className="font-heading font-black text-xl text-white tracking-tight">{market.country}</h3>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <Trophy className="w-3 h-3 text-amber-400" />
+                <p className="text-[9px] text-amber-400/90 uppercase tracking-widest font-black">Tournament Futures</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Position Selector */}
-        <div className="mb-4">
-          <div className="flex gap-1.5 bg-white/5 backdrop-blur-sm rounded-2xl p-1.5 border border-white/10">
+        {/* Position Selector - Enhanced */}
+        <div className="mb-5">
+          <p className="text-[9px] text-white/50 uppercase tracking-wider font-bold mb-2">Select Position</p>
+          <div className="flex gap-2 bg-gradient-to-r from-white/8 to-white/3 backdrop-blur-md rounded-2xl p-1.5 border border-white/12">
             {market.outcomes.map((outcome, idx) => (
               <button
                 key={idx}
                 onClick={() => setSelectedIndex(idx)}
-                className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
+                className={`flex-1 py-3 text-xs font-black rounded-xl transition-all duration-300 ${
                   selectedIndex === idx
-                    ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/25'
-                    : 'text-white/50 hover:text-white/80 hover:bg-white/5'
+                    ? 'bg-gradient-to-br from-emerald-500 via-emerald-500 to-emerald-600 text-white shadow-xl shadow-emerald-500/30 scale-105'
+                    : 'text-white/40 hover:text-white/80 hover:bg-white/8 hover:scale-100'
                 }`}
               >
-                {outcome.position}
+                <div className="flex flex-col items-center gap-0.5">
+                  <span>{outcome.position}</span>
+                  {selectedIndex === idx && <TrendingUp className="w-3 h-3" />}
+                </div>
               </button>
             ))}
           </div>
         </div>
 
-        {/* Stats Card */}
-        <div className="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm rounded-2xl p-4 mb-4 border border-white/10">
+        {/* Enhanced Stats Card */}
+        <div className="bg-gradient-to-br from-emerald-500/10 via-white/5 to-purple-500/10 backdrop-blur-sm rounded-2xl p-4 mb-4 border border-emerald-500/20">
           <div className="grid grid-cols-3 gap-3">
-            <div>
-              <p className="text-[9px] text-white/40 uppercase tracking-wider font-semibold mb-1">Odds</p>
-              <p className="font-heading font-bold text-emerald-400 text-sm">{activeOutcome.odds.toFixed(2)}x</p>
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <TrendingUp className="w-3 h-3 text-emerald-400" />
+                <p className="text-[8px] text-emerald-400/70 uppercase tracking-wider font-black">Multiplier</p>
+              </div>
+              <p className="font-heading font-black text-emerald-400 text-lg">{activeOutcome.odds.toFixed(2)}x</p>
             </div>
-            <div>
-              <p className="text-[9px] text-white/40 uppercase tracking-wider font-semibold mb-1">Pool</p>
-              <p className="font-heading font-bold text-white text-sm">◎{activeOutcome.pool?.toFixed(2) || '0'}</p>
+            <div className="text-center border-x border-white/10">
+              <p className="text-[8px] text-white/50 uppercase tracking-wider font-black mb-1">Pool</p>
+              <p className="font-heading font-black text-white text-lg">◎{activeOutcome.pool?.toFixed(2) || '0'}</p>
             </div>
-            <div>
-              <p className="text-[9px] text-white/40 uppercase tracking-wider font-semibold mb-1">LPs</p>
-              <p className="font-heading font-bold text-white text-sm">{activeOutcome.lp_offers || 0}</p>
+            <div className="text-center">
+              <p className="text-[8px] text-white/50 uppercase tracking-wider font-black mb-1">Active LPs</p>
+              <p className="font-heading font-black text-amber-400 text-lg">{activeOutcome.lp_offers || 0}</p>
             </div>
           </div>
         </div>
 
-        {/* Info Banner */}
-        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 mb-4">
-          <p className="text-[10px] text-emerald-400/80 leading-relaxed">
-            <span className="font-bold">Bet against</span> {market.country} finishing {activeOutcome.position.toLowerCase()}. Profit if they don't reach it.
-          </p>
+        {/* FOMO Banner - High Energy */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-emerald-500/15 via-emerald-500/10 to-emerald-500/15 border border-emerald-500/30 rounded-xl p-3 mb-4">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 blur-2xl" />
+          <div className="relative">
+            <p className="text-[10px] text-emerald-300 leading-relaxed">
+              <span className="font-black text-emerald-400">UNDERWRITE</span> {market.country} finishing <span className="font-black text-emerald-400">{activeOutcome.position.toLowerCase()}</span>
+            </p>
+            <p className="text-[9px] text-emerald-400/70 mt-1">
+              💰 Keep your stake + win losers' money if they DON'T reach it!
+            </p>
+          </div>
         </div>
 
-        {/* Amount Section */}
+        {/* Investment Section */}
         <div className="mt-auto space-y-3">
           <div>
-            <input
-              type="number"
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 text-white font-heading font-bold text-xl h-14 rounded-2xl px-4 focus:outline-none focus:border-emerald-500/50 transition-colors placeholder:text-white/20"
-            />
+            <label className="text-[9px] text-white/60 uppercase tracking-wider font-bold mb-1.5 block">Investment Amount (SOL)</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400 font-bold text-lg">◎</span>
+              <input
+                type="number"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full bg-gradient-to-br from-white/8 to-white/3 border border-emerald-500/30 text-white font-heading font-black text-2xl h-16 rounded-2xl pl-10 pr-4 focus:outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-white/20"
+              />
+            </div>
           </div>
           
+          {/* Quick Amount Buttons */}
           <div className="flex gap-2">
             {[0.5, 1, 5, 10].map(qa => (
               <button
                 key={qa}
                 onClick={() => setAmount(String(qa))}
-                className="px-3 py-2.5 text-xs font-bold bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl flex-1 transition-all text-white/70 hover:text-white"
+                className="px-3 py-3 text-xs font-black bg-gradient-to-br from-emerald-500/15 to-emerald-500/10 hover:from-emerald-500/25 hover:to-emerald-500/15 border border-emerald-500/20 rounded-xl flex-1 transition-all text-emerald-300 hover:text-emerald-200 hover:scale-105 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/20"
               >
                 ◎{qa}
               </button>
             ))}
           </div>
 
+          {/* Potential Return Display */}
+          {amount && parseFloat(amount) > 0 && activeOutcome.odds > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-amber-500/15 border border-amber-500/30 rounded-xl p-3"
+            >
+              <p className="text-[9px] text-amber-400/70 uppercase tracking-wider font-bold mb-0.5">Potential Return</p>
+              <p className="font-heading font-black text-amber-400 text-xl">◎{potentialReturn} SOL</p>
+            </motion.div>
+          )}
+
+          {/* CTA Button - High Impact */}
           <Button
             onClick={() => {
               onProvideLiquidity({
@@ -263,12 +303,14 @@ function FuturesMarketLpCard({ market, onProvideLiquidity }) {
               }, parseFloat(amount));
             }}
             disabled={!amount || parseFloat(amount) <= 0}
-            className="w-full h-12 font-heading font-bold rounded-2xl text-sm transition-all"
+            className="w-full h-14 font-heading font-black rounded-2xl text-base transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:grayscale"
             style={{ 
-              background: 'linear-gradient(135deg, #21c45d 0%, #1a9f4a 100%)',
-              boxShadow: '0 4px 20px rgba(33,196,93,0.3), inset 0 1px 0 rgba(255,255,255,0.2)'
+              background: 'linear-gradient(135deg, #21c45d 0%, #10b981 50%, #059669 100%)',
+              boxShadow: '0 6px 24px rgba(33,196,93,0.4), inset 0 1px 0 rgba(255,255,255,0.25)',
+              textShadow: '0 1px 2px rgba(0,0,0,0.2)'
             }}
           >
+            <DollarSign className="w-5 h-5 mr-2 inline" />
             Provide ◎{amount || '0'} Liquidity
           </Button>
         </div>
