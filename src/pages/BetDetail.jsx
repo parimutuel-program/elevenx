@@ -43,7 +43,7 @@ export default function BetDetail() {
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-      }, 100);
+      }, 500);
     }
   }, [bet?.id]);
 
