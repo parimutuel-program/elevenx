@@ -224,8 +224,9 @@ export default function LpDashboard() {
       setPendingCommitData(null);
     }
     
-    const outcomeLabel = selectedBet && selectedOutcome === 'a' ? selectedBet.outcome_a : selectedOutcome === 'b' ? selectedBet?.outcome_b : 'Draw';
-    const matchTitle = selectedBet ? `${selectedBet.outcome_a} vs ${selectedBet.outcome_b}` : 'Market';
+    // Use the outcome from pendingCommitData (which has the actual selected outcome)
+    const outcomeLabel = pendingCommitData?.outcome_label || selectedBet?.outcome_a || 'Unknown';
+    const matchTitle = pendingCommitData?.match_title || selectedBet ? `${selectedBet.outcome_a} vs ${selectedBet.outcome_b}` : 'Market';
     
     setSuccessDialog({
       signature,
