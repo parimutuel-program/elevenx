@@ -50,9 +50,9 @@ export default function AdminBetRow({ bet, matches, index }) {
       }
     },
     enabled: !!match,
-    refetchInterval: 10000, // Reduced from 5s to 10s to avoid rate limiting
-    retry: 1, // Reduced retries to avoid spam
-    staleTime: 15000, // Cache for 15s
+    refetchInterval: 20000, // Reduced polling to avoid rate limiting
+    retry: 1,
+    staleTime: 30000, // Cache for 30s
   });
   
   console.log('[AdminBetRow] Query state:', { isLoading, isFetching, hasData: !!marketStatus, hasError: !!marketError });
