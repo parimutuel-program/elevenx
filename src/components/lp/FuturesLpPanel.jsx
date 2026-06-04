@@ -166,117 +166,112 @@ function FuturesMarketLpCard({ market, onProvideLiquidity }) {
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.02, y: -4 }}
-      className="relative rounded-2xl transition-all group h-full"
+      whileHover={{ y: -6 }}
+      className="relative rounded-3xl h-full overflow-hidden"
       style={{
-        background: 'linear-gradient(145deg, rgba(15,10,30,0.95) 0%, rgba(26,16,64,0.9) 100%)',
+        background: 'linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)'
       }}
     >
-      {/* Purple gradient border frame */}
-      <div className="absolute inset-0 rounded-2xl p-[2px] pointer-events-none z-0">
-        <div className="absolute inset-0 rounded-2xl" 
-              style={{
-                background: 'linear-gradient(135deg, #a69cf2, #8b84e8, #6d5dd3)',
-              }} />
-      </div>
-
-      {/* Inner content container */}
-      <div className="relative z-10 rounded-2xl bg-[#0f0a1e]/95 backdrop-blur-sm h-full flex flex-col pb-3">
-      {/* Header with Flag & Country */}
-      <div className="p-5 border-b border-border/30">
-        <div className="flex items-center gap-3">
-          <div className="text-4xl shrink-0">{market.country_flag || '🌍'}</div>
-          <div className="flex-1">
-            <h3 className="font-heading font-black text-lg text-foreground">{market.country}</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">{market.subtitle || 'Tournament Finish'}</p>
+      {/* Subtle glow effect */}
+      <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-10" style={{ background: '#21c45d' }} />
+      
+      {/* Content */}
+      <div className="relative p-5 h-full flex flex-col">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="text-4xl filter drop-shadow-lg">{market.country_flag || '🌍'}</div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-heading font-bold text-lg text-white truncate">{market.country}</h3>
+            <p className="text-[10px] text-white/40 uppercase tracking-wider font-semibold">Tournament Finish</p>
           </div>
         </div>
-      </div>
 
-      {/* Position Selector (1st, 2nd, 3rd) */}
-      <div className="p-5 space-y-4 flex-1 flex flex-col justify-between">
-        <div>
-          <label className="text-xs text-muted-foreground mb-1.5 block font-bold">Select Finish Position</label>
-          <div className="grid grid-cols-3 gap-1.5 bg-secondary/30 p-1 rounded-xl border border-border/30">
+        {/* Position Selector */}
+        <div className="mb-4">
+          <div className="flex gap-1.5 bg-white/5 backdrop-blur-sm rounded-2xl p-1.5 border border-white/10">
             {market.outcomes.map((outcome, idx) => (
               <button
                 key={idx}
                 onClick={() => setSelectedIndex(idx)}
-                className={`py-2 text-xs font-bold rounded-lg transition-all ${
+                className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
                   selectedIndex === idx
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/25'
+                    : 'text-white/50 hover:text-white/80 hover:bg-white/5'
                 }`}
               >
-                {outcome.position || outcome.label}
+                {outcome.position}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Dynamic Stats for Selected Position */}
-        <div className="bg-secondary/40 rounded-xl p-3.5 text-xs space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="text-muted-foreground">Odds:</span>
-            <span className="font-bold text-primary text-sm">{activeOutcome.odds.toFixed(2)}x</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-muted-foreground">Pool:</span>
-            <span className="font-bold">◎{activeOutcome.pool?.toFixed(2) || '0'}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-muted-foreground">LP Offers:</span>
-            <span className="font-bold">{activeOutcome.lp_offers || 0}</span>
+        {/* Stats Card */}
+        <div className="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm rounded-2xl p-4 mb-4 border border-white/10">
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <p className="text-[9px] text-white/40 uppercase tracking-wider font-semibold mb-1">Odds</p>
+              <p className="font-heading font-bold text-emerald-400 text-sm">{activeOutcome.odds.toFixed(2)}x</p>
+            </div>
+            <div>
+              <p className="text-[9px] text-white/40 uppercase tracking-wider font-semibold mb-1">Pool</p>
+              <p className="font-heading font-bold text-white text-sm">◎{activeOutcome.pool?.toFixed(2) || '0'}</p>
+            </div>
+            <div>
+              <p className="text-[9px] text-white/40 uppercase tracking-wider font-semibold mb-1">LPs</p>
+              <p className="font-heading font-bold text-white text-sm">{activeOutcome.lp_offers || 0}</p>
+            </div>
           </div>
         </div>
 
-        {/* Explainer */}
-        <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 text-[11px] text-muted-foreground leading-relaxed">
-          ⚠️ You're providing liquidity <strong className="text-destructive">AGAINST</strong> {market.country} finishing {activeOutcome.position.toLowerCase()}. If they don't reach this position, you profit!
+        {/* Info Banner */}
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 mb-4">
+          <p className="text-[10px] text-emerald-400/80 leading-relaxed">
+            <span className="font-bold">Bet against</span> {market.country} finishing {activeOutcome.position.toLowerCase()}. Profit if they don't reach it.
+          </p>
         </div>
 
-        {/* Amount Input */}
-        <div>
-          <label className="text-xs text-muted-foreground mb-2 block font-bold">LP Amount (◎ SOL)</label>
-          <input
-            type="number"
-            placeholder="0.00"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="w-full bg-secondary/50 border border-border/50 text-lg font-heading font-bold h-12 rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-          <div className="flex gap-2 mt-2.5">
+        {/* Amount Section */}
+        <div className="mt-auto space-y-3">
+          <div>
+            <input
+              type="number"
+              placeholder="0.00"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 text-white font-heading font-bold text-xl h-14 rounded-2xl px-4 focus:outline-none focus:border-emerald-500/50 transition-colors placeholder:text-white/20"
+            />
+          </div>
+          
+          <div className="flex gap-2">
             {[0.5, 1, 5, 10].map(qa => (
               <button
                 key={qa}
                 onClick={() => setAmount(String(qa))}
-                className="px-3 py-2 text-xs font-bold bg-secondary hover:bg-secondary/80 rounded-lg flex-1 transition-colors"
+                className="px-3 py-2.5 text-xs font-bold bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl flex-1 transition-all text-white/70 hover:text-white"
               >
                 ◎{qa}
               </button>
             ))}
           </div>
-        </div>
 
-        {/* Provide LP Button */}
-        <Button
-          onClick={() => {
-            onProvideLiquidity({
-              ...activeOutcome,
-              market_id: market.id,
-            }, parseFloat(amount));
-          }}
-          disabled={!amount || parseFloat(amount) <= 0}
-          className="w-full h-12 font-heading font-bold rounded-xl text-base transition-all hover:shadow-lg mt-auto"
-          style={{ 
-            background: 'linear-gradient(135deg, #a69cf2, #8b84e8)',
-            boxShadow: '0 0 20px rgba(166,156,242,0.4)'
-          }}
-        >
-          <DollarSign className="w-5 h-5 mr-2" />
-          Provide ◎{amount || '0'} LP for {activeOutcome.position}
-        </Button>
-      </div>
+          <Button
+            onClick={() => {
+              onProvideLiquidity({
+                ...activeOutcome,
+                market_id: market.id,
+              }, parseFloat(amount));
+            }}
+            disabled={!amount || parseFloat(amount) <= 0}
+            className="w-full h-12 font-heading font-bold rounded-2xl text-sm transition-all"
+            style={{ 
+              background: 'linear-gradient(135deg, #21c45d 0%, #1a9f4a 100%)',
+              boxShadow: '0 4px 20px rgba(33,196,93,0.3), inset 0 1px 0 rgba(255,255,255,0.2)'
+            }}
+          >
+            Provide ◎{amount || '0'} Liquidity
+          </Button>
+        </div>
       </div>
     </motion.div>
   );
