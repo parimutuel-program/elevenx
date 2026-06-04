@@ -28,14 +28,14 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
       const now = new Date().getTime();
       const closeTime = new Date(bet.open_until).getTime();
       const diff = closeTime - now;
-      
+
       if (diff <= 0) {
         setTimeRemaining(0);
       } else {
         const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / 60000);
-        const seconds = Math.floor((diff % 60000) / 1000);
+        const hours = Math.floor(diff % (1000 * 60 * 60 * 24) / (1000 * 60 * 60));
+        const minutes = Math.floor(diff % (1000 * 60 * 60) / 60000);
+        const seconds = Math.floor(diff % 60000 / 1000);
         setTimeRemaining({ days, hours, minutes, seconds, total: diff });
       }
     };
@@ -45,18 +45,18 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
     return () => clearInterval(interval);
   }, [bet?.open_until]);
 
-  const isBettingClosed = bet.status !== 'open' || (timeRemaining && timeRemaining.total <= 0);
+  const isBettingClosed = bet.status !== 'open' || timeRemaining && timeRemaining.total <= 0;
 
   const stakeNum = parseFloat(amount) || 0;
 
   // For new offer: payout = stake * odds
-  const odds = mode === 'offer'
-    ? (selectedOutcome === 'a' ? bet?.odds_a : selectedOutcome === 'b' ? bet?.odds_b : bet?.odds_draw) || 0
-    : 0;
+  const odds = mode === 'offer' ?
+  (selectedOutcome === 'a' ? bet?.odds_a : selectedOutcome === 'b' ? bet?.odds_b : bet?.odds_draw) || 0 :
+  0;
 
-  const maxMatcherStake = mode === 'match' && selectedOffer
-    ? selectedOffer.amount_unmatched * (selectedOffer.odds_at_creation - 1)
-    : null;
+  const maxMatcherStake = mode === 'match' && selectedOffer ?
+  selectedOffer.amount_unmatched * (selectedOffer.odds_at_creation - 1) :
+  null;
 
   // For LP mode: max is the total pool of the opposing outcome (what they're betting against)
   const maxLpAmount = mode === 'offer' ? (() => {
@@ -67,16 +67,16 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
   })() : null;
 
   const lpPayout = mode === 'offer' ? stakeNum * odds : 0;
-  const matcherPayout = mode === 'match' && selectedOffer
-    ? stakeNum + (stakeNum / (selectedOffer.odds_at_creation - 1))
-    : 0;
+  const matcherPayout = mode === 'match' && selectedOffer ?
+  stakeNum + stakeNum / (selectedOffer.odds_at_creation - 1) :
+  0;
 
   const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
   const getWalletAddress = () => {
     const s = localStorage.getItem('elevenx_wallet_session');
     if (!s) return null;
-    try { const p = JSON.parse(s); return (p.address || p)?.toString().trim(); } catch { return s?.toString().trim(); }
+    try {const p = JSON.parse(s);return (p.address || p)?.toString().trim();} catch {return s?.toString().trim();}
   };
 
   const validateWalletAddress = (addr) => {
@@ -90,7 +90,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
       console.error('[PlaceBetPanel] Invalid address:', trimmed);
       console.error('[PlaceBetPanel] Length:', trimmed.length);
       // Find specific invalid chars
-      const invalid = trimmed.split('').filter(c => !/^[1-9A-HJ-NP-Za-km-z]$/.test(c));
+      const invalid = trimmed.split('').filter((c) => !/^[1-9A-HJ-NP-Za-km-z]$/.test(c));
       if (invalid.length > 0) {
         console.error('[PlaceBetPanel] Invalid chars:', invalid.map((c, i) => `'${c}'@pos${i}(code${c.charCodeAt(0)})`).join(', '));
       }
@@ -121,14 +121,14 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
       matchId,
       selectedOutcome,
       selectedOffer: selectedOffer?.id,
-      stakeNum,
+      stakeNum
     });
-    
+
     // Debug: show both wallets
     console.log('[PlaceBetPanel] Context walletAddress:', walletAddress);
     console.log('[PlaceBetPanel] LocalStorage wallet:', getWalletAddress());
 
-    if (!wallet) { setPrepareError('Wallet not connected'); return; }
+    if (!wallet) {setPrepareError('Wallet not connected');return;}
 
     if (!validateWalletAddress(wallet)) {
       console.error('[PlaceBetPanel] Invalid wallet address:', wallet);
@@ -145,9 +145,9 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
         wallet_trimmed: wallet?.trim(),
         mode,
         bet_id: bet?.id,
-        matchId,
+        matchId
       });
-      
+
       let res;
       if (mode === 'offer') {
         console.log('[PlaceBetPanel] Calling provideLiquidity with wallet:', wallet);
@@ -156,7 +156,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
           bet_id: bet.id,
           match_id: matchId,
           outcome: selectedOutcome,
-          amount: stakeNum,
+          amount: stakeNum
         });
         console.log('[PlaceBetPanel] provideLiquidity response:', res.data);
       } else {
@@ -164,7 +164,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
         res = await base44.functions.invoke('matchBet', {
           offer_id: selectedOffer.id,
           amount: stakeNum,
-          wallet_address: wallet,
+          wallet_address: wallet
         });
         console.log('[PlaceBetPanel] matchBet response:', res.data);
       }
@@ -172,7 +172,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
       // Include commit_data in instruction for post-tx commit
       setInstruction({
         ...res.data.solana_instruction,
-        commit_data: res.data.commit_data,
+        commit_data: res.data.commit_data
       });
     } catch (err) {
       console.error('[PlaceBetPanel] Error in handleGetInstruction:', err);
@@ -188,19 +188,19 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
     setAmount('');
     setLastSignature(result.signature);
     setLastInstruction(instruction);
-    
+
     // Commit to database after transaction succeeds
     try {
       const commitPayload = {
         signature: result.signature,
-        commit_data: instruction.commit_data,
+        commit_data: instruction.commit_data
       };
-      
+
       const commitFunction = mode === 'offer' ? 'commitLiquidity' : 'commitBet';
       console.log('[PlaceBetPanel] Calling commit function:', commitFunction, commitPayload);
-      
+
       const commitRes = await base44.functions.invoke(commitFunction, commitPayload);
-      
+
       if (commitRes.data.error) {
         console.error('[PlaceBetPanel] Commit failed:', commitRes.data.error);
         // Show error but don't block - transaction still succeeded on-chain
@@ -211,7 +211,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
       console.error('[PlaceBetPanel] Commit error:', commitErr);
       // Transaction succeeded, commit failure is logged but doesn't block UX
     }
-    
+
     // Keep showing success message for 5.5 seconds before calling parent callback
     const timer = setTimeout(() => {
       setInstruction(null);
@@ -231,11 +231,11 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
     console.error('Transaction failed:', error);
   };
 
-  const outcomeLabel = mode === 'offer'
-    ? selectedOutcome === 'a' ? bet?.outcome_a : selectedOutcome === 'b' ? bet?.outcome_b : 'Draw'
-    : selectedOffer
-      ? (selectedOffer.outcome === 'a' ? bet?.outcome_b : selectedOffer.outcome === 'b' ? bet?.outcome_a : 'Not Draw')
-      : '';
+  const outcomeLabel = mode === 'offer' ?
+  selectedOutcome === 'a' ? bet?.outcome_a : selectedOutcome === 'b' ? bet?.outcome_b : 'Draw' :
+  selectedOffer ?
+  selectedOffer.outcome === 'a' ? bet?.outcome_b : selectedOffer.outcome === 'b' ? bet?.outcome_a : 'Not Draw' :
+  '';
 
   if (!isConnected) {
     return (
@@ -245,8 +245,8 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
         <Button onClick={connect} disabled={isConnecting} className="bg-primary hover:bg-primary/90 font-heading font-bold h-10 rounded-xl px-6">
           Connect Phantom
         </Button>
-      </div>
-    );
+      </div>);
+
   }
 
   return (
@@ -256,48 +256,48 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
           <h3 className="font-heading font-bold text-base">
             {mode === 'offer' ? `Bet on ${outcomeLabel}` : `Bet against ${selectedOffer?.outcome_label}`}
           </h3>
-          {timeRemaining && timeRemaining.total > 0 && (
-            <div className="flex items-center gap-1.5 bg-destructive/10 text-destructive px-2.5 py-1 rounded-full text-xs font-bold animate-pulse">
+          {timeRemaining && timeRemaining.total > 0 &&
+          <div className="flex items-center gap-1.5 bg-destructive/10 text-destructive px-2.5 py-1 rounded-full text-xs font-bold animate-pulse">
               <Clock className="w-3.5 h-3.5" />
               <span className="text-[9px] mr-0.5">Betting closes in</span>
-              {timeRemaining.days > 0 
-                ? `${timeRemaining.days}d ${timeRemaining.hours}h`
-                : timeRemaining.hours > 0 
-                  ? `${timeRemaining.hours}h ${timeRemaining.minutes}m`
-                  : `${timeRemaining.minutes}:${String(timeRemaining.seconds).padStart(2, '0')}`
-              }
+              {timeRemaining.days > 0 ?
+            `${timeRemaining.days}d ${timeRemaining.hours}h` :
+            timeRemaining.hours > 0 ?
+            `${timeRemaining.hours}h ${timeRemaining.minutes}m` :
+            `${timeRemaining.minutes}:${String(timeRemaining.seconds).padStart(2, '0')}`
+            }
             </div>
-          )}
+          }
         </div>
         <p className="text-xs text-muted-foreground">
-          {mode === 'offer'
-            ? `Odds: ${odds.toFixed(2)}x — Max: ◎${maxLpAmount?.toFixed(4)} — your offer goes into the orderbook until matched`
-            : `Max stake: ◎${maxMatcherStake?.toFixed(4)} — locked immediately once confirmed`
+          {mode === 'offer' ?
+          `Odds: ${odds.toFixed(2)}x — Max: ◎${maxLpAmount?.toFixed(4)} — your offer goes into the orderbook until matched` :
+          `Max stake: ◎${maxMatcherStake?.toFixed(4)} — locked immediately once confirmed`
           }
         </p>
         
         {/* Help text explaining the mode */}
-        <div className={`rounded-xl p-3 text-[10px] ${
-          mode === 'offer' 
-            ? 'bg-primary/5 border border-primary/20' 
-            : 'bg-primary/5 border border-primary/20'
-        }`}>
-          {mode === 'offer' ? (
-            <>
+        <div className={`rounded-xl p-3 text-[10px] hidden ${
+        mode === 'offer' ?
+        'bg-primary/5 border border-primary/20' :
+        'bg-primary/5 border border-primary/20'}`
+        }>
+          {mode === 'offer' ?
+          <>
               <p className="font-bold text-primary mb-1">🎯 You're Placing a Bet</p>
               <p className="text-muted-foreground">
                 Your bet will be matched against existing LP liquidity. Once matched, your funds are locked with fixed odds.
               </p>
-            </>
-          ) : (
-            <>
+            </> :
+
+          <>
               <p className="font-bold text-primary mb-1">🎯 You're Placing a Bet</p>
               <p className="text-muted-foreground">
                 You're betting against an existing offer. Your SOL is locked immediately and cannot be withdrawn. 
                 Win and get paid out automatically after the match ends.
               </p>
             </>
-          )}
+          }
         </div>
       </div>
 
@@ -309,38 +309,38 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
           min={0}
           max={maxMatcherStake || undefined}
           step="any"
-          onChange={e => setAmount(e.target.value)}
-          className="bg-secondary/50 border-border/50 text-lg font-heading font-bold h-12"
-        />
+          onChange={(e) => setAmount(e.target.value)}
+          className="bg-secondary/50 border-border/50 text-lg font-heading font-bold h-12" />
+        
         <div className="flex gap-2 mt-2 flex-wrap">
-          {QUICK_AMOUNTS.map(qa => {
+          {QUICK_AMOUNTS.map((qa) => {
             const capped = maxMatcherStake ? Math.min(qa, maxMatcherStake) : qa;
             return (
               <button key={qa} onClick={() => setAmount(String(capped))}
-                className="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 rounded-lg transition-colors">
+              className="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 rounded-lg transition-colors">
                 ◎{qa}
-              </button>
-            );
+              </button>);
+
           })}
-          {maxMatcherStake && (
-            <button onClick={() => setAmount(String(maxMatcherStake))}
-              className="px-3 py-1.5 text-xs font-medium bg-accent/10 text-accent hover:bg-accent/20 rounded-lg transition-colors">
+          {maxMatcherStake &&
+          <button onClick={() => setAmount(String(maxMatcherStake))}
+          className="px-3 py-1.5 text-xs font-medium bg-accent/10 text-accent hover:bg-accent/20 rounded-lg transition-colors">
               Max ◎{maxMatcherStake.toFixed(4)}
             </button>
-          )}
-          {mode === 'offer' && maxLpAmount && (
-            <button onClick={() => setAmount(String(maxLpAmount))}
-              className="px-3 py-1.5 text-xs font-medium bg-accent/10 text-accent hover:bg-accent/20 rounded-lg transition-colors font-bold">
+          }
+          {mode === 'offer' && maxLpAmount &&
+          <button onClick={() => setAmount(String(maxLpAmount))}
+          className="px-3 py-1.5 text-xs font-medium bg-accent/10 text-accent hover:bg-accent/20 rounded-lg transition-colors font-bold">
               Max ◎{maxLpAmount.toFixed(4)}
             </button>
-          )}
+          }
         </div>
       </div>
 
       <AnimatePresence>
-        {stakeNum > 0 && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-            className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-2 text-xs overflow-hidden">
+        {stakeNum > 0 &&
+        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+        className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-2 text-xs overflow-hidden">
             <p className="font-bold text-foreground mb-1">Summary</p>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Backing</span>
@@ -350,8 +350,8 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
               <span className="text-muted-foreground">Your stake</span>
               <span className="font-bold">◎{stakeNum.toFixed(4)}</span>
             </div>
-            {mode === 'offer' && odds > 0 && (
-              <>
+            {mode === 'offer' && odds > 0 &&
+          <>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Odds locked at</span>
                   <span className="font-bold">{odds.toFixed(2)}x</span>
@@ -363,9 +363,9 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
                 </div>
                 <p className="text-[10px] text-muted-foreground">Offer sits in orderbook — can be withdrawn until matched</p>
               </>
-            )}
-            {mode === 'match' && (
-              <>
+          }
+            {mode === 'match' &&
+          <>
                 <div className="h-px bg-border/30 my-1" />
                 <div className="flex justify-between font-bold text-sm">
                   <span>Payout if you win</span>
@@ -373,86 +373,86 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'offer', selectedOu
                 </div>
                 <p className="text-[10px] text-muted-foreground">Funds locked immediately — cannot be withdrawn</p>
               </>
-            )}
+          }
           </motion.div>
-        )}
+        }
       </AnimatePresence>
 
-      {stakeNum > 0 && mode === 'match' && maxMatcherStake && stakeNum > maxMatcherStake && (
-        <p className="text-xs text-destructive text-center font-semibold">Not enough liquidity to place bet</p>
-      )}
-      {stakeNum > 0 && mode === 'offer' && maxLpAmount && stakeNum > maxLpAmount && (
-        <p className="text-xs text-destructive text-center font-semibold">Not enough liquidity to place bet</p>
-      )}
-      {timeRemaining && timeRemaining.total <= 0 && (
-        <p className="text-xs text-destructive text-center font-bold">⏰ Betting has closed for this match</p>
-      )}
-      {prepareError && prepareError.includes('reconnect') && (
-        <Button onClick={handleReconnect} className="w-full h-8 text-xs bg-secondary hover:bg-secondary/80 rounded-lg mb-2">
+      {stakeNum > 0 && mode === 'match' && maxMatcherStake && stakeNum > maxMatcherStake &&
+      <p className="text-xs text-destructive text-center font-semibold">Not enough liquidity to place bet</p>
+      }
+      {stakeNum > 0 && mode === 'offer' && maxLpAmount && stakeNum > maxLpAmount &&
+      <p className="text-xs text-destructive text-center font-semibold">Not enough liquidity to place bet</p>
+      }
+      {timeRemaining && timeRemaining.total <= 0 &&
+      <p className="text-xs text-destructive text-center font-bold">⏰ Betting has closed for this match</p>
+      }
+      {prepareError && prepareError.includes('reconnect') &&
+      <Button onClick={handleReconnect} className="w-full h-8 text-xs bg-secondary hover:bg-secondary/80 rounded-lg mb-2">
           Reconnect Wallet
         </Button>
-      )}
-      {prepareError && (
-        <p className="text-xs text-destructive text-center">{prepareError}</p>
-      )}
+      }
+      {prepareError &&
+      <p className="text-xs text-destructive text-center">{prepareError}</p>
+      }
 
-      {lastSignature ? (
-        <div className="bg-accent/10 border border-accent/30 rounded-xl p-4 relative">
+      {lastSignature ?
+      <div className="bg-accent/10 border border-accent/30 rounded-xl p-4 relative">
           <button
-            onClick={handleCloseSuccess}
-            className="absolute top-2 right-2 text-muted-foreground hover:text-foreground transition-colors"
-          >
+          onClick={handleCloseSuccess}
+          className="absolute top-2 right-2 text-muted-foreground hover:text-foreground transition-colors">
+          
             <X className="w-4 h-4" />
           </button>
           <div className="text-center">
             <CheckCircle className="w-8 h-8 text-accent mx-auto mb-2" />
             <p className="font-heading font-bold text-sm text-accent">✓ Bet placed successfully!</p>
-            {lastInstruction?.amountLamports && (
-              <p className="font-heading font-bold text-lg text-accent mt-1">
+            {lastInstruction?.amountLamports &&
+          <p className="font-heading font-bold text-lg text-accent mt-1">
                 ◎{(lastInstruction.amountLamports / 1e9).toFixed(4)} SOL staked
               </p>
-            )}
+          }
             <p className="font-heading font-bold text-sm text-accent mt-2">Good luck! 🍀</p>
             <div className="mt-3 pt-3 border-t border-accent/20">
               <p className="text-xs text-muted-foreground mb-1">Transaction on Solana</p>
-              <a 
-                href={`https://solscan.io/tx/${lastSignature}?cluster=devnet`}
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="inline-flex items-center gap-1 text-primary text-xs font-bold hover:underline"
-              >
+              <a
+              href={`https://solscan.io/tx/${lastSignature}?cluster=devnet`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-primary text-xs font-bold hover:underline">
+              
                 View on Solscan →
                 <span className="font-mono text-[10px] text-muted-foreground">{lastSignature.slice(0, 8)}...{lastSignature.slice(-8)}</span>
               </a>
             </div>
           </div>
-        </div>
-      ) : instruction ? (
-        <SolanaTransactionSigner
-          instruction={instruction}
-          amount={stakeNum}
-          isOffer={mode === 'offer'}
-          onSuccess={handleTransactionSuccess}
-          onError={handleTransactionError}
-        />
-      ) : (
-        <Button
-          onClick={handleGetInstruction}
-          disabled={stakeNum <= 0 || isPreparing || (timeRemaining && timeRemaining.total <= 0) || (mode === 'match' && maxMatcherStake && stakeNum > maxMatcherStake) || (mode === 'offer' && maxLpAmount && stakeNum > maxLpAmount)}
-          className="w-full h-12 font-heading font-bold text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {timeRemaining && timeRemaining.total <= 0 ? (
-            <>
+        </div> :
+      instruction ?
+      <SolanaTransactionSigner
+        instruction={instruction}
+        amount={stakeNum}
+        isOffer={mode === 'offer'}
+        onSuccess={handleTransactionSuccess}
+        onError={handleTransactionError} /> :
+
+
+      <Button
+        onClick={handleGetInstruction}
+        disabled={stakeNum <= 0 || isPreparing || timeRemaining && timeRemaining.total <= 0 || mode === 'match' && maxMatcherStake && stakeNum > maxMatcherStake || mode === 'offer' && maxLpAmount && stakeNum > maxLpAmount}
+        className="w-full h-12 font-heading font-bold text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
+        
+          {timeRemaining && timeRemaining.total <= 0 ?
+        <>
               <Clock className="w-4 h-4 mr-2" />
               Betting Closed
-            </>
-          ) : isPreparing ? 'Preparing...' : mode === 'offer' ? (
-            `Place Offer ◎${stakeNum > 0 ? stakeNum.toFixed(2) : '0.00'}`
-          ) : (
-            `Bet ◎${stakeNum > 0 ? stakeNum.toFixed(2) : '0.00'} against this offer`
-          )}
+            </> :
+        isPreparing ? 'Preparing...' : mode === 'offer' ?
+        `Place Offer ◎${stakeNum > 0 ? stakeNum.toFixed(2) : '0.00'}` :
+
+        `Bet ◎${stakeNum > 0 ? stakeNum.toFixed(2) : '0.00'} against this offer`
+        }
         </Button>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 }
