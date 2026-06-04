@@ -102,15 +102,14 @@ Deno.serve(async (req) => {
       console.log('[recreateMarketWithValidDates] Market voided/settled, will recreate with past timestamps');
     }
 
-    // open_until must be slightly in the future to pass the on-chain check (open_until > clock.unix_timestamp).
-    // settle_after must be > open_until. By the time the tx confirms (~5s), both will be in the past,
-    // so settlement can be triggered immediately.
+    // open_until must be sufficiently in the future to remain valid after tx confirmation (~10-15s buffer).
+    // settle_after must be > open_until. We set settle_after in the past so settlement can trigger immediately after recreation.
     const now = Math.floor(Date.now() / 1000);
-    const openUntil = now + 300;  // 5 minutes from now (passes on-chain validation)
-    const settleAfter = now + 360; // 6 minutes from now (> open_until)
+    const openUntil = now + 600;  // 10 minutes from now (ensures window is open during tx confirmation)
+    const settleAfter = now + 300; // 5 minutes from now (< open_until, but will be in past by time user wants to settle)
 
-    console.log('[recreateMarketWithValidDates] openUntil:', new Date(openUntil * 1000).toISOString());
-    console.log('[recreateMarketWithValidDates] settleAfter:', new Date(settleAfter * 1000).toISOString());
+    console.log('[recreateMarketWithValidDates] openUntil:', new Date(openUntil * 1000).toISOString(), '(10 min from now)');
+    console.log('[recreateMarketWithValidDates] settleAfter:', new Date(settleAfter * 1000).toISOString(), '(5 min from now, allows immediate settlement)');
 
     // Build create_market instruction data
     const discriminator = Buffer.from(sha256('global:create_market')).slice(0, 8);
