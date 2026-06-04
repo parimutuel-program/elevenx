@@ -470,6 +470,28 @@ export default function MatchDetail() {
       {hasBet && isAdmin && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <DebugOffers bet={bet} />
+          <div className="flex gap-2 mt-4">
+            {['a', 'b', 'draw'].map(outcome => (
+              <Button
+                key={outcome}
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  const res = await base44.functions.invoke('fixCancelledOffer', { bet_id: bet.id, outcome });
+                  if (res.data.success) {
+                    alert(res.data.message);
+                    queryClient.invalidateQueries({ queryKey: ['debugOffers', bet.id] });
+                    queryClient.invalidateQueries({ queryKey: ['allOffers', bet.id] });
+                  } else {
+                    alert(res.data.error || 'Failed to fix');
+                  }
+                }}
+                className="text-xs"
+              >
+                Fix {outcome} Cancelled
+              </Button>
+            ))}
+          </div>
         </motion.div>
       )}
 

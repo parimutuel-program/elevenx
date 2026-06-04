@@ -59,7 +59,10 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
     });
     return isValid;
   }).
-  reduce((sum, o) => sum + (o.amount_unmatched || 0), 0) :
+  reduce((sum, o) => {
+    const unmatched = parseFloat((o.amount_unmatched || 0).toFixed(9));
+    return parseFloat((sum + unmatched).toFixed(9));
+  }, 0) :
   0;
 
   const hasLiquidityForOutcome = totalLiquidityForOutcome > 0;
@@ -309,9 +312,9 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
         </div>
         <p className="text-xs text-muted-foreground">
           {selectedOffer ?
-          `Max stake: ◎${maxMatcherStake?.toFixed(4)} @ ${odds.toFixed(2)}x — locked immediately` :
+          `Max stake: ◎${Number(maxMatcherStake || 0).toFixed(4)} @ ${odds.toFixed(2)}x — locked immediately` :
           hasLiquidityForOutcome ?
-          `Max stake: ◎${maxMatcherStake?.toFixed(4)} — limited by available LP liquidity` :
+          `Max stake: ◎${Number(maxMatcherStake || 0).toFixed(4)} — limited by available LP liquidity` :
           '⚠️ No LP liquidity - Go to LP Dashboard to add liquidity'
           }
         </p>
@@ -371,16 +374,16 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
               {QUICK_AMOUNTS.map((qa) => {
               const capped = maxMatcherStake !== null ? Math.min(qa, maxMatcherStake) : qa;
               return (
-                <button key={qa} onClick={() => setAmount(String(capped))}
+                <button key={qa} onClick={() => setAmount(String(Number(capped).toFixed(4)))}
                 className="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 rounded-lg transition-colors">
                     ◎{qa}
                   </button>);
 
             })}
               {maxMatcherStake !== null && maxMatcherStake > 0 &&
-            <button onClick={() => setAmount(String(maxMatcherStake))}
+            <button onClick={() => setAmount(String(Number(maxMatcherStake).toFixed(4)))}
             className="px-3 py-1.5 text-xs font-medium bg-accent/10 text-accent hover:bg-accent/20 rounded-lg transition-colors">
-                  Max ◎{maxMatcherStake.toFixed(4)}
+                  Max ◎{Number(maxMatcherStake).toFixed(4)}
                 </button>
             }
             </>
