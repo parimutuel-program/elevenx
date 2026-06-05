@@ -17,6 +17,7 @@ export default function AdminFuturesPanel() {
   const [pendingTimestampFix, setPendingTimestampFix] = useState(null);
   const [oddsStatus, setOddsStatus] = useState(null);
   const [settlingWithOracle, setSettlingWithOracle] = useState(null);
+  const [manualSettleModal, setManualSettleModal] = useState({ open: false, marketId: null, marketName: '' });
 
   // Fetch existing futures markets (country-by-country)
   const { data: futuresMarkets = [], refetch } = useQuery({
@@ -138,23 +139,53 @@ export default function AdminFuturesPanel() {
   };
 
   const settleWithOracleMutation = useMutation({
-    mutationFn: async (marketId) => {
-      const res = await base44.functions.invoke('settleFuturesWithOracle', {
+    mutationFn: async ({ marketId, manual_winning_position }) => {
+      // Step 1: Prepare on-chain settlement transaction
+      const res = await base44.functions.invoke('settleFuturesMarketOnChain', {
         futures_market_id: marketId,
+        winning_position: manual_winning_position,
       });
       if (res.data.error) throw new Error(res.data.error);
       return res.data;
     },
     onSuccess: (data, marketId) => {
-      setSettlingWithOracle(null);
-      queryClient.invalidateQueries({ queryKey: ['futuresMarkets'] });
-      alert(`✓ ${data.message}\n\nWinning position: ${data.winning_position}\nSource: ${data.source}`);
+      // Step 2: Show transaction signing modal
+      setSettlingWithOracle({
+        instruction: data.solana_instruction,
+        futures_market_id: marketId,
+        winning_position: data.winning_position,
+      });
     },
     onError: (error) => {
       setSettlingWithOracle(null);
       alert('Settlement failed: ' + error.message);
     },
   });
+
+  const handleSettlementSuccess = async (result) => {
+    // Step 3: Commit settlement to database after on-chain confirmation
+    try {
+      const commitRes = await base44.functions.invoke('commitFuturesSettlement', {
+        signature: result.signature,
+        futures_market_id: settlingWithOracle.futures_market_id,
+        winning_position: settlingWithOracle.winning_position,
+      });
+      
+      setSettlingWithOracle(null);
+      setManualSettleModal({ open: false, marketId: null, marketName: '' });
+      queryClient.invalidateQueries({ queryKey: ['futuresMarkets'] });
+      
+      if (commitRes.data.error) {
+        alert('Settlement transaction confirmed but commit failed: ' + commitRes.data.error);
+        return;
+      }
+      
+      alert(`✓ On-chain settlement complete!\n\n${commitRes.data.message}\nWinners: ${commitRes.data.winners_count} | Losers: ${commitRes.data.losers_count} | Refunds: ${commitRes.data.pending_refunds}`);
+    } catch (error) {
+      console.error('Commit failed:', error);
+      alert('Transaction confirmed but database update failed: ' + error.message);
+    }
+  };
 
   const deployMutation = useMutation({
     mutationFn: async (marketId) => {
@@ -263,7 +294,7 @@ export default function AdminFuturesPanel() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => settleWithOracleMutation.mutate(market.id)}
+                    onClick={() => setManualSettleModal({ open: true, marketId: market.id, marketName: market.country })}
                     disabled={market.status === 'settled' || settlingWithOracle === market.id || settleWithOracleMutation.isPending}
                     className="bg-accent/10 text-accent hover:bg-accent/20 border border-accent/20 text-xs font-bold h-7 px-2 rounded-lg"
                   >
@@ -419,6 +450,72 @@ export default function AdminFuturesPanel() {
               />
               <Button variant="outline" size="sm" onClick={() => setPendingBulkDeploy(null)} className="w-full">
                 Cancel (Deployed {pendingBulkDeploy.currentIndex} so far)
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Settlement Modal - Position Selection */}
+      {manualSettleModal.open && !settlingWithOracle && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border/50 rounded-2xl p-6 max-w-md w-full">
+            <div className="space-y-4">
+              <div className="bg-accent/10 border border-accent/30 rounded-xl p-4">
+                <p className="text-sm font-bold text-accent mb-1">Settle Futures Market</p>
+                <p className="text-xs text-muted-foreground">Select the winning position for {manualSettleModal.marketName}</p>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-3">
+                {['1st', '2nd', '3rd'].map((position) => (
+                  <Button
+                    key={position}
+                    onClick={() => settleWithOracleMutation.mutate({ 
+                      marketId: manualSettleModal.marketId, 
+                      manual_winning_position: position 
+                    })}
+                    disabled={settleWithOracleMutation.isPending}
+                    className="bg-accent hover:bg-accent/90 text-accent-foreground text-sm font-bold h-12 rounded-xl"
+                  >
+                    {position} Place
+                  </Button>
+                ))}
+              </div>
+              
+              <Button variant="outline" size="sm" onClick={() => setManualSettleModal({ open: false, marketId: null, marketName: '' })} className="w-full">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* On-Chain Settlement Transaction Modal */}
+      {settlingWithOracle && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border/50 rounded-2xl p-6 max-w-lg w-full">
+            <div className="space-y-4">
+              <div className="bg-primary/10 border border-primary/30 rounded-xl p-4">
+                <p className="text-sm font-bold text-primary mb-1">On-Chain Settlement</p>
+                <p className="text-xs text-muted-foreground">
+                  Sign transaction to settle {manualSettleModal.marketName} on Solana
+                  {settlingWithOracle.winning_position && ` — Winner: ${settlingWithOracle.winning_position} place`}
+                </p>
+              </div>
+              
+              <SolanaTransactionSigner
+                instruction={settlingWithOracle.instruction}
+                amount={0}
+                futures_market_id={settlingWithOracle.futures_market_id}
+                onSuccess={handleSettlementSuccess}
+                onError={(err) => {
+                  console.error('Settlement transaction failed:', err);
+                  setSettlingWithOracle(null);
+                }}
+              />
+              
+              <Button variant="outline" size="sm" onClick={() => setSettlingWithOracle(null)} className="w-full">
+                Cancel
               </Button>
             </div>
           </div>
