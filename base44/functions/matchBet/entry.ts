@@ -157,6 +157,17 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Offer is no longer available', status: offer.status }, { status: 400 });
     }
     
+    // CRITICAL: Validate bettor stake doesn't exceed available LP liquidity
+    const availableLiquidity = offer.amount_unmatched || 0;
+    if (amount > availableLiquidity) {
+      return Response.json({
+        error: `Stake exceeds available liquidity (max: ◎${availableLiquidity.toFixed(4)} SOL)`,
+        hint: 'Your stake cannot exceed the LP offer size',
+        maxAllowed: availableLiquidity,
+        requested: amount,
+      }, { status: 400 });
+    }
+    
     // Check if offer has required LP wallet address
     if (!offer.lp_wallet_address) {
       console.error('[matchBet] Offer missing lp_wallet_address:', { offer_id: offer.id, offer });
@@ -185,9 +196,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Removed max stake validation - bets can exceed LP liquidity and go pending
-    // Calculate potential payout using LP odds (matched portion will be paid at these odds)
-    const lp_odds = offer.odds_at_creation || (bettor_outcome === 'a' ? bet.odds_a : bettor_outcome === 'b' ? bet.odds_b : bet.odds_draw) || 2.0;
+    // Calculate potential payout using LP odds
+    const lp_odds = offer.odds_at_creation || 2.0;
 
     // Validate LP wallet address exists
     console.log('[matchBet] Offer data:', {
@@ -284,8 +294,8 @@ Deno.serve(async (req) => {
       },
       offerUpdate: {
         amount_matched: (offer.amount_matched || 0) + amount,
-        amount_unmatched: (offer.amount_unmatched || 0) - amount,
-        status: (offer.amount_unmatched - amount) <= 0.0001 ? 'fully_matched' : 'partially_matched',
+        amount_unmatched: availableLiquidity - amount,
+        status: (availableLiquidity - amount) <= 0.0001 ? 'fully_matched' : 'partially_matched',
       },
       betUpdate: {
         poolKey: `pool_${offer.outcome}`,
