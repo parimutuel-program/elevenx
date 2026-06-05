@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
-    // PARIMUTUEL MODE: No LP offer required
+    // PARIMUTUEL MODE: Bettor IS the LP when no pool exists
     if (!offer_id) {
       // Load bet directly
       const bets = await base44.entities.Bet.filter({ id: bet_id });
@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Invalid outcome' }, { status: 400 });
       }
 
-      // Derive PDAs for parimutuel bet (no LP offer PDA)
+      // Check if LP offer already exists for this outcome
       const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA__PROGRAM_ID');
       const programId = new PublicKey(SOLANA_PROGRAM_ID);
       const matchIdBytes = Buffer.alloc(32);
@@ -159,6 +159,12 @@ Deno.serve(async (req) => {
       const bettorPubkey = new PublicKey(trimmedWallet);
       const outcomeIndex = outcome === 'a' ? 0 : outcome === 'b' ? 1 : 2;
 
+      // Derive LP offer PDA for this bettor+outcome
+      const [lpOfferPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from('lp_offer'), marketPda.toBuffer(), bettorPubkey.toBuffer(), Buffer.from([outcomeIndex])],
+        programId
+      );
+
       const [positionPda] = PublicKey.findProgramAddressSync(
         [Buffer.from('position'), marketPda.toBuffer(), bettorPubkey.toBuffer()],
         programId
@@ -167,52 +173,88 @@ Deno.serve(async (req) => {
       const amountLamports = Math.round(amount * 1_000_000_000);
       const outcomeLabel = outcome === 'a' ? bet.outcome_a : outcome === 'b' ? bet.outcome_b : 'Draw';
 
-      console.log('[matchBet] Parimutuel bet (pending pool):', {
+      // Check if this bettor already has an LP offer for this outcome
+      const existingOffers = await base44.entities.BetOffer.filter({
+        bet_id,
+        match_id,
+        outcome,
+        lp_wallet_address: trimmedWallet,
+      });
+
+      const hasExistingLiquidity = existingOffers.length > 0 && existingOffers.some(o => o.status !== 'cancelled');
+
+      console.log('[matchBet] Parimutuel bet check:', {
         outcome,
         outcomeLabel,
         amount,
+        hasExistingLiquidity,
+        existingOffersCount: existingOffers.length,
         marketPda: marketPda.toBase58(),
+        lpOfferPda: lpOfferPda.toBase58(),
         positionPda: positionPda.toBase58(),
       });
 
-      // Prepare commit data - bet goes entirely to pending pool
+      // CRITICAL: If no LP exists for this outcome, use provide_liquidity instruction
+      // This creates the initial pool (bettor becomes LP under the hood)
+      // If LP already exists, use place_bet to match against it
+      const instructionType = !hasExistingLiquidity ? 'provide_liquidity' : 'place_bet';
+
+      console.log('[matchBet] Using instruction type:', instructionType, '(bettor IS LP when pool is empty)');
+
+      // Prepare commit data - bettor is ALWAYS an LP in parimutuel mode
       const commit_data = {
+        lpOffer: {
+          bet_id,
+          match_id,
+          outcome,
+          outcome_label: outcomeLabel,
+          amount_offered: amount,
+          amount_matched: 0,
+          amount_unmatched: amount,
+          status: 'open',
+          odds_at_creation: 0,
+          lp_wallet_address: trimmedWallet,
+          solana_bet_pool_pda: marketPda.toBase58(),
+          solana_position_pda: lpOfferPda.toBase58(),
+        },
         userBet: {
           bet_id,
           match_id,
-          offer_id: null, // No LP offer
-          role: 'matcher',
+          offer_id: 'TEMP_LP_OFFER_ID', // Will be replaced with actual ID after commit
+          role: 'lp', // CRITICAL: Parimutuel bettor IS the LP
           outcome,
           outcome_label: outcomeLabel,
           amount,
-          potential_payout: 0, // Will be calculated when matched
-          status: 'pending', // Unmatched, waiting in pool
+          potential_payout: 0,
+          status: 'active',
           match_title: `${bet.outcome_a} vs ${bet.outcome_b}`,
           wallet_address: trimmedWallet,
+          liquidity_deposited: amount,
+          liquidity_matched: 0,
+          liquidity_unmatched: amount,
         },
-        offerUpdate: null, // No LP offer to update
         betUpdate: {
           poolKey: `pool_${outcome}`,
           currentPool: bet[outcome === 'a' ? 'pool_a' : outcome === 'b' ? 'pool_b' : 'pool_draw'] || 0,
           amount,
-          is_pending: true, // This is a pending bet
+          is_pending: false, // Not pending - it's LP liquidity
         },
       };
 
       return Response.json({
         success: true,
-        mode: 'parimutuel_pending',
+        mode: 'parimutuel_lp',
         solana_instruction: {
-          instruction_type: 'place_bet',
+          instruction_type: instructionType,
           programId: SOLANA_PROGRAM_ID,
           marketPda: marketPda.toBase58(),
-          lpOfferPda: null, // No LP offer
+          lpOfferPda: lpOfferPda.toBase58(),
           bettorPositionPda: positionPda.toBase58(),
           outcome: outcomeIndex,
           amountLamports,
         },
         commit_data,
-        message: `✓ Bet ◎${amount} on ${outcomeLabel} added to pending pool — will match when opposite side bets`,
+        message: `✓ Bet ◎${amount} on ${outcomeLabel} — you're providing liquidity (parimutuel pool)`,
       });
     }
 

@@ -298,6 +298,37 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         
         transaction.add(provideIx);
         
+      } else if (instruction.instruction_type === 'provide_liquidity') {
+        // provide_liquidity — LP deposits SOL (parimutuel: bettor IS the LP)
+        console.log('Creating provide_liquidity program instruction:', instruction);
+        
+        const programId = new PublicKey(instruction.programId);
+        
+        // Build keys in the EXACT order required by the Rust ProvideLiquidity struct:
+        // market, lp_offer, lp (signer), system_program
+        const keys = [];
+        keys.push({ pubkey: new PublicKey(instruction.marketPda), isSigner: false, isWritable: true });
+        keys.push({ pubkey: new PublicKey(instruction.lpOfferPda), isSigner: false, isWritable: true });
+        keys.push({ pubkey: provider.publicKey, isSigner: true, isWritable: true }); // lp signer
+        keys.push({ pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false }); // system_program
+        
+        // Anchor discriminator (8 bytes) + outcome (u8) + amount (u64 LE) = 17 bytes
+        const disc = await anchorDiscriminator('provide_liquidity');
+        const data = Buffer.alloc(17);
+        disc.copy(data, 0);
+        data.writeUInt8(instruction.outcome, 8);
+        data.writeBigUInt64LE(BigInt(instruction.amountLamports), 9);
+        console.log('[SolanaTransactionSigner] provide_liquidity discriminator:', disc.toString('hex'));
+        console.log('[SolanaTransactionSigner] full data:', data.toString('hex'));
+        
+        const provideIx = new TransactionInstruction({
+          keys,
+          programId,
+          data,
+        });
+        
+        transaction.add(provideIx);
+        
       } else if (instruction.instruction_type === 'place_bet') {
         // place_bet — call the actual program instruction
         console.log('Creating place_bet program instruction:', instruction);
@@ -656,7 +687,11 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         payoutInfo = `◎${solAmount} SOL staked`;
       }
     } else if (instruction?.instruction_type === 'provide_liquidity') {
-      txMessage = '✓ Liquidity provided!';
+      txMessage = '✓ Liquidity provided (parimutuel pool)!';
+      if (instruction.amountLamports) {
+        const solAmount = (instruction.amountLamports / 1e9).toFixed(4);
+        payoutInfo = `◎${solAmount} SOL deposited`;
+      }
       goodLuckMessage = 'Good luck! 🍀';
     } else if (instruction?.instruction_type === 'claim_winnings') {
       txMessage = '✓ Winnings claimed!';
