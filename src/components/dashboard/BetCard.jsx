@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Clock, TrendingUp, TrendingDown, Trophy, Wallet, ExternalLink } from 'lucide-react';
+import { Clock, TrendingUp, TrendingDown, Trophy, Wallet, ExternalLink, Zap, Target } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
 
 const statusConfig = {
@@ -30,6 +31,20 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
   const [claimSignature, setClaimSignature] = useState(null);
   const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
   const [withdrawData, setWithdrawData] = useState(null);
+
+  // Fetch match data to get team flags
+  const { data: match } = useQuery({
+    queryKey: ['match', bet.match_id],
+    queryFn: async () => {
+      const matches = await base44.entities.Match.filter({ id: bet.match_id });
+      return matches[0];
+    },
+    enabled: !!bet.match_id,
+  });
+
+  // Determine which flag to show based on backed outcome
+  const outcomeFlag = bet.outcome === 'a' ? match?.team_a_flag : bet.outcome === 'b' ? match?.team_b_flag : '🤝';
+  const outcomeTeam = bet.outcome === 'a' ? match?.team_a : bet.outcome === 'b' ? match?.team_b : 'Draw';
 
   const claimMutation = useMutation({
     mutationFn: async () => {
@@ -146,6 +161,12 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
   const isParimutuelLp = bet.role === 'lp' && !bet.offer_id;
   const unmatched = isParimutuelLp && (bet.status === 'pending' || bet.status === 'active') ? bet.amount : (bet.liquidity_unmatched || 0);
   const canWithdraw = isParimutuelLp && unmatched > 0 && (bet.status === 'pending' || bet.status === 'active');
+  
+  // Calculate match progress for pending/active bets (how much of the bet is matched)
+  const matchProgress = (bet.status === 'pending' || bet.status === 'active') && bet.amount > 0
+    ? Math.min(100, Math.round(((bet.amount - (unmatched || 0)) / bet.amount) * 100))
+    : 100;
+  const isFullyMatched = matchProgress === 100 && (bet.status === 'pending' || bet.status === 'active');
 
   return (
     <>
@@ -256,19 +277,33 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
         <Card className="bg-card border border-border/50 rounded-2xl overflow-hidden">
           <CardContent className="p-0">
             <div className="p-5 space-y-4">
-              {/* Header */}
+              {/* Header with Flag */}
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 flex-1">
+                  {/* Status Icon */}
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${config.color}`}>
                     <StatusIcon className="w-6 h-6" />
                   </div>
+                  {/* Outcome Flag & Label */}
+                  <div className="flex items-center gap-2 flex-shrink-0 bg-secondary/50 px-3 py-2 rounded-xl border border-border/50">
+                    <span className="text-2xl">{outcomeFlag || '🏆'}</span>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Backed</p>
+                      <p className="text-sm font-heading font-bold text-foreground truncate max-w-[120px]">{outcomeTeam || bet.outcome_label}</p>
+                    </div>
+                  </div>
+                  {/* Match Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h3 className="font-heading font-bold text-lg truncate">{bet.match_title || 'Match'}</h3>
                       <Badge className={`text-[10px] border ${config.color}`}>{config.label}</Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Backed <span className="text-primary font-semibold">{bet.outcome_label}</span>
+                    <p className="text-xs text-muted-foreground">
+                      {bet.role === 'lp' ? (
+                        <span className="text-primary font-semibold">⚡ Liquidity Provider</span>
+                      ) : (
+                        <span className="text-accent font-semibold">🎯 Bettor</span>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -290,10 +325,33 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
                   <p className="font-heading font-bold text-primary">◎{(bet.potential_payout || 0).toFixed(4)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-muted-foreground mb-1">Status</p>
-                  <p className="font-heading font-bold text-accent capitalize">{bet.status}</p>
+                  <p className="text-[10px] text-muted-foreground mb-1">Role</p>
+                  <p className="font-heading font-bold text-accent capitalize">{bet.role === 'lp' ? 'LP' : 'Bettor'}</p>
                 </div>
               </div>
+
+              {/* Match Progress Gauge - Only for pending/active bets */}
+              {(bet.status === 'pending' || bet.status === 'active') && (
+                <div className="bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Target className={`w-4 h-4 ${isFullyMatched ? 'text-accent' : 'text-primary'}`} />
+                      <span className="text-xs font-bold text-muted-foreground">
+                        {isFullyMatched ? '✅ Fully Matched' : '⏳ Matching Progress'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isFullyMatched && <Zap className="w-4 h-4 text-accent animate-pulse" />}
+                      <span className="text-sm font-heading font-bold text-primary">{matchProgress}%</span>
+                    </div>
+                  </div>
+                  <Progress value={matchProgress} className="h-2 bg-secondary/50" />
+                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                    <span>Matched: ◎{(bet.amount - (unmatched || 0)).toFixed(4)}</span>
+                    {unmatched > 0 && <span>Unmatched: ◎{unmatched.toFixed(4)}</span>}
+                  </div>
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="flex gap-2">
