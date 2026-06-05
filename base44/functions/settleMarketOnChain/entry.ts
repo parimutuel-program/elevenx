@@ -130,15 +130,78 @@ Deno.serve(async (req) => {
     // Calculate winning bets and update UserBet statuses
     const outcomeLabel = winning_outcome === 'a' ? bet.outcome_a : winning_outcome === 'b' ? bet.outcome_b : 'Draw';
     
+    // Check if market settle_after is in the future — if so, skip on-chain settle
+    // and just do an off-chain DB-only settlement (admin override)
+    let skipOnChain = false;
+    try {
+      const marketInfo = await connection.getAccountInfo(marketPda);
+      if (marketInfo) {
+        // BetMarket layout: 8 (discriminator) + 32 (match_id) + 96 (outcome_names) + 8 (open_until) + 8 (settle_after) = offset 152
+        const settleAfterBytes = marketInfo.data.slice(152, 160);
+        const settleAfterTs = Number(BigInt.asIntN(64, new DataView(settleAfterBytes.buffer, settleAfterBytes.byteOffset).getBigInt64(0, true)));
+        const nowTs = Math.floor(Date.now() / 1000);
+        console.log('[settleMarketOnChain] settle_after:', settleAfterTs, 'now:', nowTs, 'diff:', settleAfterTs - nowTs);
+        if (settleAfterTs > nowTs) {
+          console.log('[settleMarketOnChain] settle_after is in future — using DB-only settlement');
+          skipOnChain = true;
+        }
+      } else {
+        console.log('[settleMarketOnChain] Market not on-chain — using DB-only settlement');
+        skipOnChain = true;
+      }
+    } catch (e) {
+      console.error('[settleMarketOnChain] Could not check settle_after:', e.message);
+    }
+
+    if (skipOnChain) {
+      // DB-only settlement — no on-chain tx needed
+      const userBets = await serviceRole.entities.UserBet.filter({ bet_id });
+      let winnersCount = 0, totalPayout = 0, pendingCount = 0;
+      for (const ub of userBets) {
+        if (ub.status === 'pending') {
+          await serviceRole.entities.UserBet.update(ub.id, { status: 'refunded', actual_payout: 0 });
+          pendingCount++;
+        } else if (ub.outcome === winning_outcome && ub.status === 'active') {
+          const payout = ub.potential_payout || 0;
+          await serviceRole.entities.UserBet.update(ub.id, { status: 'won', actual_payout: payout });
+          totalPayout += payout;
+          winnersCount++;
+        } else if (ub.status === 'active') {
+          await serviceRole.entities.UserBet.update(ub.id, { status: 'lost', actual_payout: 0 });
+        }
+      }
+      await serviceRole.entities.Bet.update(bet_id, { status: 'settled', winning_outcome });
+      if (bet.match_id) {
+        await serviceRole.entities.Match.update(bet.match_id, {
+          status: 'finished',
+          winner: winning_outcome === 'a' ? 'team_a' : winning_outcome === 'b' ? 'team_b' : 'draw',
+        });
+      }
+      return Response.json({
+        success: true,
+        db_only: true,
+        message: `✓ Market settled (DB-only — market not yet on-chain or settle window not reached). Winner: ${outcomeLabel}. ${winnersCount} winners | ◎${totalPayout.toFixed(4)} payout | ${pendingCount} refunds`,
+        winners_count: winnersCount,
+        total_payout: totalPayout,
+        pending_refunds: pendingCount,
+      });
+    }
+
     return Response.json({
       success: true,
       message: `Settle market on-chain for ${match.team_a} vs ${match.team_b}`,
       solana_instruction: {
         instruction_type: 'settle_market',
         programId: SOLANA_PROGRAM_ID,
+        // EmergencySettle account order (MUST match Rust struct exactly):
+        // 1. market (mut)
+        // 2. platform_config (READ-ONLY — no mut in Rust struct!)
+        // 3. fee_vault (mut)
+        // 4. admin (mut signer)
+        // 5. system_program (readonly)
         keys: [
           { pubkey: marketPda.toBase58(), isSigner: false, isWritable: true },
-          { pubkey: platformPda.toBase58(), isSigner: false, isWritable: true },
+          { pubkey: platformPda.toBase58(), isSigner: false, isWritable: false },
           { pubkey: feeVaultPda.toBase58(), isSigner: false, isWritable: true },
           { pubkey: 'SIGNER_WALLET', isSigner: true, isWritable: true },
           { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false },
@@ -151,7 +214,6 @@ Deno.serve(async (req) => {
         match_id: bet.match_id,
         winning_outcome: winning_outcome,
         outcome_label: outcomeLabel,
-        all_bet_ids: allBets.map(b => b.id),
       },
     });
 
