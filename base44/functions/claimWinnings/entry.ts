@@ -92,20 +92,12 @@ Deno.serve(async (req) => {
     const bets = await serviceRole.entities.Bet.filter({ id: userBet.bet_id });
     const bet  = bets[0];
     if (!bet) {
-      console.log('[claimWinnings] Bet entity not found, but UserBet has status "won" — proceeding with DB-only claim');
-      for (const b of betsToClaim_validated) {
-        await serviceRole.entities.UserBet.update(b.id, {
-          status: 'claimed',
-          actual_payout: b.actual_payout || b.potential_payout || 0,
-        });
-      }
-      return Response.json({
-        success: true,
-        db_only: true,
-        message: `✓ ${betsToClaim_validated.length} winning bet(s) marked as claimed.`,
-        betIds: betsToClaim_validated.map(b => b.id),
-        totalPayout: betsToClaim_validated.reduce((sum, b) => sum + (b.actual_payout || b.potential_payout || 0), 0),
-      });
+      console.error('[claimWinnings] Bet entity not found for userBet:', userBet.id, 'bet_id:', userBet.bet_id);
+      return Response.json({ 
+        error: 'Bet entity not found - cannot process claim',
+        userBetId: userBet.id,
+        bet_id: userBet.bet_id
+      }, { status: 404 });
     }
 
     // Check on-chain market state
@@ -166,15 +158,9 @@ Deno.serve(async (req) => {
     const totalPayout = betsToClaim_validated.reduce((sum, b) => sum + (b.actual_payout || b.potential_payout || 0), 0);
     console.log(`✓ Claim: wallet=${trimmedWallet.slice(0, 8)}... | bets=${betsToClaim_validated.length} | total=${totalPayout} SOL | voided=${isVoided}`);
 
-    // If market is voided, not settled on-chain, position doesn't exist, or positionData is missing, do DB-only claim
-    if (!marketInfo || isVoided || !isSettledOnChain || !positionExists || !positionData) {
-      console.log('[claimWinnings] Market voided/not settled/position missing — doing DB-only claim', {
-        marketInfo: !!marketInfo,
-        isVoided,
-        isSettledOnChain,
-        positionExists,
-        positionData: !!positionData,
-      });
+    // If market is voided, do DB-only claim (no on-chain funds to claim)
+    if (isVoided) {
+      console.log('[claimWinnings] Market voided — doing DB-only claim');
       for (const b of betsToClaim_validated) {
         await serviceRole.entities.UserBet.update(b.id, {
           status: 'claimed',
@@ -184,10 +170,34 @@ Deno.serve(async (req) => {
       return Response.json({
         success: true,
         db_only: true,
-        message: `✓ ${betsToClaim_validated.length} winning bet(s) marked as claimed.`,
+        message: `✓ ${betsToClaim_validated.length} winning bet(s) marked as claimed (market voided).`,
         betIds: betsToClaim_validated.map(b => b.id),
         totalPayout,
       });
+    }
+    
+    // If market not settled on-chain OR position doesn't exist, return error (should not happen for normal claims)
+    if (!marketInfo || !isSettledOnChain) {
+      console.error('[claimWinnings] Market not settled on-chain yet:', {
+        marketExists: !!marketInfo,
+        isSettledOnChain,
+      });
+      return Response.json({ 
+        error: 'Market not settled yet - cannot claim winnings',
+        marketSettled: isSettledOnChain,
+        marketExists: !!marketInfo
+      }, { status: 400 });
+    }
+    
+    if (!positionExists || !positionData) {
+      console.error('[claimWinnings] Position not found on-chain:', {
+        positionExists,
+        positionData: !!positionData,
+      });
+      return Response.json({ 
+        error: 'Position not found on-chain - contact support',
+        positionPda: positionPda.toBase58()
+      }, { status: 404 });
     }
     
     // Check if position was already claimed on-chain
