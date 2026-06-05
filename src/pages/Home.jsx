@@ -233,7 +233,7 @@ export default function Home() {
                   }}>
 
                   {/* Glow effect */}
-                  <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-10" style={{ background: '#a69cf2' }} />
+                  <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-10" style={{ background: '#21c45d' }} />
 
                   {/* Match Image Header */}
                   <div className="relative h-40 overflow-hidden">
@@ -246,7 +246,7 @@ export default function Home() {
 
                     {/* Group Badge */}
                     <div className="absolute top-3 left-3">
-                      <span className="text-[9px] font-bold bg-gradient-to-r from-primary/20 to-primary/10 backdrop-blur-md text-primary px-2.5 py-1 rounded-full border border-primary/30 uppercase tracking-wide">
+                      <span className="text-[9px] font-bold bg-gradient-to-r from-blue-500/20 to-blue-500/10 backdrop-blur-md text-blue-400 px-2.5 py-1 rounded-full border border-blue-500/30 uppercase tracking-wide">
                         {fm.group}
                       </span>
                     </div>
@@ -265,8 +265,8 @@ export default function Home() {
                    <div className="flex items-center justify-between">
                      <div className="flex flex-col items-center flex-1 min-w-0">
                        <div className="relative">
-                         <div className="absolute inset-0 bg-primary/20 blur-md rounded-full" />
-                         <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border border-primary/30 shadow-lg">
+                         <div className="absolute inset-0 bg-blue-500/20 blur-md rounded-full" />
+                         <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-blue-500/20 to-blue-500/10 flex items-center justify-center border border-blue-500/30 shadow-lg">
                            <span className="text-2xl leading-none filter drop-shadow-lg">{getTeamFlag(fm.team_a)}</span>
                          </div>
                        </div>
@@ -290,15 +290,15 @@ export default function Home() {
 
                    {/* Odds Section - 2x2 Grid */}
                    <div className="grid grid-cols-2 gap-2">
-                     <div className="bg-gradient-to-br from-primary/10 to-primary/5 backdrop-blur-sm rounded-xl p-2 border border-primary/20">
+                     <div className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 backdrop-blur-sm rounded-xl p-2 border border-blue-500/20">
                        <p className="text-[8px] text-white/40 uppercase tracking-wider mb-0.5 truncate">{fm.team_a}</p>
-                       <p className="font-heading font-bold text-primary text-sm">
+                       <p className="font-heading font-bold text-blue-400 text-sm">
                          {(fm.odds_a || bet?.odds_a) ? (fm.odds_a || bet.odds_a).toFixed(2) : '—'}x
                        </p>
                      </div>
-                     <div className="bg-gradient-to-br from-accent/10 to-accent/5 backdrop-blur-sm rounded-xl p-2 border border-accent/20">
+                     <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 backdrop-blur-sm rounded-xl p-2 border border-emerald-500/20">
                        <p className="text-[8px] text-white/40 uppercase tracking-wider mb-0.5 truncate">{fm.team_b}</p>
-                       <p className="font-heading font-bold text-accent text-sm">
+                       <p className="font-heading font-bold text-emerald-400 text-sm">
                          {(fm.odds_b || bet?.odds_b) ? (fm.odds_b || bet.odds_b).toFixed(2) : '—'}x
                        </p>
                      </div>
@@ -318,7 +318,7 @@ export default function Home() {
                        </Button>
                      </Link>
                      <Link to={`/match/${fm.matchId}`} className="block">
-                       <Button className="w-full h-9 text-xs font-heading font-bold rounded-xl bg-gradient-to-r from-primary/20 to-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-all">
+                       <Button className="w-full h-9 text-xs font-heading font-bold rounded-xl bg-gradient-to-r from-blue-500/20 to-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 transition-all">
                          + LP
                        </Button>
                      </Link>
