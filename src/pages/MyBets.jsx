@@ -170,23 +170,24 @@ export default function MyBets() {
     return 'Draw';
   };
 
-  // CRITICAL: Parimutuel bets (role='lp' with no offer_id) show as regular bets with withdraw button
-  // Only traditional LP positions (role='lp' WITH offer_id) show in LP tab
+  // CRITICAL: LP positions filtering
+  // - Traditional LP (role='lp' WITH offer_id): Shows in LP tab
+  // - Parimutuel LP (role='lp' WITH offer_id AND _isParimutuel=true): Shows in LP tab WITH withdraw button
+  // - Matcher bets (role='matcher'): Shows in Bets tab
   const myLpPositions = myBets.filter((b) => {
-    // Traditional LP: role='lp' AND has offer_id
+    // All LP positions: role='lp' AND has offer_id (includes parimutuel)
     return b.role === 'lp' && b.offer_id !== null;
   });
   
-  // Parimutuel bets show as regular bets (bettor IS LP on-chain but UI treats as bet with withdraw)
+  // Matcher bets only (not LP)
   const myMatcherBets = myBets.filter((b) => {
-    // Include: matcher bets + parimutuel LP bets (no offer_id)
-    return b.role !== 'lp' || b.offer_id === null;
+    return b.role === 'matcher';
   });
   
   // DEBUG: Log filtering results
   console.log('[MyBets] Total bets:', myBets.length);
-  console.log('[MyBets] myLpPositions (traditional LP with offer_id):', myLpPositions.length, myLpPositions.map(b => ({ id: b.id.slice(0,8), role: b.role, offer_id: b.offer_id })));
-  console.log('[MyBets] myMatcherBets (bettors + parimutuel):', myMatcherBets.length, myMatcherBets.map(b => ({ id: b.id.slice(0,8), role: b.role, offer_id: b.offer_id })));
+  console.log('[MyBets] myLpPositions (all LP with offer_id):', myLpPositions.length, myLpPositions.map(b => ({ id: b.id.slice(0,8), role: b.role, offer_id: b.offer_id, _isParimutuel: b._isParimutuel })));
+  console.log('[MyBets] myMatcherBets (matcher only):', myMatcherBets.length, myMatcherBets.map(b => ({ id: b.id.slice(0,8), role: b.role, offer_id: b.offer_id })));
   
   const totalStaked = myMatcherBets.reduce((s, b) => s + (b.amount || 0), 0);
   const totalWon = myMatcherBets.filter((b) => b.status === 'won' || b.status === 'claimed').reduce((s, b) => s + (b.actual_payout || 0), 0);
@@ -359,7 +360,7 @@ export default function MyBets() {
         
       </div>
       
-      {/* LP Stats - only traditional LP positions */}
+      {/* LP Stats - includes both traditional and parimutuel LP */}
       {myLpPositions.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
           <QuickStat

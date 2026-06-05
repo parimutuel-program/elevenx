@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
         console.log('[commitMatchBet] Updated BetOffer (old format):', offer.id);
       }
     } else if (offerUpdate && userBet?.offer_id) {
-      // New format
+      // New format - fixed odds match
       const existingOffer = await serviceRole.entities.BetOffer.get(userBet.offer_id);
       if (existingOffer) {
         await serviceRole.entities.BetOffer.update(userBet.offer_id, offerUpdate);
@@ -71,12 +71,22 @@ Deno.serve(async (req) => {
       }
     }
     
+    // CRITICAL: For parimutuel LP bets (no offer_id), create a BetOffer record so it shows in LP tab
+    let offerId = userBet.offer_id || null;
+    if (userBet._isParimutuel && !userBet.offer_id && commit_data.lpOffer) {
+      // Create BetOffer for parimutuel LP
+      const newOffer = await serviceRole.entities.BetOffer.create(commit_data.lpOffer);
+      offerId = newOffer.id;
+      console.log('[commitMatchBet] Created BetOffer for parimutuel LP:', offerId);
+    }
+    
     // Create UserBet record
     const createdBet = await serviceRole.entities.UserBet.create({
       ...userBet,
       _isParimutuel: userBet._isParimutuel || false,
+      offer_id: offerId, // Use the created offer_id for parimutuel
     });
-    console.log('[commitMatchBet] Created UserBet:', createdBet.id);
+    console.log('[commitMatchBet] Created UserBet:', createdBet.id, 'offer_id:', offerId);
     
     // Update Bet pool totals and bettor count - handle both formats
     if (betUpdate) {
