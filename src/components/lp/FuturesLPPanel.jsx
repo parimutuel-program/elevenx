@@ -25,6 +25,10 @@ export default function FuturesLPPanel({ onSuccess, onError }) {
     queryFn: () => base44.entities.FuturesMarket.list(),
   });
 
+  // Separate test markets from real markets
+  const testMarkets = futuresMarkets.filter(m => m.title?.includes('Quick Test') || m.title?.includes('Future Test'));
+  const realMarkets = futuresMarkets.filter(m => !m.title?.includes('Quick Test') && !m.title?.includes('Future Test'));
+
   const provideFuturesLiquidityMutation = useMutation({
     mutationFn: async () => {
       const amt = parseFloat(amount);
@@ -137,25 +141,69 @@ export default function FuturesLPPanel({ onSuccess, onError }) {
         />
       ) : (
         <>
-          {/* Market selector */}
-          <div>
-            <label className="text-xs text-muted-foreground mb-1.5 block">Select Futures Market</label>
-            <select
-              value={selectedMarket?.id || ''}
-              onChange={(e) => {
-                const market = futuresMarkets.find(m => m.id === e.target.value);
-                setSelectedMarket(market || null);
-                setSelectedOutcome(null);
-                setError(null);
-              }}
-              className="w-full bg-secondary/50 border-border/50 rounded-xl p-3 text-sm"
-            >
-              <option value="">Choose a futures market...</option>
-              {futuresMarkets.map(market => (
-                <option key={market.id} value={market.id}>{market.icon} {market.title}</option>
-              ))}
-            </select>
-          </div>
+          {/* Test Markets Section */}
+          {testMarkets.length > 0 && (
+            <div className="mb-4">
+              <label className="text-xs text-muted-foreground mb-1.5 block font-bold text-emerald-400">⚡ Quick Test Markets</label>
+              <div className="grid grid-cols-1 gap-2">
+                {testMarkets.map(market => (
+                  <button
+                    key={market.id}
+                    onClick={() => {
+                      setSelectedMarket(market);
+                      setSelectedOutcome(null);
+                      setError(null);
+                    }}
+                    className={`rounded-xl p-3 border-2 text-left transition-all ${
+                      selectedMarket?.id === market.id
+                        ? 'border-emerald-500 bg-emerald-500/10'
+                        : 'border-border/50 bg-secondary/30 hover:border-emerald-500/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{market.icon}</span>
+                      <div>
+                        <span className="font-heading font-bold text-sm text-white">{market.title}</span>
+                        <p className="text-[10px] text-muted-foreground">{market.subtitle}</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Real Markets Section */}
+          {realMarkets.length > 0 && (
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block font-bold">🏆 World Cup Markets</label>
+              <div className="grid grid-cols-1 gap-2">
+                {realMarkets.map(market => (
+                  <button
+                    key={market.id}
+                    onClick={() => {
+                      setSelectedMarket(market);
+                      setSelectedOutcome(null);
+                      setError(null);
+                    }}
+                    className={`rounded-xl p-3 border-2 text-left transition-all ${
+                      selectedMarket?.id === market.id
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border/50 bg-secondary/30 hover:border-primary/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{market.icon}</span>
+                      <div>
+                        <span className="font-heading font-bold text-sm text-white">{market.title}</span>
+                        <p className="text-[10px] text-muted-foreground">{market.subtitle}</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {selectedMarket && (
             <>
