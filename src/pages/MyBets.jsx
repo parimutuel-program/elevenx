@@ -152,8 +152,8 @@ export default function MyBets() {
     queryFn: () => base44.entities.Match.list()
   });
 
-  // Show all bets including LP positions
-  const myMatcherBets = myBets;
+  // Filter out LP positions (parimutuel) - they should only appear in LP dashboard
+  const myMatcherBets = myBets.filter(b => !b._isParimutuel);
   
   const totalStaked = myMatcherBets.reduce((s, b) => s + (b.amount || 0), 0);
   const totalWon = myMatcherBets.filter((b) => b.status === 'won' || b.status === 'claimed').reduce((s, b) => s + (b.actual_payout || 0), 0);
@@ -161,6 +161,7 @@ export default function MyBets() {
   const completedBets = myMatcherBets.filter((b) => b.status !== 'active' && b.status !== 'pending');
   const pendingClaims = myMatcherBets.filter((b) => b.status === 'won');
   const availableRefunds = myMatcherBets.filter((b) => b.status === 'refunded');
+  const myLpPositions = myBets.filter(b => b._isParimutuel);
 
   // Group won bets by match for batch claiming
   const groupedWonBets = pendingClaims.reduce((acc, bet) => {
