@@ -115,11 +115,13 @@ export default function LpDashboard() {
   const { data: myOffers = [], refetch: refetchOffers } = useQuery({
     queryKey: ['myOffers', walletAddress],
     queryFn: async () => {
-      const allUserBets = await base44.entities.UserBet.list('-created_date', 200);
-      const lpUserBets = allUserBets.filter(ub => ub.wallet_address === walletAddress && ub.role === 'lp');
+      // STRICT P2P MODE: Only fetch UserBets with role='lp' (no parimutuel fallback)
+      const lpUserBets = await base44.entities.UserBet.filter({ 
+        wallet_address: walletAddress,
+        role: 'lp'
+      });
       
       console.log('=== LP DEBUG ===');
-      console.log('All UserBets:', allUserBets.length);
       console.log('LP UserBets (role=lp):', lpUserBets);
       
       const offersWithDetails = await Promise.all(lpUserBets.map(async (ub) => {
@@ -129,25 +131,6 @@ export default function LpDashboard() {
           const offers = await base44.entities.BetOffer.filter({ id: ub.offer_id });
           offer = offers[0];
           console.log('Found BetOffer:', offer);
-        }
-        
-        if (!offer && ub.bet_id && ub.match_id) {
-          console.log('No BetOffer - creating parimutuel fallback');
-          return {
-            id: `pm-${ub.id}`,
-            bet_id: ub.bet_id,
-            match_id: ub.match_id,
-            outcome: ub.outcome,
-            outcome_label: ub.outcome_label,
-            amount_offered: ub.amount || 0,
-            amount_matched: ub.liquidity_matched || 0,
-            amount_unmatched: ub.liquidity_unmatched || 0,
-            status: 'open',
-            lp_wallet_address: ub.wallet_address,
-            userBetId: ub.id,
-            userBet: ub,
-            _isParimutuel: true,
-          };
         }
         
         return offer ? { ...offer, userBetId: ub.id, userBet: ub } : null;
