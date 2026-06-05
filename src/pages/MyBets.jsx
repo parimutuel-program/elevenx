@@ -170,18 +170,14 @@ export default function MyBets() {
     return 'Draw';
   };
 
-  // CRITICAL: LP positions filtering
-  // - Traditional LP (role='lp' WITH offer_id): Shows in LP tab
-  // - Parimutuel LP (role='lp' WITH offer_id AND _isParimutuel=true): Shows in LP tab WITH withdraw button
-  // - Matcher bets (role='matcher'): Shows in Bets tab
+  // LP positions: role='lp' WITH offer_id (traditional LP only, not parimutuel)
   const myLpPositions = myBets.filter((b) => {
-    // All LP positions: role='lp' AND has offer_id (includes parimutuel)
-    return b.role === 'lp' && b.offer_id !== null;
+    return b.role === 'lp' && b.offer_id !== null && !b._isParimutuel;
   });
   
-  // Matcher bets only (not LP)
+  // Matcher bets: role='matcher' OR parimutuel LP bets (role='lp' with _isParimutuel=true)
   const myMatcherBets = myBets.filter((b) => {
-    return b.role === 'matcher';
+    return b.role === 'matcher' || (b.role === 'lp' && b._isParimutuel);
   });
   
   // DEBUG: Log filtering results
