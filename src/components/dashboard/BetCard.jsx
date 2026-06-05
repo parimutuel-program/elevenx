@@ -66,26 +66,13 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
         throw new Error(res.data.error + (res.data.debug ? ' - ' + JSON.stringify(res.data.debug) : ''));
       }
 
-      // If DB-only claim (voided market), update local bet status immediately
-      if (res.data.db_only) {
-        await base44.entities.UserBet.update(bet.id, { status: 'claimed' });
-        return { db_only: true, message: res.data.message };
-      }
-
       // Return solana instruction for signing
       return res.data;
     },
     onSuccess: (data) => {
-      // Always show dialog - for db_only claims, show success immediately
-      if (data.db_only) {
-        // DB-only claim - show success dialog with no transaction
-        setClaimInstruction({ db_only: true, message: data.message, payout: bet.potential_payout });
-        setClaimDialogOpen(true);
-      } else {
-        // Show transaction signer dialog
-        setClaimInstruction(data);
-        setClaimDialogOpen(true);
-      }
+      // Show transaction signer dialog
+      setClaimInstruction(data);
+      setClaimDialogOpen(true);
       queryClient.invalidateQueries({ queryKey: ['myBets'] });
     },
     onError: (err) => {
@@ -98,12 +85,12 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
     const signature = txResult.signature;
     setClaimSignature(signature);
 
-    // Update bet status in DB
-    await base44.entities.UserBet.update(bet.id, { status: 'claimed' });
+    // Update bet status in DB AFTER successful on-chain claim
+    await base44.entities.UserBet.update(bet.id, { 
+      status: 'claimed',
+      actual_payout: bet.potential_payout || 0
+    });
     queryClient.invalidateQueries({ queryKey: ['myBets'] });
-
-    // Show success message
-    alert(`🎉 Congratulations! You claimed ◎${(bet.potential_payout || 0).toFixed(4)} SOL!\n\nTransaction: ${signature.slice(0, 8)}...${signature.slice(-8)}\nView on Solscan: https://solscan.io/tx/${signature}?cluster=devnet`);
   };
 
   const handleCloseClaimDialog = () => {
@@ -271,21 +258,6 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
                 variant="secondary"
                 onClick={handleCloseClaimDialog}
                 className="w-full h-10 text-sm rounded-xl">
-                
-                  Close
-                </Button>
-              </div> :
-            claimInstruction?.db_only ?
-            <div className="bg-accent/10 border border-accent/30 rounded-xl p-4 text-center">
-                <CheckCircle className="w-8 h-8 text-accent mx-auto mb-2" />
-                <p className="font-heading font-bold text-sm text-accent mb-1">✓ Claim Processed</p>
-                <p className="font-heading font-bold text-2xl text-accent">◎{(claimInstruction.payout || bet.potential_payout || 0).toFixed(4)} SOL</p>
-                <p className="text-xs text-muted-foreground mt-2">Status updated to claimed</p>
-                <p className="text-xs text-muted-foreground mt-1">SOL payout will be processed by admin</p>
-                <Button
-                variant="outline"
-                onClick={handleCloseClaimDialog}
-                className="w-full mt-4 h-10 text-sm rounded-xl border-border/50">
                 
                   Close
                 </Button>

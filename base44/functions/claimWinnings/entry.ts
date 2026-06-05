@@ -109,7 +109,6 @@ Deno.serve(async (req) => {
     const [marketPda] = PublicKey.findProgramAddressSync([Buffer.from('market'), matchIdBytes], programId);
 
     const marketInfo = await connection.getAccountInfo(marketPda);
-    const isVoided = marketInfo && marketInfo.data.length >= 249 && marketInfo.data[245] === 1;
     const isSettledOnChain = marketInfo && marketInfo.data.length >= 249 && marketInfo.data[244] === 1;
     
     // Check if position exists on-chain and read its state
@@ -148,7 +147,6 @@ Deno.serve(async (req) => {
     
     console.log('[claimWinnings] Market state:', {
       marketExists: !!marketInfo,
-      isVoided,
       isSettledOnChain,
       positionExists,
       positionPda: positionPda.toBase58(),
@@ -156,32 +154,11 @@ Deno.serve(async (req) => {
     });
 
     const totalPayout = betsToClaim_validated.reduce((sum, b) => sum + (b.actual_payout || b.potential_payout || 0), 0);
-    console.log(`✓ Claim: wallet=${trimmedWallet.slice(0, 8)}... | bets=${betsToClaim_validated.length} | total=${totalPayout} SOL | voided=${isVoided}`);
+    console.log(`✓ Claim: wallet=${trimmedWallet.slice(0, 8)}... | bets=${betsToClaim_validated.length} | total=${totalPayout} SOL`);
 
-    // If market is voided, do DB-only claim (no on-chain funds to claim)
-    if (isVoided) {
-      console.log('[claimWinnings] Market voided — doing DB-only claim');
-      for (const b of betsToClaim_validated) {
-        await serviceRole.entities.UserBet.update(b.id, {
-          status: 'claimed',
-          actual_payout: b.actual_payout || b.potential_payout || 0,
-        });
-      }
-      return Response.json({
-        success: true,
-        db_only: true,
-        message: `✓ ${betsToClaim_validated.length} winning bet(s) marked as claimed (market voided).`,
-        betIds: betsToClaim_validated.map(b => b.id),
-        totalPayout,
-      });
-    }
-    
-    // If market not settled on-chain OR position doesn't exist, return error (should not happen for normal claims)
+    // Validate market is settled and position exists
     if (!marketInfo || !isSettledOnChain) {
-      console.error('[claimWinnings] Market not settled on-chain yet:', {
-        marketExists: !!marketInfo,
-        isSettledOnChain,
-      });
+      console.error('[claimWinnings] Market not settled on-chain yet');
       return Response.json({ 
         error: 'Market not settled yet - cannot claim winnings',
         marketSettled: isSettledOnChain,
@@ -190,10 +167,7 @@ Deno.serve(async (req) => {
     }
     
     if (!positionExists || !positionData) {
-      console.error('[claimWinnings] Position not found on-chain:', {
-        positionExists,
-        positionData: !!positionData,
-      });
+      console.error('[claimWinnings] Position not found on-chain');
       return Response.json({ 
         error: 'Position not found on-chain - contact support',
         positionPda: positionPda.toBase58()
@@ -202,20 +176,11 @@ Deno.serve(async (req) => {
     
     // Check if position was already claimed on-chain
     if (positionData.claimed) {
-      console.log('[claimWinnings] Position already claimed on-chain — doing DB-only update');
-      for (const b of betsToClaim_validated) {
-        await serviceRole.entities.UserBet.update(b.id, {
-          status: 'claimed',
-          actual_payout: b.actual_payout || b.potential_payout || 0,
-        });
-      }
-      return Response.json({
-        success: true,
-        db_only: true,
-        message: `✓ ${betsToClaim_validated.length} winning bet(s) already claimed on-chain. Updated DB.`,
-        betIds: betsToClaim_validated.map(b => b.id),
-        totalPayout,
-      });
+      console.log('[claimWinnings] Position already claimed on-chain');
+      return Response.json({ 
+        error: 'Winnings already claimed on-chain',
+        positionPda: positionPda.toBase58()
+      }, { status: 400 });
     }
     
     console.log('[claimWinnings] Proceeding with on-chain claim');
@@ -235,15 +200,14 @@ Deno.serve(async (req) => {
       positionPda: positionPda.toBase58(),
       feeVaultPda: feeVaultPda.toBase58(),
       bettorPubkey: trimmedWallet,
-      amountLamports: claimAmount.toString(),
+      amountLamports: Number(claimAmount),
     };
     
     return Response.json({
       success: true,
-      on_chain: true,
-      message: `✓ ${betsToClaim_validated.length} winning bet(s) ready for on-chain claim`,
+      message: `✓ ${betsToClaim_validated.length} winning bet(s) ready for claim`,
       betIds: betsToClaim_validated.map(b => b.id),
-      totalPayout,
+      totalPayout: Number(totalPayout),
       solana_instruction: claimInstruction,
     });
 

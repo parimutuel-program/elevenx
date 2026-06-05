@@ -223,12 +223,6 @@ export default function MyBets() {
       if (res.data.error) {
         throw new Error(res.data.error + (res.data.debug ? ' - ' + JSON.stringify(res.data.debug) : ''));
       }
-      // DB-only claim (voided market) — already committed server-side
-      if (res.data.db_only) {
-        alert(res.data.message || '✓ Winnings claimed!');
-        queryClient.invalidateQueries({ queryKey: ['myBets'] });
-        return;
-      }
       setClaimData({ ...res.data, matchId });
       setBatchClaimMatchId(matchId);
     } catch (err) {
@@ -240,15 +234,15 @@ export default function MyBets() {
   const handleClaimSignSuccess = async () => {
     if (claimData?.betIds) {
       for (const betId of claimData.betIds) {
-        await base44.entities.UserBet.update(betId, { status: 'claimed' });
+        await base44.entities.UserBet.update(betId, { 
+          status: 'claimed',
+          actual_payout: claimData.totalPayout / claimData.betIds.length
+        });
       }
     }
     setClaimData(null);
     setBatchClaimMatchId(null);
-    // Force reload after a short delay to ensure DB is updated
-    setTimeout(() => {
-      queryClient.invalidateQueries({ queryKey: ['myBets'] });
-    }, 500);
+    queryClient.invalidateQueries({ queryKey: ['myBets'] });
   };
 
   return (
