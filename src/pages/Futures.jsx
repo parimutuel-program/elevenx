@@ -369,6 +369,7 @@ export default function Futures() {
                   key={m.id}
                   market={m}
                   index={i}
+                  onSelect={handleCountrySelect}
                 />
               ))}
             </div>
@@ -402,6 +403,7 @@ export default function Futures() {
                         key={market.id}
                         market={market}
                         index={index}
+                        onSelect={handleCountrySelect}
                       />
                     ))}
                   </div>
