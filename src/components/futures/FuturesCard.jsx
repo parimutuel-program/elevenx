@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronRight, Trophy, Droplets } from 'lucide-react';
+import { ChevronRight, Trophy, Droplets, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import BetCountdown from '@/components/betting/BetCountdown';
 
 const statusStyles = {
   open: 'bg-accent/10 text-accent border border-accent/20',
@@ -53,10 +54,15 @@ export default function FuturesCard({ market, index, onSelect }) {
             <span className="text-[10px] text-muted-foreground font-semibold truncate">
               {market.country}
             </span>
-            <Badge className={`text-[9px] font-semibold uppercase tracking-wider flex-shrink-0 ${statusStyles[market.status] || statusStyles.open}`}>
-              {market.status === 'open' && <span className="w-1 h-1 rounded-full bg-accent animate-pulse mr-1" />}
-              {market.status.replace('_', ' ')}
-            </Badge>
+            <div className="flex items-center gap-2">
+              {market.status === 'open' && market.open_until && (
+                <BetCountdown openUntil={market.open_until} label="" className="text-[8px]" />
+              )}
+              <Badge className={`text-[9px] font-semibold uppercase tracking-wider flex-shrink-0 ${statusStyles[market.status] || statusStyles.open}`}>
+                {market.status === 'open' && <span className="w-1 h-1 rounded-full bg-accent animate-pulse mr-1" />}
+                {market.status.replace('_', ' ')}
+              </Badge>
+            </div>
           </div>
 
           {/* Market Icon & Title */}
