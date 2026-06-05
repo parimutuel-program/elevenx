@@ -811,38 +811,21 @@ export default function LpDashboard() {
                   console.log('Mapping', offersWithUserBet.length, 'offers...');
                   
                   return offersWithUserBet.map((offer, idx) => {
-                    console.log(`Rendering offer ${idx}:`, offer.id, offer.outcome_label);
+                    console.log(`Rendering offer ${idx}:`, offer.id, offer.outcome_label, offer.status);
                     try {
                       const match = matches.find((m) => m.id === offer.match_id);
-                      const bet = openBets.find((b) => b.id === offer.bet_id);
+                      console.log(`Offer ${idx} match:`, match?.team_a, 'vs', match?.team_b, 'match_id:', offer.match_id);
                       
-                      console.log(`Offer ${idx} match:`, match?.team_a, 'vs', match?.team_b);
-                      
+                      // TEMP: Simple card to test rendering
                       return (
-                        <LpPositionCard
-                          key={offer.id || offer.userBetId}
-                          offer={offer}
-                          match={match}
-                          potentialEarnings={(offer.amount_matched || 0) * 0.02}
-                          matchPct={(offer.amount_offered || offer.userBet?.amount || 1) > 0 ? (offer.amount_matched || 0) / (offer.amount_offered || offer.userBet?.amount || 1) * 100 : 0}
-                          isFullyMatched={offer.status === 'fully_matched'}
-                          isPartiallyMatched={offer.status === 'partially_matched'}
-                          hasUnmatched={(offer.amount_unmatched || 0) > 0}
-                          currentStatus={{
-                            open: { bg: 'bg-primary/10', border: 'border-primary/30', color: 'text-primary' },
-                            partially_matched: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', color: 'text-yellow-400' },
-                            fully_matched: { bg: 'bg-accent/10', border: 'border-accent/30', color: 'text-accent' }
-                          }[offer.status] || { bg: 'bg-muted/10', border: 'border-muted/30', color: 'text-muted-foreground' }}
-                          getOutcomeLabel={() => {
-                            if (offer.outcome === 'a') return offer.outcome_label || bet?.outcome_a || match?.team_a || 'Team A';
-                            if (offer.outcome === 'b') return offer.outcome_label || bet?.outcome_b || match?.team_b || 'Team B';
-                            return 'Draw';
-                          }}
-                          canWithdraw={(offer.amount_unmatched || 0) > 0 && offer.status !== 'fully_matched'}
-                          onWithdraw={() => {
-                            console.log('[onWithdraw] Withdrawing:', offer.id);
-                            withdrawLiquidityMutation.mutate(offer);
-                          }} />
+                        <div key={offer.id || offer.userBetId} className="bg-card border border-border/50 rounded-xl p-4">
+                          <p className="font-bold text-white">LP Position #{idx + 1}</p>
+                          <p className="text-sm text-muted-foreground">Outcome: {offer.outcome_label}</p>
+                          <p className="text-sm text-muted-foreground">Status: {offer.status}</p>
+                          <p className="text-sm text-primary">Deposited: ◎{offer.amount_offered?.toFixed(4)}</p>
+                          <p className="text-sm text-accent">Matched: ◎{offer.amount_matched?.toFixed(4)}</p>
+                          <p className="text-sm text-yellow-400">Unmatched: ◎{offer.amount_unmatched?.toFixed(4)}</p>
+                        </div>
                       );
                     } catch (err) {
                       console.error(`Error rendering offer ${idx}:`, err);
