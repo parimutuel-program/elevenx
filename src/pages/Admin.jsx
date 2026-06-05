@@ -363,6 +363,39 @@ export default function Admin() {
                   <span className="font-bold text-lg text-white">🗑️ Clear DB</span>
                   <span className="text-xs text-gray-400">Delete everything</span>
                 </Button>
+                <Button
+                  onClick={async () => {
+                    if (!walletAddress) {
+                      alert('Connect wallet first!');
+                      return;
+                    }
+                    try {
+                      // Fix timestamps for the test market
+                      const fixRes = await base44.functions.invoke('updateMarketTimestampsOnChain', {
+                        bet_id: '6a22f4a0f57d1e46dd8a6bac',
+                        match_id: '6a22f4a0ec705f7f006f085c',
+                        admin_wallet: walletAddress,
+                        mode: 'test',
+                      });
+                      if (fixRes.data.error) throw new Error(fixRes.data.error);
+                      if (fixRes.data.solana_instruction) {
+                        setFixTimestampDialog({
+                          instruction: fixRes.data.solana_instruction,
+                          pendingSettle: {
+                            bet: { id: '6a22f4a0f57d1e46dd8a6bac', match_id: '6a22f4a0ec705f7f006f085c' },
+                            outcome: 'a',
+                          },
+                        });
+                      }
+                    } catch (err) {
+                      alert('Error: ' + err.message);
+                    }
+                  }}
+                  className="h-24 flex flex-col gap-2 bg-yellow-600/20 hover:bg-yellow-600/30 border border-yellow-600/30 rounded-xl"
+                >
+                  <span className="font-bold text-lg text-white">🔧 Fix Test Market</span>
+                  <span className="text-xs text-gray-400">Fix timestamps + settle</span>
+                </Button>
               </div>
             </Card>
           </TabsContent>
