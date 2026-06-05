@@ -126,7 +126,7 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
       await base44.functions.invoke('finalizeWithdrawal', {
         signature,
         userBetId: bet.id,
-        offerId: bet.offer_id
+        offerId: bet.offer_id || null
       });
     } catch (err) {
       console.error('[BetCard] finalizeWithdrawal error:', err);
@@ -134,6 +134,8 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
     // Invalidate queries to refresh UI - bet will disappear or update
     queryClient.invalidateQueries({ queryKey: ['myBets'] });
     setWithdrawDialogOpen(false);
+    // Show success alert
+    alert(`✓ Withdrawal successful! ◎${bet.amount.toFixed(4)} SOL returned to your wallet`);
   };
 
   const canClaim = bet.status === 'won';

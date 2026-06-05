@@ -11,8 +11,8 @@ Deno.serve(async (req) => {
     const payload = await req.json();
     const { userBetId, offerId, signature } = payload;
 
-    if (!userBetId || !offerId) {
-      return Response.json({ error: 'Missing required parameters' }, { status: 400 });
+    if (!userBetId) {
+      return Response.json({ error: 'Missing userBetId' }, { status: 400 });
     }
 
     if (!signature) {
@@ -28,15 +28,18 @@ Deno.serve(async (req) => {
     if (userBet.role !== 'lp') {
       return Response.json({ error: 'Not an LP bet' }, { status: 400 });
     }
-    if (userBet.status !== 'pending') {
-      return Response.json({ error: 'Bet is not pending' }, { status: 400 });
+    if (userBet.status !== 'pending' && userBet.status !== 'active') {
+      return Response.json({ error: 'Bet is not pending or active' }, { status: 400 });
     }
 
-    // Fetch BetOffer
-    const offers = await base44.entities.BetOffer.filter({ id: offerId });
-    const offer = offers[0];
-    if (!offer) {
-      return Response.json({ error: 'Offer not found' }, { status: 404 });
+    // For traditional LP (with offer_id), fetch and update BetOffer
+    let offer = null;
+    if (offerId) {
+      const offers = await base44.entities.BetOffer.filter({ id: offerId });
+      offer = offers[0];
+      if (!offer) {
+        return Response.json({ error: 'Offer not found' }, { status: 404 });
+      }
     }
 
     // Fetch Bet to update LP totals
@@ -46,8 +49,13 @@ Deno.serve(async (req) => {
     const withdrawAmount = userBet.amount || offer.amount_unmatched || 0;
 
     // Update database records
+    // For parimutuel LP (no offer_id): mark as refunded
+    // For traditional LP (with offer_id): mark as refunded and cancel offer
     await base44.entities.UserBet.update(userBetId, { status: 'refunded' });
-    await base44.entities.BetOffer.update(offerId, { status: 'cancelled' });
+    
+    if (offerId && offer) {
+      await base44.entities.BetOffer.update(offerId, { status: 'cancelled' });
+    }
     
     // Update Bet LP totals
     if (bet) {

@@ -83,19 +83,13 @@ Deno.serve(async (req) => {
     return Response.json({
       success: true,
       amount: unmatchedAmount,
+      userBetId,
       solana_instruction: {
         instruction_type: 'withdraw_liquidity',
         programId: SOLANA_PROGRAM_ID,
         marketPda: marketPda.toBase58(),
         lpOfferPda: lpOfferPda.toBase58(),
         amountLamports,
-      },
-      commit_data: {
-        userBetUpdate: {
-          liquidity_unmatched: 0,
-          liquidity_deposited: (userBet.liquidity_deposited || 0) - unmatchedAmount,
-          status: 'withdrawn',
-        },
       },
       message: `✓ Ready to withdraw ◎${unmatchedAmount.toFixed(4)} unmatched liquidity`,
     });
