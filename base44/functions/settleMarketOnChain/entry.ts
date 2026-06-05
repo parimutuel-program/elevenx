@@ -130,27 +130,23 @@ Deno.serve(async (req) => {
     // Calculate winning bets and update UserBet statuses
     const outcomeLabel = winning_outcome === 'a' ? bet.outcome_a : winning_outcome === 'b' ? bet.outcome_b : 'Draw';
     
-    // Check if market settle_after is in the future — if so, skip on-chain settle
-    // and just do an off-chain DB-only settlement (admin override)
+    // Check if market exists on-chain — if not, fall back to DB-only
     let skipOnChain = false;
     try {
       const marketInfo = await connection.getAccountInfo(marketPda);
-      if (marketInfo) {
-        // BetMarket layout: 8 (discriminator) + 32 (match_id) + 96 (outcome_names) + 8 (open_until) + 8 (settle_after) = offset 152
+      if (!marketInfo) {
+        console.log('[settleMarketOnChain] Market not on-chain — using DB-only settlement');
+        skipOnChain = true;
+      } else {
+        // Log settle_after for debugging but DO NOT block settlement based on it
+        // (corrupted timestamps like year 29179 would permanently block on-chain settlement)
         const settleAfterBytes = marketInfo.data.slice(152, 160);
         const settleAfterTs = Number(BigInt.asIntN(64, new DataView(settleAfterBytes.buffer, settleAfterBytes.byteOffset).getBigInt64(0, true)));
         const nowTs = Math.floor(Date.now() / 1000);
-        console.log('[settleMarketOnChain] settle_after:', settleAfterTs, 'now:', nowTs, 'diff:', settleAfterTs - nowTs);
-        if (settleAfterTs > nowTs) {
-          console.log('[settleMarketOnChain] settle_after is in future — using DB-only settlement');
-          skipOnChain = true;
-        }
-      } else {
-        console.log('[settleMarketOnChain] Market not on-chain — using DB-only settlement');
-        skipOnChain = true;
+        console.log('[settleMarketOnChain] settle_after:', settleAfterTs, 'now:', nowTs, '— forcing on-chain settle (admin override)');
       }
     } catch (e) {
-      console.error('[settleMarketOnChain] Could not check settle_after:', e.message);
+      console.error('[settleMarketOnChain] Could not check market on-chain:', e.message);
     }
 
     if (skipOnChain) {
