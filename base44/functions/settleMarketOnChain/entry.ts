@@ -121,72 +121,53 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Fee vault not found on-chain' }, { status: 400 });
     }
 
-    // Check if market account exists and has correct discriminator
+    // Fetch market account and validate
     let marketInfo;
     try {
       marketInfo = await connection.getAccountInfo(marketPda);
     } catch (accountErr) {
-      console.log('[settleMarketOnChain] Failed to fetch market account:', accountErr.message);
-      marketInfo = null;
+      console.error('[settleMarketOnChain] Failed to fetch market account:', accountErr.message);
+      throw new Error('Failed to fetch market account: ' + accountErr.message);
     }
     
-    if (!marketInfo || !marketInfo.data || marketInfo.data.length < 249) {
-      console.log('[settleMarketOnChain] Market account missing or corrupted - doing DB-only settlement');
-      console.log('[settleMarketOnChain] Market PDA:', marketPda.toBase58());
-      console.log('[settleMarketOnChain] Bet solana_market_pda:', bet.solana_market_pda || 'NOT SET');
-      const outcomeLabel = winning_outcome === 'a' ? bet.outcome_a : winning_outcome === 'b' ? bet.outcome_b : 'Draw';
-      return Response.json({
-        success: true,
-        db_only: true,
-        message: `Market not deployed on-chain or corrupted. DB settlement only for: ${outcomeLabel}`,
-        bet_id: bet_id,
-        winning_outcome: winning_outcome,
-        note: 'Market was never deployed or account data is invalid - using DB fallback',
-      });
+    if (!marketInfo || !marketInfo.data) {
+      throw new Error('Market account not found on-chain. PDA: ' + marketPda.toBase58());
     }
     
-    // Check settle_after timestamp - Error 6005 means it's still in the future
-    // Market account layout: discriminator(8) + admin(32) + match_id(32) + open_until(i64) + settle_after(i64) + ...
-    const settleAfterBytes = marketInfo.data.slice(72, 80);
-    const settleAfter = BigInt.asIntN(64, settleAfterBytes.readBigUInt64LE(0));
-    const settleAfterSeconds = Number(settleAfter);
-    const settleAfterDate = new Date(settleAfterSeconds * 1000);
-    const now = Date.now();
+    console.log('[settleMarketOnChain] Market account size:', marketInfo.data.length, 'bytes');
+    console.log('[settleMarketOnChain] Market discriminator (hex):', marketInfo.data.slice(0, 8).toString('hex'));
     
-    console.log('[settleMarketOnChain] On-chain settle_after:', settleAfterDate.toISOString(), 'timestamp:', settleAfterSeconds);
-    console.log('[settleMarketOnChain] Current time:', new Date(now).toISOString(), 'timestamp:', Math.floor(now / 1000));
-    console.log('[settleMarketOnChain] Can settle?', now >= settleAfterSeconds * 1000);
-    
-    if (now < settleAfterSeconds * 1000) {
-      console.log('[settleMarketOnChain] Too early to settle - returning fix timestamp instruction first');
-      const secondsUntilSettle = settleAfterSeconds - Math.floor(now / 1000);
-      return Response.json({
-        error: 'TooEarlyToSettle',
-        code: 6005,
-        settle_after: settleAfterDate.toISOString(),
-        current_time: new Date(now).toISOString(),
-        seconds_until_settle: secondsUntilSettle,
-        fix_required: 'update_market_timestamps',
-        message: `Market settle time is ${secondsUntilSettle}s in the future. Fix timestamps first.`,
-      }, { status: 400 });
+    // Validate discriminator first
+    const expectedDisc = Buffer.from(sha256.digestSync('global:market')).slice(0, 8);
+    const actualDisc = marketInfo.data.slice(0, 8);
+    if (!expectedDisc.equals(actualDisc)) {
+      console.error('[settleMarketOnChain] DISCRIMINATOR MISMATCH!');
+      console.error('[settleMarketOnChain] Expected:', expectedDisc.toString('hex'));
+      console.error('[settleMarketOnChain] Actual:', actualDisc.toString('hex'));
+      throw new Error('Invalid market account - wrong discriminator. Account may be corrupted or from different program version.');
     }
+    console.log('[settleMarketOnChain] ✓ Discriminator valid');
     
-    // Check discriminator - should match BetMarket account type
-    const marketDisc = marketInfo.data.slice(0, 8).toString('hex');
-    const expectedDisc = Buffer.from(sha256("account:BetMarket")).slice(0, 8).toString('hex');
-    console.log('[settleMarketOnChain] Market discriminator:', marketDisc, '(expected:', expectedDisc + ')');
-    
-    if (marketDisc !== expectedDisc) {
-      console.log('[settleMarketOnChain] Market discriminator mismatch - doing DB-only settlement');
-      const outcomeLabel = winning_outcome === 'a' ? bet.outcome_a : winning_outcome === 'b' ? bet.outcome_b : 'Draw';
-      return Response.json({
-        success: true,
-        db_only: true,
-        message: `Market account has invalid discriminator (${marketDisc}). DB settlement only for: ${outcomeLabel}`,
-        bet_id: bet_id,
-        winning_outcome: winning_outcome,
-        note: 'On-chain market account was created with wrong data - using DB fallback',
-      });
+    // Parse settle_after timestamp (offset 72-80 in market account)
+    try {
+      const settleAfterBytes = marketInfo.data.slice(72, 80);
+      const settleAfter = BigInt.asIntN(64, settleAfterBytes.readBigUInt64LE(0));
+      const settleAfterSeconds = Number(settleAfter);
+      const settleAfterDate = new Date(settleAfterSeconds * 1000);
+      const now = Date.now();
+      
+      console.log('[settleMarketOnChain] settle_after timestamp:', settleAfterSeconds, '(' + settleAfterDate.toISOString() + ')');
+      console.log('[settleMarketOnChain] Current timestamp:', Math.floor(now / 1000));
+      
+      if (now < settleAfterSeconds * 1000) {
+        const secondsUntilSettle = settleAfterSeconds - Math.floor(now / 1000);
+        const minutesUntilSettle = Math.ceil(secondsUntilSettle / 60);
+        throw new Error(`Too early to settle. Wait ${minutesUntilSettle} more minute(s). settle_after: ${settleAfterDate.toISOString()}`);
+      }
+      console.log('[settleMarketOnChain] ✓ Settlement time reached');
+    } catch (tsErr) {
+      console.error('[settleMarketOnChain] Failed to parse settle_after timestamp:', tsErr.message);
+      throw new Error('Invalid settle_after timestamp in market account: ' + tsErr.message);
     }
 
     // Handle void outcome separately
