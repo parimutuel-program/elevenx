@@ -152,8 +152,8 @@ export default function MyBets() {
     queryFn: () => base44.entities.Match.list()
   });
 
-  // All bets go to Bets/History tabs - LP positions are ONLY shown in LP Dashboard "My LP" tab
-  const myMatcherBets = myBets.filter(b => b.role !== 'lp' || !b.offer_id);
+  // Show all bets including LP positions
+  const myMatcherBets = myBets;
   
   const totalStaked = myMatcherBets.reduce((s, b) => s + (b.amount || 0), 0);
   const totalWon = myMatcherBets.filter((b) => b.status === 'won' || b.status === 'claimed').reduce((s, b) => s + (b.actual_payout || 0), 0);
