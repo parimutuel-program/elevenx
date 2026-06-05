@@ -233,7 +233,7 @@ export default function Home() {
                   className="relative rounded-2xl p-4 transition-all duration-300 border border-primary/20 bg-card h-full">
 
                   {/* Match Image Header */}
-                  <div className="relative h-32 -mx-4 -mt-4 mb-3 overflow-hidden rounded-t-2xl">
+                  <div className={`relative ${fm.team_a === 'Netherlands' ? 'h-24' : 'h-32'} -mx-4 -mt-4 mb-3 overflow-hidden rounded-t-2xl`}>
                     <img
                       src={fm.img || WC_PHOTOS[(i + 1) % WC_PHOTOS.length]}
                       alt="match"
