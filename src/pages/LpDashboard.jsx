@@ -816,16 +816,22 @@ export default function LpDashboard() {
                       const match = matches.find((m) => m.id === offer.match_id);
                       console.log(`Offer ${idx} match:`, match?.team_a, 'vs', match?.team_b, 'match_id:', offer.match_id);
                       
-                      // TEMP: Simple card to test rendering
                       return (
-                        <div key={offer.id || offer.userBetId} className="bg-card border border-border/50 rounded-xl p-4">
-                          <p className="font-bold text-white">LP Position #{idx + 1}</p>
-                          <p className="text-sm text-muted-foreground">Outcome: {offer.outcome_label}</p>
-                          <p className="text-sm text-muted-foreground">Status: {offer.status}</p>
-                          <p className="text-sm text-primary">Deposited: ◎{offer.amount_offered?.toFixed(4)}</p>
-                          <p className="text-sm text-accent">Matched: ◎{offer.amount_matched?.toFixed(4)}</p>
-                          <p className="text-sm text-yellow-400">Unmatched: ◎{offer.amount_unmatched?.toFixed(4)}</p>
-                        </div>
+                        <LpPositionCard
+                          key={offer.id || offer.userBetId}
+                          position={offer}
+                          match={match}
+                          walletAddress={walletAddress}
+                          onWithdrawRequest={(withdrawData) => {
+                            console.log('[onWithdrawRequest] Withdraw triggered:', withdrawData);
+                            setPendingTx({
+                              instruction: withdrawData.solanaInstruction,
+                              amount: withdrawData.withdrawAmount,
+                              type: 'withdraw_liquidity',
+                              userBetId: withdrawData.positionId,
+                              offerId: withdrawData.offerId
+                            });
+                          }} />
                       );
                     } catch (err) {
                       console.error(`Error rendering offer ${idx}:`, err);
