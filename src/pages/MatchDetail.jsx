@@ -104,15 +104,15 @@ export default function MatchDetail() {
     enabled: !!matchId
   });
   const walletAddress = getWalletAddress();
-  // CRITICAL: Parimutuel bets (role='lp' with _isParimutuel=true or no offer_id) show as regular bets
-  // Only traditional LP positions (role='lp' WITH offer_id and NOT parimutuel) show as LP
+  // CRITICAL: Parimutuel bets (role='lp' with no offer_id) show as regular bets with withdraw button
+  // Only traditional LP positions (role='lp' WITH offer_id) show as LP
   const myLpPositions = myUserBets.filter((ub) =>
     (walletAddress && ub.wallet_address === walletAddress || user?.id && ub.created_by_id === user.id) &&
-    ub.role === 'lp' && ub.offer_id !== null && ub._isParimutuel !== true
+    ub.role === 'lp' && ub.offer_id !== null
   );
   const myMatcherBets = myUserBets.filter((ub) =>
     (walletAddress && ub.wallet_address === walletAddress || user?.id && ub.created_by_id === user.id) &&
-    (ub.role !== 'lp' || ub._isParimutuel === true || ub.offer_id === null)
+    (ub.role !== 'lp' || ub.offer_id === null)
   );
 
   // Calculate won bets and total payout for batch claim (matcher bets only)
