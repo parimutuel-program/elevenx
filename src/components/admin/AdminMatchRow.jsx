@@ -123,6 +123,8 @@ export default function AdminMatchRow({ match, bets, index }) {
   const handleMarketInitSuccess = async (txResult) => {
     const signature = txResult.signature;
     console.log('[AdminMatchRow] Transaction confirmed:', signature);
+    console.log('[AdminMatchRow] txResult:', txResult);
+    console.log('[AdminMatchRow] pendingMarketInit:', pendingMarketInit);
     
     // If this was platform init, now show create market instruction
     if (pendingMarketInit?.step === 'platform_init' && pendingMarketInit?.createMarketInstruction) {
@@ -137,13 +139,17 @@ export default function AdminMatchRow({ match, bets, index }) {
     
     // Commit the market data to database AFTER successful on-chain transaction
     const betIdToCommit = txResult.betId || pendingMarketInit?.betId;
-    if (betIdToCommit) {
+    const marketPda = txResult.marketPda || pendingMarketInit?.instruction?.accounts?.market;
+    
+    console.log('[AdminMatchRow] Committing to DB - betId:', betIdToCommit, 'marketPda:', marketPda);
+    
+    if (betIdToCommit && marketPda) {
       try {
         await base44.entities.Bet.update(betIdToCommit, { 
-          solana_market_pda: pendingMarketInit?.instruction?.accounts?.market,
+          solana_market_pda: marketPda,
           solana_market_created: true,
         });
-        console.log('[AdminMatchRow] Updated bet with solana_market_pda after successful transaction');
+        console.log('[AdminMatchRow] ✓ Updated bet with solana_market_pda after successful transaction');
       } catch (err) {
         console.error('[AdminMatchRow] Failed to update bet:', err);
       }
@@ -152,15 +158,26 @@ export default function AdminMatchRow({ match, bets, index }) {
     setPendingMarketInit(null);
     queryClient.invalidateQueries({ queryKey: ['bets'] });
     queryClient.invalidateQueries({ queryKey: ['marketStatus', match.id] });
-    alert('Market initialized on-chain!');
+    alert('✓ Market initialized on-chain!\n\nYou can now provide liquidity and place bets.');
   };
 
   const handleMarketInitError = (err) => {
     console.error('[AdminMatchRow] Transaction error:', err);
+    console.error('[AdminMatchRow] Error details:', {
+      message: err.message,
+      stack: err.stack,
+      response: err.response?.data,
+    });
     setPendingMarketInit(null);
     // Show more specific error message
-    const errorMsg = err.message || 'Unknown error';
-    alert('Market initialization failed: ' + errorMsg);
+    let errorMsg = err.message || 'Unknown error';
+    
+    // Extract on-chain error code if present
+    if (errorMsg.includes('On-chain error')) {
+      errorMsg = errorMsg + '\n\nThis usually means the wallet address doesn\'t match the platform admin.';
+    }
+    
+    alert('❌ Market initialization failed:\n' + errorMsg);
   };
 
   const updateStatusMutation = useMutation({
@@ -246,36 +263,9 @@ export default function AdminMatchRow({ match, bets, index }) {
         )}
         
         {existingBet && marketStatus?.status === 'initialized' && !pendingMarketInit && (
-          <Button
-            size="sm"
-            onClick={async () => {
-              try {
-                const marketRes = await base44.functions.invoke('createMarketOnChain', {
-                  bet_id: existingBet.id,
-                  match_id: match.id,
-                  force_recreate: true,
-                });
-                if (marketRes.data.createMarketInstruction) {
-                  setPendingMarketInit({
-                    instruction: marketRes.data.createMarketInstruction,
-                    betId: existingBet.id,
-                    step: 'create_market',
-                  });
-                } else if (marketRes.data.error) {
-                  alert('Failed to re-init market: ' + marketRes.data.error);
-                }
-              } catch (err) {
-                if (err.response?.status === 429) {
-                  alert('Rate limit exceeded. Please wait a moment and try again.');
-                } else {
-                  alert('Error: ' + err.message);
-                }
-              }
-            }}
-            className="h-8 text-xs bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 font-heading rounded-lg"
-          >
-            🔄 Re-Init On-Chain
-          </Button>
+          <Badge className="bg-accent/20 text-accent text-[10px] py-1 px-3 rounded-lg">
+            <CheckCircle2 className="w-3 h-3 mr-1" /> Ready for Betting
+          </Badge>
         )}
         {pendingMarketInit && (
           <div className="w-64">
