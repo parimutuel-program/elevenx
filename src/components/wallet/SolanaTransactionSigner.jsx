@@ -316,13 +316,15 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         const keys = [];
         keys.push({ pubkey: new PublicKey(instruction.marketPda), isSigner: false, isWritable: true });
         
-        // Only include lpOfferPda if it exists (fixed-odds mode)
+        // CRITICAL: Parimutuel mode MUST still include lp_offer account - use bettor's own address as placeholder
+        // The Solana program expects 6 accounts: market, lp_offer, bettor_position, bettor, system_program
         if (instruction.lpOfferPda) {
+          // Fixed-odds mode: use real LP offer PDA
           keys.push({ pubkey: new PublicKey(instruction.lpOfferPda), isSigner: false, isWritable: true });
         } else {
-          // Parimutuel mode: use zero pubkey as placeholder or skip
-          console.log('[SolanaTransactionSigner] Parimutuel bet - no LP offer PDA');
-          // Skip lp_offer account for pending pool bets
+          // Parimutuel mode: use bettor's position PDA as lp_offer placeholder
+          // This tells the program to create a self-backed position (betting into the pool)
+          keys.push({ pubkey: new PublicKey(instruction.bettorPositionPda), isSigner: false, isWritable: true });
         }
         
         keys.push({ pubkey: new PublicKey(instruction.bettorPositionPda), isSigner: false, isWritable: true });
