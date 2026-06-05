@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
       userBet: {
         bet_id,
         match_id,
-        offer_id: 'TEMP_LP_OFFER_ID', // Will be replaced with actual ID after commit
+        offer_id: null, // CRITICAL: null for parimutuel - no separate offer created
         outcome,
         amount,
         role: 'lp', // CRITICAL: This is an LP position, not a matcher bet
