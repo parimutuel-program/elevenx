@@ -736,6 +736,17 @@ export default function LpDashboard() {
 
           <TabsContent value="positions" className="space-y-4 sm:space-y-6">
             {/* Debug: Show raw data */}
+            <div className="bg-card border border-border/50 rounded-xl p-4 space-y-2">
+              <p className="text-xs font-bold text-muted-foreground">Debug Info:</p>
+              <p className="text-[10px] text-muted-foreground">Wallet: {walletAddress || 'Not connected'}</p>
+              <p className="text-[10px] text-muted-foreground">My Offers: {myOffers.length}</p>
+              <p className="text-[10px] text-muted-foreground">Offers with UserBet: {offersWithUserBet.length}</p>
+              {myOffers.length > 0 && (
+                <pre className="text-[9px] text-primary overflow-auto max-h-40 bg-black/50 p-2 rounded">
+                  {JSON.stringify(myOffers[0], null, 2)}
+                </pre>
+              )}
+            </div>
             
 
 
