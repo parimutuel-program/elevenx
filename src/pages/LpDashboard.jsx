@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
@@ -89,6 +89,11 @@ export default function LpDashboard() {
   const { isConnected, connect, walletAddress } = useWallet();
   const queryClient = useQueryClient();
 
+  // Debug: Log wallet address and query state
+  React.useEffect(() => {
+    console.log('[LpDashboard] Render:', { walletAddress, isConnected });
+  }, [walletAddress, isConnected]);
+
   const [activeTab, setActiveTab] = useState('matches');
   const [selectedBet, setSelectedBet] = useState(null);
   const [selectedOutcome, setSelectedOutcome] = useState('a');
@@ -110,18 +115,48 @@ export default function LpDashboard() {
   const { data: myOffers = [], refetch: refetchOffers } = useQuery({
     queryKey: ['myOffers', walletAddress],
     queryFn: async () => {
-      // Fetch all UserBets with role='lp' (includes both traditional LP and parimutuel self-backed bets)
       const allUserBets = await base44.entities.UserBet.list('-created_date', 200);
       const lpUserBets = allUserBets.filter(ub => ub.wallet_address === walletAddress && ub.role === 'lp');
       
-      // For each UserBet, fetch the associated BetOffer to display
+      console.log('=== LP DEBUG ===');
+      console.log('All UserBets:', allUserBets.length);
+      console.log('LP UserBets (role=lp):', lpUserBets);
+      
       const offersWithDetails = await Promise.all(lpUserBets.map(async (ub) => {
-        const offers = await base44.entities.BetOffer.filter({ id: ub.offer_id });
-        const offer = offers[0];
+        console.log('Processing UserBet:', ub.id, 'offer_id:', ub.offer_id);
+        let offer = null;
+        if (ub.offer_id) {
+          const offers = await base44.entities.BetOffer.filter({ id: ub.offer_id });
+          offer = offers[0];
+          console.log('Found BetOffer:', offer);
+        }
+        
+        if (!offer && ub.bet_id && ub.match_id) {
+          console.log('No BetOffer - creating parimutuel fallback');
+          return {
+            id: `pm-${ub.id}`,
+            bet_id: ub.bet_id,
+            match_id: ub.match_id,
+            outcome: ub.outcome,
+            outcome_label: ub.outcome_label,
+            amount_offered: ub.amount || 0,
+            amount_matched: ub.liquidity_matched || 0,
+            amount_unmatched: ub.liquidity_unmatched || 0,
+            status: 'open',
+            lp_wallet_address: ub.wallet_address,
+            userBetId: ub.id,
+            userBet: ub,
+            _isParimutuel: true,
+          };
+        }
+        
         return offer ? { ...offer, userBetId: ub.id, userBet: ub } : null;
       }));
       
-      return offersWithDetails.filter(Boolean);
+      const result = offersWithDetails.filter(o => o !== null);
+      console.log('Final LP positions:', result);
+      console.log('==================');
+      return result;
     },
     enabled: !!walletAddress,
     refetchOnWindowFocus: true,
@@ -224,27 +259,44 @@ export default function LpDashboard() {
       
       if (!userBet) throw new Error('UserBet not found');
       if (userBet.role !== 'lp') throw new Error('Not an LP bet');
-      // Allow withdrawal for any LP position - backend will check if unmatched funds exist
       
-      console.log('[withdrawLiquidityMutation] Calling withdrawLpWinnings for settled LP position');
+      // For parimutuel positions, use withdrawLiquidity (not withdrawLpWinnings)
+      if (offer._isParimutuel || userBet._isParimutuel) {
+        console.log('[withdrawLiquidityMutation] Parimutuel position - calling withdrawLiquidity');
+        const res = await base44.functions.invoke('withdrawLiquidity', {
+          userBetId: offer.userBetId,
+        });
+        if (res.data.error) throw new Error(res.data.error);
+        return res.data;
+      }
       
-      // Use withdrawLpWinnings for settled winning positions (includes fee bonus)
-      const res = await base44.functions.invoke('withdrawLpWinnings', {
-        userBetId: offer.userBetId,
-      });
+      // Traditional LP: check if settled (use withdrawLpWinnings for fee bonus) or open (use withdrawLiquidity)
+      const bet = await base44.entities.Bet.get(userBet.bet_id);
+      const isSettled = bet?.status === 'settled';
       
-      console.log('[withdrawLiquidityMutation] Response:', res.data);
-      
-      if (res.data.error) throw new Error(res.data.error);
-      return res.data;
+      if (isSettled) {
+        console.log('[withdrawLiquidityMutation] Settled LP position - calling withdrawLpWinnings');
+        const res = await base44.functions.invoke('withdrawLpWinnings', {
+          userBetId: offer.userBetId,
+        });
+        if (res.data.error) throw new Error(res.data.error);
+        return res.data;
+      } else {
+        console.log('[withdrawLiquidityMutation] Open LP position - calling withdrawLiquidity');
+        const res = await base44.functions.invoke('withdrawLiquidity', {
+          userBetId: offer.userBetId,
+        });
+        if (res.data.error) throw new Error(res.data.error);
+        return res.data;
+      }
     },
     onSuccess: (data) => {
       console.log('[withdrawLiquidityMutation] Success:', data);
       setPendingTx({
         instruction: data.solana_instruction,
-        amount: data.withdrawAmount || 0,
+        amount: data.withdrawAmount || data.amount || 0,
         lpFeeBonus: data.lpFeeBonus || 0,
-        totalWithdraw: data.totalWithdraw || 0,
+        totalWithdraw: data.totalWithdraw || (data.withdrawAmount || data.amount || 0) + (data.lpFeeBonus || 0),
         type: 'withdraw_liquidity',
         userBetId: data.userBetId,
         offerId: data.offerId,
@@ -656,6 +708,28 @@ export default function LpDashboard() {
           </TabsContent>
 
           <TabsContent value="positions" className="space-y-4 sm:space-y-6">
+            {/* Debug: Show raw data */}
+            <div className="bg-card border border-border/50 rounded-xl p-4 mb-4">
+              <p className="text-xs font-bold text-muted-foreground mb-2">Debug - My LP Data:</p>
+              <p className="text-[10px] font-mono text-muted-foreground">
+                UserBets with role='lp': {myOffers?.length || 0}
+              </p>
+              <p className="text-[10px] font-mono text-muted-foreground">
+                Wallet: {walletAddress}
+              </p>
+              {myOffers?.length > 0 && (
+                <pre className="text-[9px] font-mono text-muted-foreground mt-2 max-h-32 overflow-auto">
+                  {JSON.stringify(myOffers.map(o => ({
+                    id: o.id,
+                    userBetId: o.userBetId,
+                    isParimutuel: o._isParimutuel,
+                    amount: o.amount_offered || o.userBet?.amount,
+                    status: o.status,
+                  })), null, 2)}
+                </pre>
+              )}
+            </div>
+
             {/* My LP Positions Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
               {[
@@ -677,13 +751,21 @@ export default function LpDashboard() {
 
             {/* LP Positions List */}
             <div className="space-y-3">
-              <h2 className="font-heading font-bold text-sm text-muted-foreground">Your LP Positions</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="font-heading font-bold text-sm text-muted-foreground">Your LP Positions</h2>
+                <button
+                  onClick={() => console.log('DEBUG: LP positions:', offersWithUserBet)}
+                  className="text-[10px] text-primary underline"
+                >
+                  Debug Log ({offersWithUserBet.length})
+                </button>
+              </div>
               <div className="grid gap-3 sm:gap-4">
                 {offersWithUserBet.length === 0 ? (
                   <div className="bg-card border border-border/50 rounded-2xl p-8 text-center">
                     <TrendingUp className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
                     <p className="font-heading font-bold text-sm text-muted-foreground mb-1">No LP positions yet</p>
-                    <p className="text-xs text-muted-foreground">Provide liquidity to start earning fees</p>
+                    <p className="text-xs text-muted-foreground">Check browser console for debug info</p>
                   </div>
                 ) : (
                   offersWithUserBet.map((offer) => {
@@ -706,6 +788,9 @@ export default function LpDashboard() {
                         return 'Draw';
                       };
 
+                      // For parimutuel: use UserBet liquidity fields
+                      const canWithdraw = amountUnmatched > 0 && !isFullyMatched;
+                      
                       const currentStatus = {
                         open: { bg: 'bg-primary/10', border: 'border-primary/30', color: 'text-primary' },
                         partially_matched: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', color: 'text-yellow-400' },
@@ -724,15 +809,14 @@ export default function LpDashboard() {
                           hasUnmatched={hasUnmatched}
                           currentStatus={currentStatus}
                           getOutcomeLabel={getOutcomeLabel}
-                          onWithdraw={(o) => {
-                            console.log('[onWithdraw] Called with offer:', {
-                              userBetId: o.userBetId,
-                              amount_unmatched: o.amount_unmatched,
-                              status: o.status,
-                              match_id: o.match_id,
-                              outcome: o.outcome,
+                          canWithdraw={canWithdraw}
+                          onWithdraw={() => {
+                            console.log('[onWithdraw] Withdrawing:', {
+                              userBetId: offer.userBetId,
+                              amount_unmatched: amountUnmatched,
+                              _isParimutuel: offer._isParimutuel,
                             });
-                            withdrawLiquidityMutation.mutate(o);
+                            withdrawLiquidityMutation.mutate(offer);
                           }}
                         />
                       );
