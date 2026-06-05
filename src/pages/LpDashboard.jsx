@@ -110,18 +110,18 @@ export default function LpDashboard() {
   const { data: myOffers = [], refetch: refetchOffers } = useQuery({
     queryKey: ['myOffers', walletAddress],
     queryFn: async () => {
-      // Fetch BetOffer entities where this wallet is the LP
-      const allOffers = await base44.entities.BetOffer.list('-created_date', 200);
-      const myLpOffers = allOffers.filter(o => o.lp_wallet_address === walletAddress);
+      // Fetch all UserBets with role='lp' (includes both traditional LP and parimutuel self-backed bets)
+      const allUserBets = await base44.entities.UserBet.list('-created_date', 200);
+      const lpUserBets = allUserBets.filter(ub => ub.wallet_address === walletAddress && ub.role === 'lp');
       
-      // For each BetOffer, fetch the associated UserBet (role='lp') for withdrawal
-      const offersWithUserBet = await Promise.all(myLpOffers.map(async (offer) => {
-        const userBets = await base44.entities.UserBet.filter({ offer_id: offer.id, role: 'lp' });
-        const userBet = userBets[0];
-        return userBet ? { ...offer, userBetId: userBet.id, userBet } : null;
+      // For each UserBet, fetch the associated BetOffer to display
+      const offersWithDetails = await Promise.all(lpUserBets.map(async (ub) => {
+        const offers = await base44.entities.BetOffer.filter({ id: ub.offer_id });
+        const offer = offers[0];
+        return offer ? { ...offer, userBetId: ub.id, userBet: ub } : null;
       }));
       
-      return offersWithUserBet.filter(Boolean);
+      return offersWithDetails.filter(Boolean);
     },
     enabled: !!walletAddress,
     refetchOnWindowFocus: true,
@@ -337,13 +337,15 @@ export default function LpDashboard() {
     queryClient.invalidateQueries({ queryKey: ['offersWithUserBet', walletAddress] });
   };
 
-  // Stats
-  const totalCommitted = myOffers.reduce((s, o) => s + (o.amount_offered || 0), 0);
-  const totalMatched   = myOffers.reduce((s, o) => s + (o.amount_matched || 0), 0);
+  // Stats - calculate from UserBet data (works for both traditional LP and parimutuel)
+  const totalCommitted = myOffers.reduce((s, o) => {
+    // Use UserBet amount if available (parimutuel), otherwise BetOffer amount_offered
+    return s + ((o.userBet?.amount || o.amount_offered) || 0);
+  }, 0);
+  const totalMatched = myOffers.reduce((s, o) => s + (o.amount_matched || 0), 0);
   const totalUnmatched = myOffers.reduce((s, o) => s + (o.amount_unmatched || 0), 0);
-  const activeOffers   = myOffers.filter(o => o.status === 'open' || o.status === 'partially_matched');
+  const activeOffers = myOffers.filter(o => o.status === 'open' || o.status === 'partially_matched');
   
-  // myOffers now contains BetOffer + UserBet data merged, so offersWithUserBet is already computed
   const offersWithUserBet = myOffers;
 
   const getMatchTitle = (matchId) => {
@@ -676,61 +678,67 @@ export default function LpDashboard() {
             {/* LP Positions List */}
             <div className="space-y-3">
               <h2 className="font-heading font-bold text-sm text-muted-foreground">Your LP Positions</h2>
-              {offersWithUserBet.length === 0 ? (
-                <div className="bg-card border border-border/50 rounded-2xl p-8 text-center">
-                  <TrendingUp className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-                  <p className="font-heading font-bold text-sm text-muted-foreground mb-1">No LP positions yet</p>
-                  <p className="text-xs text-muted-foreground">Provide liquidity to start earning fees</p>
-                </div>
-              ) : (
-                <div className="grid gap-3 sm:gap-4">
-                  {offersWithUserBet.map((offer) => {
-                    const match = matches.find(m => m.id === offer.match_id);
-                    const potentialEarnings = (offer.amount_matched || 0) * 0.02; // 2% fee
-                    const matchPct = offer.amount_offered > 0 ? ((offer.amount_matched || 0) / offer.amount_offered * 100) : 0;
-                    const isFullyMatched = offer.status === 'fully_matched';
-                    const isPartiallyMatched = offer.status === 'partially_matched';
-                    const hasUnmatched = (offer.amount_unmatched || 0) > 0;
+              <div className="grid gap-3 sm:gap-4">
+                {offersWithUserBet.length === 0 ? (
+                  <div className="bg-card border border-border/50 rounded-2xl p-8 text-center">
+                    <TrendingUp className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                    <p className="font-heading font-bold text-sm text-muted-foreground mb-1">No LP positions yet</p>
+                    <p className="text-xs text-muted-foreground">Provide liquidity to start earning fees</p>
+                  </div>
+                ) : (
+                  offersWithUserBet.map((offer) => {
+                      const match = matches.find(m => m.id === offer.match_id);
+                      const bet = openBets.find(b => b.id === offer.bet_id);
+                      
+                      // Use UserBet data if available (parimutuel), otherwise BetOffer data
+                      const amountDeposited = offer.userBet?.amount || offer.amount_offered || 0;
+                      const amountMatched = offer.amount_matched || 0;
+                      const amountUnmatched = offer.amount_unmatched || 0;
+                      const potentialEarnings = amountMatched * 0.02; // 2% fee
+                      const matchPct = amountDeposited > 0 ? (amountMatched / amountDeposited * 100) : 0;
+                      const isFullyMatched = offer.status === 'fully_matched';
+                      const isPartiallyMatched = offer.status === 'partially_matched';
+                      const hasUnmatched = amountUnmatched > 0;
 
-                    const getOutcomeLabel = () => {
-                      if (offer.outcome === 'a') return offer.outcome_label || match?.team_a || 'Team A';
-                      if (offer.outcome === 'b') return offer.outcome_label || match?.team_b || 'Team B';
-                      return 'Draw';
-                    };
+                      const getOutcomeLabel = () => {
+                        if (offer.outcome === 'a') return offer.outcome_label || bet?.outcome_a || match?.team_a || 'Team A';
+                        if (offer.outcome === 'b') return offer.outcome_label || bet?.outcome_b || match?.team_b || 'Team B';
+                        return 'Draw';
+                      };
 
-                    const currentStatus = {
-                      open: { bg: 'bg-primary/10', border: 'border-primary/30', color: 'text-primary' },
-                      partially_matched: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', color: 'text-yellow-400' },
-                      fully_matched: { bg: 'bg-accent/10', border: 'border-accent/30', color: 'text-accent' },
-                    }[offer.status] || { bg: 'bg-muted/10', border: 'border-muted/30', color: 'text-muted-foreground' };
+                      const currentStatus = {
+                        open: { bg: 'bg-primary/10', border: 'border-primary/30', color: 'text-primary' },
+                        partially_matched: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', color: 'text-yellow-400' },
+                        fully_matched: { bg: 'bg-accent/10', border: 'border-accent/30', color: 'text-accent' },
+                      }[offer.status] || { bg: 'bg-muted/10', border: 'border-muted/30', color: 'text-muted-foreground' };
 
-                    return (
-                      <LpPositionCard
-                        key={offer.id}
-                        offer={offer}
-                        match={match}
-                        potentialEarnings={potentialEarnings}
-                        matchPct={matchPct}
-                        isFullyMatched={isFullyMatched}
-                        isPartiallyMatched={isPartiallyMatched}
-                        hasUnmatched={hasUnmatched}
-                        currentStatus={currentStatus}
-                        getOutcomeLabel={getOutcomeLabel}
-                        onWithdraw={(o) => {
-                          console.log('[onWithdraw] Called with offer:', {
-                            userBetId: o.userBetId,
-                            amount_unmatched: o.amount_unmatched,
-                            status: o.status,
-                            match_id: o.match_id,
-                            outcome: o.outcome,
-                          });
-                          withdrawLiquidityMutation.mutate(o);
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-              )}
+                      return (
+                        <LpPositionCard
+                          key={offer.id || offer.userBetId}
+                          offer={offer}
+                          match={match}
+                          potentialEarnings={potentialEarnings}
+                          matchPct={matchPct}
+                          isFullyMatched={isFullyMatched}
+                          isPartiallyMatched={isPartiallyMatched}
+                          hasUnmatched={hasUnmatched}
+                          currentStatus={currentStatus}
+                          getOutcomeLabel={getOutcomeLabel}
+                          onWithdraw={(o) => {
+                            console.log('[onWithdraw] Called with offer:', {
+                              userBetId: o.userBetId,
+                              amount_unmatched: o.amount_unmatched,
+                              status: o.status,
+                              match_id: o.match_id,
+                              outcome: o.outcome,
+                            });
+                            withdrawLiquidityMutation.mutate(o);
+                          }}
+                        />
+                      );
+                    })
+                  )}
+              </div>
             </div>
 
             {/* Withdraw Transaction Signer */}
