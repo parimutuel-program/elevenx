@@ -719,26 +719,26 @@ export default function LpDashboard() {
 
           <TabsContent value="positions" className="space-y-4 sm:space-y-6">
             {/* Debug: Show raw data */}
-            <div className="bg-card border border-border/50 rounded-xl p-4 mb-4 hidden">
-              <p className="text-xs font-bold text-muted-foreground mb-2">Debug - My LP Data:</p>
-              <p className="text-[10px] font-mono text-muted-foreground">
-                UserBets with role='lp': {myOffers?.length || 0}
-              </p>
-              <p className="text-[10px] font-mono text-muted-foreground">
-                Wallet: {walletAddress}
-              </p>
-              {myOffers?.length > 0 &&
-            <pre className="text-[9px] font-mono text-muted-foreground mt-2 max-h-32 overflow-auto">
-                  {JSON.stringify(myOffers.map((o) => ({
-                id: o.id,
-                userBetId: o.userBetId,
-                isParimutuel: o._isParimutuel,
-                amount: o.amount_offered || o.userBet?.amount,
-                status: o.status
-              })), null, 2)}
-                </pre>
-            }
-            </div>
+            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          
 
             {/* My LP Positions Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
