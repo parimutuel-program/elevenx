@@ -119,12 +119,36 @@ export default function Admin() {
     }
   };
 
-  const handleSettleSuccess = () => {
+  const handleSettleSuccess = async (commitPayload) => {
+    // Call commitSettlement to update DB after on-chain tx confirms
+    if (commitPayload?.signature && settleDialog?.bet) {
+      try {
+        await base44.functions.invoke('commitSettlement', {
+          signature: commitPayload.signature,
+          bet_id: settleDialog.bet.id,
+          winning_outcome: settleDialog.outcome,
+        });
+      } catch (err) {
+        console.error('[Admin] commitSettlement failed:', err);
+      }
+    }
     queryClient.invalidateQueries({ queryKey: ['allBets'] });
     setSettleDialog(null);
   };
 
-  const handleVoidSuccess = () => {
+  const handleVoidSuccess = async (commitPayload) => {
+    // Call commitSettlement to update DB after on-chain tx confirms
+    if (commitPayload?.signature && voidDialog?.bet) {
+      try {
+        await base44.functions.invoke('commitSettlement', {
+          signature: commitPayload.signature,
+          bet_id: voidDialog.bet.id,
+          winning_outcome: 'void',
+        });
+      } catch (err) {
+        console.error('[Admin] commitSettlement failed:', err);
+      }
+    }
     queryClient.invalidateQueries({ queryKey: ['allBets'] });
     setVoidDialog(null);
   };

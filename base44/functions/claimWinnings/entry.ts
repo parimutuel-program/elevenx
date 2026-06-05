@@ -172,24 +172,8 @@ Deno.serve(async (req) => {
       });
     }
     
-    // Check if position has claimable amount (claimable === 0 means settlement didn't update it properly)
-    if (positionData && positionData.claimable === BigInt(0)) {
-      console.log('[claimWinnings] Position claimable is 0 — doing DB-only claim');
-      for (const b of betsToClaim) {
-        await serviceRole.entities.UserBet.update(b.id, {
-          status: 'claimed',
-          actual_payout: b.actual_payout || b.potential_payout || 0,
-        });
-      }
-      return Response.json({
-        success: true,
-        db_only: true,
-        message: `✓ ${betsToClaim.length} winning bet(s) marked as claimed. On-chain claimable is 0.`,
-        betIds: betsToClaim.map(b => b.id),
-        totalPayout,
-        note: 'Position claimable amount is 0 on-chain. Payout handled via admin override.',
-      });
-    }
+    // Skip claimable check - Solana calculates payout dynamically during claim instruction
+    console.log('[claimWinnings] Proceeding with on-chain claim (payout calculated on-chain)');
     
     // Check if position has matched stake
     if (!positionData || positionData.matched_stake === BigInt(0)) {

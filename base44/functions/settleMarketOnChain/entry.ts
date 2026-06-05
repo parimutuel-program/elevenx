@@ -124,42 +124,26 @@ Deno.serve(async (req) => {
     discriminator.copy(data, 0);
     data.writeUInt8(outcomeIndex, 8);
 
-    // Get all active bets for this market to update after settlement
-    const allBets = await serviceRole.entities.Bet.filter({ match_id: bet.match_id });
-    
-    // Calculate winning bets and update UserBet statuses
+    // Prepare on-chain instruction - DB updates happen AFTER tx confirms via commitSettlement
     const outcomeLabel = winning_outcome === 'a' ? bet.outcome_a : winning_outcome === 'b' ? bet.outcome_b : 'Draw';
     
-    // ALWAYS use DB-only settlement - on-chain program is outdated and missing instructions
-    const userBets = await serviceRole.entities.UserBet.filter({ bet_id });
-    let winnersCount = 0, totalPayout = 0, pendingCount = 0;
-    for (const ub of userBets) {
-      if (ub.status === 'pending') {
-        await serviceRole.entities.UserBet.update(ub.id, { status: 'refunded', actual_payout: 0 });
-        pendingCount++;
-      } else if (ub.outcome === winning_outcome && ub.status === 'active') {
-        const payout = ub.potential_payout || 0;
-        await serviceRole.entities.UserBet.update(ub.id, { status: 'won', actual_payout: payout });
-        totalPayout += payout;
-        winnersCount++;
-      } else if (ub.status === 'active') {
-        await serviceRole.entities.UserBet.update(ub.id, { status: 'lost', actual_payout: 0 });
-      }
-    }
-    await serviceRole.entities.Bet.update(bet_id, { status: 'settled', winning_outcome });
-    if (bet.match_id) {
-      await serviceRole.entities.Match.update(bet.match_id, {
-        status: 'finished',
-        winner: winning_outcome === 'a' ? 'team_a' : winning_outcome === 'b' ? 'team_b' : 'draw',
-      });
-    }
     return Response.json({
       success: true,
-      db_only: true,
-      message: `✓ Market settled (DB-only). Winner: ${outcomeLabel}. ${winnersCount} winners | ◎${totalPayout.toFixed(4)} payout | ${pendingCount} refunds`,
-      winners_count: winnersCount,
-      total_payout: totalPayout,
-      pending_refunds: pendingCount,
+      message: `Sign to settle market: ${outcomeLabel}`,
+      solana_instruction: {
+        instruction_type: 'settle_market',
+        programId: SOLANA_PROGRAM_ID,
+        keys: [
+          { pubkey: marketPda.toBase58(), isSigner: false, isWritable: true },
+          { pubkey: platformPda.toBase58(), isSigner: false, isWritable: false },
+          { pubkey: feeVaultPda.toBase58(), isSigner: false, isWritable: true },
+          { pubkey: admin_wallet, isSigner: true, isWritable: true },
+          { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false },
+        ],
+        instruction_data: data.toString('base64'),
+      },
+      bet_id: bet_id,
+      winning_outcome: winning_outcome,
     });
 
   } catch (error) {
