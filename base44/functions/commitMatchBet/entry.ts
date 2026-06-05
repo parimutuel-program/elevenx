@@ -1,69 +1,90 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { Connection } from 'npm:@solana/web3.js@1.98.4';
 
-/**
- * Commit matched bet to database AFTER transaction succeeds on-chain.
- * Called by frontend with transaction signature to verify and commit.
- */
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const serviceRole = base44.asServiceRole;
     
-    const payload = await req.json();
-    const { signature, commit_data } = payload;
+    const { signature, betData } = await req.json();
     
-    if (!signature || !commit_data) {
-      return Response.json({ error: 'Missing signature or commit_data' }, { status: 400 });
+    if (!signature) {
+      return Response.json({ error: 'Missing signature' }, { status: 400 });
     }
     
-    const { userBet, offerUpdate, betUpdate } = commit_data;
-    
-    // Verify transaction exists on-chain
+    // Verify transaction exists on-chain with retry loop for Devnet RPC lag
     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-    try {
-      const tx = await connection.getTransaction(signature, { commitment: 'confirmed' });
-      if (!tx) {
-        return Response.json({ error: 'Transaction not found on-chain' }, { status: 400 });
+    let tx = null;
+    
+    // Retry up to 5 times with exponential backoff (1s, 2s, 3s, 4s, 5s = max 15s total)
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        tx = await connection.getTransaction(signature, { commitment: 'confirmed', maxSupportedTransactionVersion: 0 });
+        if (tx) {
+          console.log(`[commitMatchBet] Transaction found on attempt ${attempt + 1}:`, signature);
+          break;
+        }
+        console.log(`[commitMatchBet] RPC lag - tx not found, retrying in ${attempt + 1}s... (attempt ${attempt + 1}/5)`);
+      } catch (err) {
+        console.log(`[commitMatchBet] RPC error on attempt ${attempt + 1}:`, err.message);
       }
-      if (tx.meta?.err) {
-        return Response.json({ error: 'Transaction failed on-chain', onChainError: tx.meta.err }, { status: 400 });
+      
+      if (attempt < 4) {
+        await new Promise(resolve => setTimeout(resolve, (attempt + 1) * 1000));
       }
-      console.log('[commitMatchBet] Transaction verified on-chain:', signature);
-    } catch (err) {
-      return Response.json({ error: 'Failed to verify transaction: ' + err.message }, { status: 400 });
     }
     
-    // Update BetOffer (only if offer_id and offerUpdate are valid - parimutuel bets have null offer_id)
-    if (userBet.offer_id && offerUpdate) {
-      await serviceRole.entities.BetOffer.update(userBet.offer_id, offerUpdate);
-      console.log('[commitMatchBet] Updated BetOffer:', userBet.offer_id);
+    // Final validation after retries
+    if (!tx) {
+      return Response.json({ error: 'Transaction propagation timeout. Please refresh and check My Bets.' }, { status: 400 });
     }
-    
-    // Create UserBet record (preserve parimutuel flag if present)
-    const createdBet = await serviceRole.entities.UserBet.create({
-      ...userBet,
-      _isParimutuel: userBet._isParimutuel || false,
+    if (tx.meta?.err) {
+      return Response.json({ error: 'Transaction failed on-chain', onChainError: tx.meta.err }, { status: 400 });
+    }
+    console.log('[commitMatchBet] Transaction verified on-chain:', signature);
+
+    // Update BetOffer if exists
+    if (betData.offerId) {
+      const existingOffer = await base44.asServiceRole.entities.BetOffer.get(betData.offerId);
+      if (existingOffer) {
+        await base44.asServiceRole.entities.BetOffer.update(betData.offerId, {
+          amount_matched: (existingOffer.amount_matched || 0) + betData.amount,
+          amount_unmatched: Math.max(0, (existingOffer.amount_unmatched || 0) - betData.amount),
+          status: (existingOffer.amount_unmatched || 0) - betData.amount <= 0.0001 ? 'fully_matched' : 'partially_matched',
+        });
+      }
+    }
+
+    // Create UserBet record
+    await base44.asServiceRole.entities.UserBet.create({
+      bet_id: betData.betId,
+      match_id: betData.matchId,
+      offer_id: betData.offerId || null,
+      role: 'matcher',
+      outcome: betData.outcome,
+      amount: betData.amount,
+      potential_payout: betData.potentialPayout,
+      status: 'active',
+      outcome_label: betData.outcomeLabel,
+      match_title: betData.matchTitle,
+      wallet_address: betData.walletAddress,
+      _isParimutuel: betData.isParimutuel || false,
     });
-    console.log('[commitMatchBet] Created UserBet:', createdBet.id);
-    
-    // Update Bet pool totals and bettor count
-    const bet = await serviceRole.entities.Bet.get(userBet.bet_id);
-    await serviceRole.entities.Bet.update(userBet.bet_id, {
-      [betUpdate.poolKey]: (bet[betUpdate.poolKey] || 0) + betUpdate.amount,
-      total_pool: (bet.total_pool || 0) + betUpdate.amount,
-      total_bettors: (bet.total_bettors || 0) + 1,
-    });
-    console.log('[commitMatchBet] Updated Bet pools');
-    
-    return Response.json({
-      success: true,
-      userBetId: createdBet.id,
-      message: `✓ ◎${betUpdate.amount} bet committed successfully!`,
-    });
-    
+
+    // Update Bet totals
+    const bet = await base44.asServiceRole.entities.Bet.get(betData.betId);
+    if (bet) {
+      const poolField = betData.outcome === 'a' ? 'pool_a' : betData.outcome === 'b' ? 'pool_b' : 'pool_draw';
+      await base44.asServiceRole.entities.Bet.update(betData.betId, {
+        [poolField]: (bet[poolField] || 0) + betData.amount,
+        total_pool: (bet.total_pool || 0) + betData.amount,
+        total_bettors: (bet.total_bettors || 0) + 1,
+      });
+    }
+
+    return Response.json({ success: true, message: 'Bet committed successfully' });
+
   } catch (error) {
-    console.error('[commitMatchBet] Error:', error);
+    console.error('commitMatchBet error:', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
