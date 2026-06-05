@@ -12,8 +12,8 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
   const offer = position;
   if (!offer) return null;
   
-  // Get match from position data if not passed
-  const matchData = match || { team_a: 'Team A', team_b: 'Team B', team_a_flag: '', team_b_flag: '', group_stage: '' };
+  // Get match from position data if not passed - ALWAYS use matchData, never match directly
+  const matchData = match || position.match || { team_a: 'Team A', team_b: 'Team B', team_a_flag: '', team_b_flag: '', group_stage: '', match_end_time: null };
 
   // Handle UserBet entity structure (liquidity_deposited, liquidity_matched, liquidity_unmatched)
   const liquidityDeposited = offer.liquidity_deposited || offer.amount_offered || 0;
@@ -109,7 +109,7 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
                 <div className="absolute inset-0 bg-primary/20 blur-md rounded-full" />
                 <div className="relative bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/30 rounded-lg p-1.5">
                   <span className="text-xl filter drop-shadow-md">
-                    {offer.outcome === 'a' ? (match.team_a_flag || '🏠') : offer.outcome === 'b' ? (match.team_b_flag || '🏠') : '🤝'}
+                    {offer.outcome === 'a' ? (matchData.team_a_flag || '🏠') : offer.outcome === 'b' ? (matchData.team_b_flag || '🏠') : '🤝'}
                   </span>
                 </div>
               </div>
@@ -119,11 +119,11 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
                     {getOutcomeLabel()}
                   </h3>
                   <span className="text-[9px] text-primary/80 font-bold">
-                    {offer.outcome === 'a' ? match.team_a : offer.outcome === 'b' ? match.team_b : 'Draw'}
+                    {offer.outcome === 'a' ? matchData.team_a : offer.outcome === 'b' ? matchData.team_b : 'Draw'}
                   </span>
                 </div>
                 <p className="text-[9px] sm:text-[10px] text-white/50 truncate">
-                  {match.group_stage || 'World Cup 2026'}
+                  {matchData.group_stage || 'World Cup 2026'}
                 </p>
               </div>
             </div>
@@ -132,7 +132,7 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
             <Badge className={`${currentStatus.bg} ${currentStatus.border} ${currentStatus.color} text-[9px] sm:text-[10px] font-bold border`}>
               {offer.status.replace('_', ' ')}
             </Badge>
-            <BetCountdown openUntil={match.match_end_time} label="Betting closes" className="text-[8px]" />
+            <BetCountdown openUntil={matchData.match_end_time} label="Betting closes" className="text-[8px]" />
           </div>
         </div>
 
