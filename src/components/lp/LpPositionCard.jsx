@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { DollarSign, TrendingUp, Clock, CheckCircle, ArrowRight, Percent, CheckCircle2, Wallet } from 'lucide-react';
+import { DollarSign, TrendingUp, Clock, CheckCircle, ArrowRight, Percent, CheckCircle2, Wallet, Trophy, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
@@ -11,6 +11,9 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
   // Support both BetOffer (offer) and UserBet (position) entities
   const offer = position;
   if (!offer) return null;
+  
+  // Detect if this is a futures LP position
+  const isFutures = offer._isFutures || position._isFutures || false;
   
   // Get match from position data if not passed - ALWAYS use matchData, never match directly
   const matchData = match || position.match || { team_a: 'Team A', team_b: 'Team B', team_a_flag: '', team_b_flag: '', group_stage: '', match_end_time: null };
@@ -93,25 +96,50 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
       animate={{ opacity: 1, y: 0 }}
       className="relative rounded-2xl overflow-hidden border border-white/10"
       style={{
-        background: 'linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%)',
+        background: isFutures 
+          ? 'linear-gradient(180deg, #2d1f4e 0%, #1a0f2e 100%)' // Purple gradient for futures
+          : 'linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%)', // Dark blue for matches
         boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)'
       }}
     >
+      {/* Type Badge - FUTURES vs MATCH */}
+      <div className={`absolute top-3 left-3 z-10 ${
+        isFutures 
+          ? 'bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 border-yellow-500/40 text-yellow-400' 
+          : 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/30 text-primary'
+      } border backdrop-blur-sm rounded-lg px-2.5 py-1 flex items-center gap-1.5`}>
+        {isFutures ? (
+          <>
+            <Trophy className="w-3 h-3" />
+            <span className="text-[9px] font-bold uppercase tracking-wider">Futures LP</span>
+          </>
+        ) : (
+          <>
+            <Calendar className="w-3 h-3" />
+            <span className="text-[9px] font-bold uppercase tracking-wider">Match LP</span>
+          </>
+        )}
+      </div>
+      
       {/* Glow effect */}
       <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-10`} 
-        style={{ background: isFullyMatched ? '#14f195' : isPartiallyMatched ? '#fbbf24' : '#a69cf2' }} />
+        style={{ background: isFutures ? '#fbbf24' : isFullyMatched ? '#14f195' : isPartiallyMatched ? '#fbbf24' : '#a69cf2' }} />
 
-      <div className="relative p-4 sm:p-5 space-y-3">
+      <div className="relative p-4 sm:p-5 pt-10 space-y-3">
         {/* Header - Outcome & Status */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2.5 mb-1">
-              {/* LP Side Indicator - Flag */}
+              {/* LP Side Indicator - Flag or Trophy */}
               <div className="relative">
-                <div className="absolute inset-0 bg-primary/20 blur-md rounded-full" />
-                <div className="relative bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/30 rounded-lg p-1.5">
+                <div className={`absolute inset-0 blur-md rounded-full ${isFutures ? 'bg-yellow-500/20' : 'bg-primary/20'}`} />
+                <div className={`relative bg-gradient-to-br border rounded-lg p-1.5 ${
+                  isFutures 
+                    ? 'from-yellow-500/20 to-yellow-600/10 border-yellow-500/30' 
+                    : 'from-primary/20 to-primary/10 border-primary/30'
+                }`}>
                   <span className="text-xl filter drop-shadow-md">
-                    {offer.outcome === 'a' ? (matchData.team_a_flag || '🏠') : offer.outcome === 'b' ? (matchData.team_b_flag || '🏠') : '🤝'}
+                    {isFutures ? '🏆' : offer.outcome === 'a' ? (matchData.team_a_flag || '🏠') : offer.outcome === 'b' ? (matchData.team_b_flag || '🏠') : '🤝'}
                   </span>
                 </div>
               </div>
@@ -120,12 +148,18 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
                   <h3 className="font-heading font-bold text-sm sm:text-base text-white truncate">
                     {getOutcomeLabel()}
                   </h3>
-                  <span className="text-[9px] text-primary/80 font-bold">
-                    {offer.outcome === 'a' ? matchData.team_a : offer.outcome === 'b' ? matchData.team_b : 'Draw'}
-                  </span>
+                  {isFutures ? (
+                    <span className={`text-[9px] font-bold ${isFutures ? 'text-yellow-400' : 'text-primary/80'}`}>
+                      {offer.outcome_label}
+                    </span>
+                  ) : (
+                    <span className="text-[9px] text-primary/80 font-bold">
+                      {offer.outcome === 'a' ? matchData.team_a : offer.outcome === 'b' ? matchData.team_b : 'Draw'}
+                    </span>
+                  )}
                 </div>
                 <p className="text-[9px] sm:text-[10px] text-white/50 truncate">
-                  {matchData.group_stage || 'World Cup 2026'}
+                  {isFutures ? 'Tournament Market' : (matchData.group_stage || 'World Cup 2026')}
                 </p>
               </div>
             </div>
@@ -134,7 +168,9 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
             <Badge className={`${currentStatus.bg} ${currentStatus.border} ${currentStatus.color} text-[9px] sm:text-[10px] font-bold border`}>
               {offer.status.replace('_', ' ')}
             </Badge>
-            <BetCountdown openUntil={matchData.match_end_time} label="Betting closes" className="text-[8px]" />
+            {!isFutures && matchData.match_end_time && (
+              <BetCountdown openUntil={matchData.match_end_time} label="Betting closes" className="text-[8px]" />
+            )}
           </div>
         </div>
 
