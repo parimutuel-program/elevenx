@@ -40,31 +40,51 @@ Deno.serve(async (req) => {
     const allUserBets = await serviceRole.entities.UserBet.list();
     console.log('[claimWinnings] Total UserBets:', allUserBets.length);
     
+    // After emergency_settle, bets may still be in 'active' status - check on-chain settled status
+    // Filter for bets that can be claimed: 'won' status OR 'active' + market has winning_outcome (emergency settled)
     const betsToClaim = allUserBets.filter(ub => 
       betIdsToProcess.includes(ub.id) && 
       ub.wallet_address === trimmedWallet &&
-      ub.status === 'won'
+      (ub.status === 'won' || ub.status === 'active')
     );
 
-    console.log('[claimWinnings] Found bets to claim:', betsToClaim.length, 'bets');
+    console.log('[claimWinnings] Found potential bets:', betsToClaim.length);
 
     if (betsToClaim.length === 0) {
-      // Debug: check what bets exist for this wallet
       const userBets = allUserBets.filter(ub => ub.wallet_address === trimmedWallet);
-      console.log('[claimWinnings] All bets for this wallet:', userBets.length);
-      console.log('[claimWinnings] Bet statuses:', userBets.map(b => ({ id: b.id, status: b.status })));
-      
+      console.log('[claimWinnings] Wallet statuses:', userBets.map(b => ({ id: b.id, status: b.status, outcome: b.outcome })));
       return Response.json({ 
-        error: 'No valid won bets found',
-        debug: {
-          walletBets: userBets.length,
-          requestedBetIds: betIdsToProcess,
-          statuses: userBets.map(b => ({ id: b.id, status: b.status }))
-        }
+        error: 'No claimable bets found (need status "won" or "active" with market settled)',
+        debug: { walletBets: userBets.length, requestedBetIds: betIdsToProcess }
       }, { status: 404 });
     }
+    
+    // Verify bets actually won by checking market winning_outcome matches bet outcome
+    let validBets = [];
+    for (const ub of betsToClaim) {
+      const bet = (await serviceRole.entities.Bet.filter({ id: ub.bet_id }))[0];
+      if (bet && bet.winning_outcome && bet.winning_outcome.length > 0) {
+        // Check if user's outcome matches the winning outcome
+        if (ub.outcome === bet.winning_outcome) {
+          validBets.push(ub);
+        } else {
+          console.log('[claimWinnings] Bet outcome mismatch:', { userOutcome: ub.outcome, winningOutcome: bet.winning_outcome });
+        }
+      } else if (ub.status === 'won') {
+        // 'won' status already validated
+        validBets.push(ub);
+      }
+    }
+    
+    if (validBets.length === 0) {
+      return Response.json({ 
+        error: 'No bets won this settlement',
+        attempted: betsToClaim.length
+      }, { status: 404 });
+    }
+    const betsToClaim_validated = validBets;
 
-    const userBet = betsToClaim[0];
+    const userBet = betsToClaim_validated[0];
 
     const bets = await serviceRole.entities.Bet.filter({ id: userBet.bet_id });
     const bet  = bets[0];
@@ -131,13 +151,13 @@ Deno.serve(async (req) => {
       positionData,
     });
 
-    const totalPayout = betsToClaim.reduce((sum, b) => sum + (b.actual_payout || b.potential_payout || 0), 0);
-    console.log(`✓ Claim: wallet=${trimmedWallet.slice(0, 8)}... | bets=${betsToClaim.length} | total=${totalPayout} SOL | voided=${isVoided}`);
+    const totalPayout = betsToClaim_validated.reduce((sum, b) => sum + (b.actual_payout || b.potential_payout || 0), 0);
+    console.log(`✓ Claim: wallet=${trimmedWallet.slice(0, 8)}... | bets=${betsToClaim_validated.length} | total=${totalPayout} SOL | voided=${isVoided}`);
 
     // If market is voided, not settled on-chain, or position doesn't exist, do DB-only claim
     if (!marketInfo || isVoided || !isSettledOnChain || !positionExists) {
       console.log('[claimWinnings] Market voided/not settled/position missing — doing DB-only claim');
-      for (const b of betsToClaim) {
+      for (const b of betsToClaim_validated) {
         await serviceRole.entities.UserBet.update(b.id, {
           status: 'claimed',
           actual_payout: b.actual_payout || b.potential_payout || 0,
@@ -146,17 +166,16 @@ Deno.serve(async (req) => {
       return Response.json({
         success: true,
         db_only: true,
-        message: `✓ ${betsToClaim.length} winning bet(s) marked as claimed. Market not settled on-chain yet.`,
-        betIds: betsToClaim.map(b => b.id),
+        message: `✓ ${betsToClaim_validated.length} winning bet(s) marked as claimed.`,
+        betIds: betsToClaim_validated.map(b => b.id),
         totalPayout,
-        note: 'Market was settled via DB override. SOL payout is handled separately by admin.',
       });
     }
     
     // Check if position was already claimed on-chain
     if (positionData?.claimed) {
       console.log('[claimWinnings] Position already claimed on-chain — doing DB-only update');
-      for (const b of betsToClaim) {
+      for (const b of betsToClaim_validated) {
         await serviceRole.entities.UserBet.update(b.id, {
           status: 'claimed',
           actual_payout: b.actual_payout || b.potential_payout || 0,
@@ -165,20 +184,18 @@ Deno.serve(async (req) => {
       return Response.json({
         success: true,
         db_only: true,
-        message: `✓ ${betsToClaim.length} winning bet(s) already claimed on-chain. Updated DB status.`,
-        betIds: betsToClaim.map(b => b.id),
+        message: `✓ ${betsToClaim_validated.length} winning bet(s) already claimed on-chain. Updated DB.`,
+        betIds: betsToClaim_validated.map(b => b.id),
         totalPayout,
-        note: 'Position was already claimed on-chain.',
       });
     }
     
-    // Skip claimable check - Solana calculates payout dynamically during claim instruction
-    console.log('[claimWinnings] Proceeding with on-chain claim (payout calculated on-chain)');
+    console.log('[claimWinnings] Proceeding with on-chain claim');
     
     // Check if position has matched stake
     if (!positionData || positionData.matched_stake === BigInt(0)) {
       console.log('[claimWinnings] Position has no matched stake — doing DB-only claim');
-      for (const b of betsToClaim) {
+      for (const b of betsToClaim_validated) {
         await serviceRole.entities.UserBet.update(b.id, {
           status: 'claimed',
           actual_payout: b.actual_payout || b.potential_payout || 0,
@@ -187,10 +204,9 @@ Deno.serve(async (req) => {
       return Response.json({
         success: true,
         db_only: true,
-        message: `✓ ${betsToClaim.length} winning bet(s) marked as claimed (no matched stake on-chain).`,
-        betIds: betsToClaim.map(b => b.id),
+        message: `✓ ${betsToClaim_validated.length} bet(s) marked as claimed (no matched stake).`,
+        betIds: betsToClaim_validated.map(b => b.id),
         totalPayout,
-        note: 'Position has no matched stake on-chain.',
       });
     }
 
@@ -202,8 +218,8 @@ Deno.serve(async (req) => {
 
     return Response.json({
       success: true,
-      message: `Sign to claim ${betsToClaim.length} winning bet(s)`,
-      betIds: betsToClaim.map(b => b.id),
+      message: `Sign to claim ${betsToClaim_validated.length} winning bet(s)`,
+      betIds: betsToClaim_validated.map(b => b.id),
       totalPayout,
       solana_instruction: {
         instruction_type: 'claim_winnings',

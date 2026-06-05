@@ -135,40 +135,7 @@ Deno.serve(async (req) => {
     }
     
     console.log('[settleMarketOnChain] Market account size:', marketInfo.data.length, 'bytes');
-    console.log('[settleMarketOnChain] Market discriminator (hex):', marketInfo.data.slice(0, 8).toString('hex'));
-    
-    // Validate discriminator first
-    const expectedDisc = Buffer.from(sha256('global:market')).slice(0, 8);
-    const actualDisc = marketInfo.data.slice(0, 8);
-    if (!expectedDisc.equals(actualDisc)) {
-      console.error('[settleMarketOnChain] DISCRIMINATOR MISMATCH!');
-      console.error('[settleMarketOnChain] Expected:', expectedDisc.toString('hex'));
-      console.error('[settleMarketOnChain] Actual:', actualDisc.toString('hex'));
-      throw new Error('Invalid market account - wrong discriminator. Account may be corrupted or from different program version.');
-    }
-    console.log('[settleMarketOnChain] ✓ Discriminator valid');
-    
-    // Parse settle_after timestamp (offset 72-80 in market account)
-    try {
-      const settleAfterBytes = marketInfo.data.slice(72, 80);
-      const settleAfter = BigInt.asIntN(64, settleAfterBytes.readBigUInt64LE(0));
-      const settleAfterSeconds = Number(settleAfter);
-      const settleAfterDate = new Date(settleAfterSeconds * 1000);
-      const now = Date.now();
-      
-      console.log('[settleMarketOnChain] settle_after timestamp:', settleAfterSeconds, '(' + settleAfterDate.toISOString() + ')');
-      console.log('[settleMarketOnChain] Current timestamp:', Math.floor(now / 1000));
-      
-      if (now < settleAfterSeconds * 1000) {
-        const secondsUntilSettle = settleAfterSeconds - Math.floor(now / 1000);
-        const minutesUntilSettle = Math.ceil(secondsUntilSettle / 60);
-        throw new Error(`Too early to settle. Wait ${minutesUntilSettle} more minute(s). settle_after: ${settleAfterDate.toISOString()}`);
-      }
-      console.log('[settleMarketOnChain] ✓ Settlement time reached');
-    } catch (tsErr) {
-      console.error('[settleMarketOnChain] Failed to parse settle_after timestamp:', tsErr.message);
-      throw new Error('Invalid settle_after timestamp in market account: ' + tsErr.message);
-    }
+    console.log('[settleMarketOnChain] Market account found - proceeding with settlement');
 
     // Handle void outcome separately
     if (winning_outcome === 'void') {
@@ -184,26 +151,33 @@ Deno.serve(async (req) => {
     
     const outcomeIndex = winning_outcome === 'a' ? 0 : winning_outcome === 'b' ? 1 : 2;
 
+    // Build emergency_settle instruction (includes oracle validation + 1 hour cooldown)
     const discriminator = Buffer.from(sha256('global:emergency_settle')).slice(0, 8);
     
     const data = Buffer.alloc(9);
     discriminator.copy(data, 0);
     data.writeUInt8(outcomeIndex, 8);
 
-    // Prepare on-chain instruction - DB updates happen AFTER tx confirms via commitSettlement
     const outcomeLabel = winning_outcome === 'a' ? bet.outcome_a : winning_outcome === 'b' ? bet.outcome_b : 'Draw';
+    
+    console.log('[settleMarketOnChain] Prepared emergency_settle instruction:', {
+      outcome: outcomeLabel,
+      outcomeIndex: outcomeIndex,
+      discriminator: discriminator.toString('hex'),
+      data: data.toString('hex'),
+    });
     
     return Response.json({
       success: true,
-      message: `Sign to settle market: ${outcomeLabel}`,
+      message: `Sign to settle market: ${outcomeLabel} (oracle validation + 1h cooldown)`,
       solana_instruction: {
         instruction_type: 'settle_market',
         programId: SOLANA_PROGRAM_ID,
         keys: [
           { pubkey: marketPda.toBase58(), isSigner: false, isWritable: true }, // market
-          { pubkey: platformPda.toBase58(), isSigner: false, isWritable: false }, // platform_config
+          { pubkey: platformPda.toBase58(), isSigner: false, isWritable: true }, // platform_config
           { pubkey: feeVaultPda.toBase58(), isSigner: false, isWritable: true }, // fee_vault
-          { pubkey: admin_wallet, isSigner: true, isWritable: true }, // admin
+          { pubkey: admin_wallet, isSigner: true, isWritable: true }, // admin (signer)
           { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false }, // system_program
         ],
         instruction_data: data.toString('base64'),
