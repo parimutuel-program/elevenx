@@ -112,23 +112,23 @@ export default function LpDashboard() {
     queryFn: () => base44.entities.Bet.filter({ status: 'open' })
   });
 
-  const { data: myOffers = [], refetch: refetchOffers } = useQuery({
+  const { data: myOffers = [], refetch: refetchOffers, isLoading: isLoadingOffers } = useQuery({
     queryKey: ['myOffers', walletAddress],
     queryFn: async () => {
       console.log('=== LP QUERY STARTED ===');
       console.log('walletAddress:', walletAddress);
       console.log('enabled:', !!walletAddress);
-      
+
       // Fetch ALL UserBets for this wallet, then filter for role='lp' client-side
       const allUserBets = await base44.entities.UserBet.list('-created_date', 100);
       console.log('Total UserBets fetched:', allUserBets.length);
-      
+
       const lpUserBets = allUserBets.filter((ub) => {
         const match = ub.wallet_address === walletAddress && ub.role === 'lp';
         console.log('UserBet check:', ub.id, 'wallet:', ub.wallet_address, 'role:', ub.role, 'matches:', match);
         return match;
       });
-      
+
       console.log('LP UserBets found:', lpUserBets.length);
       console.log('LP UserBets:', lpUserBets);
 
@@ -163,7 +163,9 @@ export default function LpDashboard() {
       return deduplicated;
     },
     enabled: !!walletAddress,
-    refetchOnWindowFocus: true
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    staleTime: 0
   });
 
   const { data: matches = [] } = useQuery({
