@@ -370,7 +370,7 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
                   <p className="text-[9px] text-muted-foreground truncate">Potential</p>
                   <p className="font-bold text-primary text-xs">◎{(bet.totalPayout || bet.potential_payout || 0).toFixed(4)}</p>
                 </div>
-                <div className="rounded-lg px-2 py-2 text-center border border-border/30 bg-[hsl(var(--background))]">
+                <div className="rounded-lg px-2 py-2 text-center border border-border/30 bg-[#272525]">
                   <p className="text-[9px] text-muted-foreground truncate">{bet.betCount && bet.betCount > 1 ? 'Bets' : 'Role'}</p>
                   <p className="font-bold text-accent text-xs capitalize">{bet.betCount && bet.betCount > 1 ? `${bet.betCount}` : bet.role === 'lp' ? 'LP' : 'Bettor'}</p>
                 </div>
