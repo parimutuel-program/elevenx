@@ -136,6 +136,32 @@ Deno.serve(async (req) => {
       });
     }
     
+    // Check settle_after timestamp - Error 6005 means it's still in the future
+    // Market account layout: discriminator(8) + admin(32) + match_id(32) + open_until(i64) + settle_after(i64) + ...
+    const settleAfterBytes = marketInfo.data.slice(72, 80);
+    const settleAfter = BigInt.asIntN(64, settleAfterBytes.readBigUInt64LE(0));
+    const settleAfterSeconds = Number(settleAfter);
+    const settleAfterDate = new Date(settleAfterSeconds * 1000);
+    const now = Date.now();
+    
+    console.log('[settleMarketOnChain] On-chain settle_after:', settleAfterDate.toISOString(), 'timestamp:', settleAfterSeconds);
+    console.log('[settleMarketOnChain] Current time:', new Date(now).toISOString(), 'timestamp:', Math.floor(now / 1000));
+    console.log('[settleMarketOnChain] Can settle?', now >= settleAfterSeconds * 1000);
+    
+    if (now < settleAfterSeconds * 1000) {
+      console.log('[settleMarketOnChain] Too early to settle - returning fix timestamp instruction first');
+      const secondsUntilSettle = settleAfterSeconds - Math.floor(now / 1000);
+      return Response.json({
+        error: 'TooEarlyToSettle',
+        code: 6005,
+        settle_after: settleAfterDate.toISOString(),
+        current_time: new Date(now).toISOString(),
+        seconds_until_settle: secondsUntilSettle,
+        fix_required: 'update_market_timestamps',
+        message: `Market settle time is ${secondsUntilSettle}s in the future. Fix timestamps first.`,
+      }, { status: 400 });
+    }
+    
     // Check discriminator - should match BetMarket account type
     const marketDisc = marketInfo.data.slice(0, 8).toString('hex');
     const expectedDisc = Buffer.from(sha256("account:BetMarket")).slice(0, 8).toString('hex');

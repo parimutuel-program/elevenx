@@ -55,8 +55,59 @@ export default function Admin() {
   const handleSettle = async (bet, outcome) => {
     if (!walletAddress) return;
     
-    // Skip timestamp fix - just settle directly (program allows admin override)
-    await _doSettle(bet, outcome);
+    try {
+      const res = await base44.functions.invoke('settleMarketOnChain', {
+        bet_id: bet.id,
+        winning_outcome: outcome,
+        admin_wallet: walletAddress,
+      });
+
+      if (res.data.error) {
+        // Check if it's a timestamp error (6005)
+        if (res.data.code === 6005 || res.data.error === 'TooEarlyToSettle') {
+          // Offer to fix timestamps first
+          const secondsUntil = res.data.seconds_until_settle || 0;
+          const fixNow = confirm(
+            `⏰ Market settle time is ${secondsUntil}s in the future.\n\n` +
+            `Click OK to fix timestamps on-chain first, then settle.\n` +
+            `Click Cancel to abort.\n\n` +
+            `Settle after: ${res.data.settle_after}\n` +
+            `Current time: ${res.data.current_time}`
+          );
+          
+          if (fixNow) {
+            // Call updateMarketTimestampsOnChain to fix timestamps
+            const fixRes = await base44.functions.invoke('updateMarketTimestampsOnChain', {
+              bet_id: bet.id,
+              admin_wallet: walletAddress,
+            });
+            
+            if (fixRes.data.error) {
+              alert('Failed to fix timestamps: ' + fixRes.data.error);
+              return;
+            }
+            
+            // Show timestamp fix dialog
+            setFixTimestampDialog({
+              instruction: fixRes.data.solana_instruction,
+              pendingSettle: { bet, outcome },
+            });
+            return;
+          }
+        } else {
+          alert('Error: ' + res.data.error);
+        }
+        return;
+      }
+
+      setSettleDialog({
+        instruction: res.data.solana_instruction,
+        bet,
+        outcome,
+      });
+    } catch (err) {
+      alert('Failed to prepare settlement: ' + err.message);
+    }
   };
 
   const _doSettle = async (bet, outcome) => {
