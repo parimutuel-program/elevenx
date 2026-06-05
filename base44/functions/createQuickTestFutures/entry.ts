@@ -96,9 +96,10 @@ Deno.serve(async (req) => {
         timeUntilBettingClose: '30 minutes',
       },
       nextSteps: {
-        step1: 'Go to /futures to provide liquidity',
-        step2: 'Place bets on the test futures market',
-        step3: 'Wait 30 minutes, then settle in /admin',
+        step1: 'Go to /admin > Futures tab and click "Deploy" to create the market on-chain',
+        step2: 'Go to /lp > Futures tab to provide liquidity (you\'ll see the test market there)',
+        step3: 'Go to /futures to place bets',
+        step4: 'Wait 30 minutes, then settle in /admin',
       },
     });
 
