@@ -268,6 +268,21 @@ export default function Admin() {
                 <Button
                   onClick={async () => {
                     try {
+                      await base44.functions.invoke('createQuickTestFutures');
+                      alert('✓ Future Test created! Betting ends in 30 min, no settlement delay!');
+                      queryClient.invalidateQueries({ queryKey: ['allBets'] });
+                    } catch (err) {
+                      alert('Error: ' + err.message);
+                    }
+                  }}
+                  className="h-24 flex flex-col gap-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-600/30 rounded-xl"
+                >
+                  <span className="font-bold text-lg text-white">🚀 Future Test</span>
+                  <span className="text-xs text-gray-400">30 min betting, instant settle</span>
+                </Button>
+                <Button
+                  onClick={async () => {
+                    try {
                       await base44.functions.invoke('bulkDeployMatches');
                       alert('✓ Matches deployed!');
                       queryClient.invalidateQueries({ queryKey: ['allBets'] });
