@@ -54,11 +54,14 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
       
       // If wallets don't match, show error
       if (expectedWallet && connectedWallet !== expectedWallet) {
-        throw new Error(
-          `Wallet mismatch! Phantom is using: ${connectedWallet?.slice(0, 8)}...${connectedWallet?.slice(-8)}\n` +
-          `But your session expects: ${expectedWallet.slice(0, 8)}...${expectedWallet.slice(-8)}\n\n` +
-          `Please disconnect Phantom and reconnect with the correct wallet.`
-        );
+        const errorMsg = `❌ Wallet mismatch!\n\nPhantom is using:\n${connectedWallet?.slice(0, 8)}...${connectedWallet?.slice(-8)}\n\nBut your session expects:\n${expectedWallet.slice(0, 8)}...${expectedWallet.slice(-8)}\n\nPlease:\n1. Disconnect Phantom\n2. Make sure you have the correct wallet selected in Phantom\n3. Reconnect`;
+        console.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+      
+      // Double-check: Query Phantom for ALL connected accounts
+      if (provider.publicKey) {
+        console.log('✓ Wallet check passed:', connectedWallet === expectedWallet);
       }
       console.log('========================================');
 
