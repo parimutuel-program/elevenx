@@ -375,6 +375,32 @@ export default function Admin() {
             </div>
           </div>
 
+          <div className="bg-card border border-primary/20 rounded-xl p-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <Zap className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="text-sm font-bold text-foreground">Quick Test Match (10min / 30min)</p>
+                  <p className="text-xs text-muted-foreground">Creates match starting in 10min, ending in 30min, betting closes in 30min</p>
+                </div>
+              </div>
+              <Button
+                onClick={async () => {
+                  const res = await base44.functions.invoke('createQuickTestMatch', {});
+                  if (res.data.error) {
+                    alert('Error: ' + res.data.error);
+                  } else {
+                    alert(`✅ Quick Test Match Created!\n\nMatch starts: ${res.data.testData.timeUntilStart}\nMatch ends: ${res.data.testData.timeUntilEnd}\nBetting closes: ${res.data.testData.timeUntilBettingClose}\n\nGo to Matches tab → Initialize Market → Provide LP → Place Bets!`);
+                    queryClient.invalidateQueries({ queryKey: ['matches', 'bets'] });
+                  }
+                }}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-heading font-bold rounded-xl h-9"
+              >
+                Create Quick Test
+              </Button>
+            </div>
+          </div>
+
 
 
           <div className="bg-card border border-primary/20 rounded-xl p-4">
