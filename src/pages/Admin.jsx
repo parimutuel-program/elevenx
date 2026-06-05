@@ -202,7 +202,9 @@ export default function Admin() {
   const handleBulkDeployMatches = async () => {
     setIsBulkDeployingMatches(true);
     try {
+      console.log('[Admin] Starting bulk deploy...');
       const res = await base44.functions.invoke('bulkDeployMatches', {});
+      console.log('[Admin] Bulk deploy response:', res);
       if (res.data.error) {
         alert('Error: ' + res.data.error);
         return;
@@ -220,7 +222,12 @@ export default function Admin() {
       }
     } catch (error) {
       console.error('Bulk deploy matches failed:', error);
-      alert('Failed to prepare bulk deploy: ' + error.message);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      alert('Failed to prepare bulk deploy: ' + error.message + (error.response?.status === 404 ? ' (Function not found - check if bulkDeployMatches exists)' : ''));
     } finally {
       setIsBulkDeployingMatches(false);
     }
