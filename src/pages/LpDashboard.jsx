@@ -141,7 +141,25 @@ export default function LpDashboard() {
           console.log('Found BetOffer:', offer);
         }
 
-        return offer ? { ...offer, userBetId: ub.id, userBet: ub } : null;
+        // FALLBACK: If no matching BetOffer found, build a virtual offer from UserBet so it displays
+        if (!offer) {
+          offer = {
+            id: ub.offer_id || ub.id,
+            bet_id: ub.bet_id,
+            match_id: ub.match_id,
+            outcome: ub.outcome,
+            outcome_label: ub.outcome_label,
+            amount_offered: ub.amount,
+            amount_matched: ub.liquidity_matched || 0,
+            amount_unmatched: ub.liquidity_unmatched || ub.amount,
+            status: ub.status === 'active' ? 'open' : ub.status,
+            odds_at_creation: ub.amount > 0 ? (ub.potential_payout / ub.amount) : 2.0,
+            lp_wallet_address: ub.wallet_address
+          };
+          console.log('Built fallback offer from UserBet:', offer);
+        }
+
+        return { ...offer, userBetId: ub.id, userBet: ub };
       }));
 
       const result = offersWithDetails.filter((o) => o !== null);
