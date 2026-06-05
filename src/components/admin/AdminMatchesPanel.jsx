@@ -35,24 +35,41 @@ export default function AdminMatchesPanel({ walletAddress }) {
         throw new Error('No bet found for this match');
       }
       
+      console.log('[AdminMatchesPanel] Deploying match:', matchId, 'bet_id:', bet.id);
+      
       const res = await base44.functions.invoke('createMarketOnChain', {
         bet_id: bet.id,
+        force_recreate: true,
       });
+      
+      console.log('[AdminMatchesPanel] Response:', res.data);
       
       if (res.data.error) throw new Error(res.data.error);
       return res.data;
     },
     onSuccess: (data, matchId) => {
+      console.log('[AdminMatchesPanel] onSuccess called:', data);
+      
+      if (data.alreadyExists && !data.forceRecreated) {
+        alert('Market already exists on-chain!');
+        queryClient.invalidateQueries({ queryKey: ['adminMatches'] });
+        return;
+      }
+      
       if (data.solana_instruction) {
+        console.log('[AdminMatchesPanel] Setting pending deploy:', data.solana_instruction);
         setPendingDeploy({
           ...data.solana_instruction,
           match_id: matchId,
           bet_id: data.bet_id,
         });
-      } else if (data.alreadyExists) {
-        alert('Market already exists on-chain!');
-        queryClient.invalidateQueries({ queryKey: ['adminMatches'] });
+      } else {
+        alert('No instruction returned - check console for details');
       }
+    },
+    onError: (error) => {
+      console.error('[AdminMatchesPanel] Deploy error:', error);
+      alert('Deploy failed: ' + error.message);
     },
   });
 
@@ -182,6 +199,7 @@ export default function AdminMatchesPanel({ walletAddress }) {
                       <Button
                         size="sm"
                         onClick={() => {
+                          console.log('[AdminMatchesPanel] Deploy button clicked for match:', match.id);
                           setDeployingMatchId(match.id);
                           deployMutation.mutate(match.id);
                         }}
@@ -189,7 +207,10 @@ export default function AdminMatchesPanel({ walletAddress }) {
                         className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold h-7 px-3 rounded-lg"
                       >
                         {deployingMatchId === match.id && deployMutation.isPending ? (
-                          <Loader className="w-3 h-3 animate-spin" />
+                          <>
+                            <Loader className="w-3 h-3 animate-spin" />
+                            Deploying...
+                          </>
                         ) : (
                           <>
                             <Rocket className="w-3 h-3 mr-1" /> Deploy
