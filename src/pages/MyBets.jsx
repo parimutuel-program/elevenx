@@ -183,6 +183,11 @@ export default function MyBets() {
     return b.role !== 'lp' || b.offer_id === null;
   });
   
+  // DEBUG: Log filtering results
+  console.log('[MyBets] Total bets:', myBets.length);
+  console.log('[MyBets] myLpPositions (traditional LP with offer_id):', myLpPositions.length, myLpPositions.map(b => ({ id: b.id.slice(0,8), role: b.role, offer_id: b.offer_id })));
+  console.log('[MyBets] myMatcherBets (bettors + parimutuel):', myMatcherBets.length, myMatcherBets.map(b => ({ id: b.id.slice(0,8), role: b.role, offer_id: b.offer_id })));
+  
   const totalStaked = myMatcherBets.reduce((s, b) => s + (b.amount || 0), 0);
   const totalWon = myMatcherBets.filter((b) => b.status === 'won' || b.status === 'claimed').reduce((s, b) => s + (b.actual_payout || 0), 0);
   const activeBets = myMatcherBets.filter((b) => b.status === 'active' || b.status === 'pending');
