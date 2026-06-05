@@ -12,7 +12,7 @@ const statusStyles = {
   upcoming: 'bg-secondary text-secondary-foreground',
   live: 'bg-destructive/20 text-destructive border border-destructive/30',
   finished: 'bg-muted text-muted-foreground',
-  cancelled: 'bg-muted text-muted-foreground line-through',
+  cancelled: 'bg-muted text-muted-foreground line-through'
 };
 
 export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
@@ -28,7 +28,7 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
       const res = await base44.functions.invoke('refreshMatchOdds', {
         bet_id: bet.id
       });
-      
+
       if (res.data.error) {
         alert('❌ ' + res.data.error);
       } else if (res.data.success) {
@@ -48,7 +48,7 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
   const lpB = bet?.lp_amount_b || 0;
   const lpDraw = bet?.lp_amount_draw || 0;
   const totalLP = lpA + lpB + lpDraw;
-  
+
   // Use authoritative odds_a/b/draw values (same as OddsPanel)
   const oddsA = bet?.odds_a || (bet?.oracle_odds_a ? bet.oracle_odds_a / 100 : 0);
   const oddsB = bet?.odds_b || (bet?.oracle_odds_b ? bet.oracle_odds_b / 100 : 0);
@@ -59,10 +59,10 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -4 }}
-      transition={{ delay: index * 0.05, duration: 0.4 }}
-    >
+      transition={{ delay: index * 0.05, duration: 0.4 }}>
+      
       <Link to={`/match/${match.id}`} className="group block">
-        <div className="relative rounded-2xl p-4 transition-all duration-300 border border-primary/20 bg-card h-full">
+        <div className="relative rounded-2xl p-4 transition-all duration-300 border border-primary/20 h-full bg-[#262322]">
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
             <span className="text-[10px] text-muted-foreground font-semibold truncate">
@@ -84,20 +84,20 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
 
             {/* VS */}
             <div className="flex flex-col items-center gap-1 px-2 flex-shrink-0">
-              {match.status === 'finished' || match.status === 'live' ? (
-                <div className="flex items-center gap-1.5 text-sm font-bold">
+              {match.status === 'finished' || match.status === 'live' ?
+              <div className="flex items-center gap-1.5 text-sm font-bold">
                   <span>{match.score_a ?? 0}</span>
                   <span className="text-muted-foreground text-xs">-</span>
                   <span>{match.score_b ?? 0}</span>
-                </div>
-              ) : (
-                <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">VS</span>
-              )}
-              {matchTime && (
-                <span className="text-[10px] text-muted-foreground font-medium">
+                </div> :
+
+              <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">VS</span>
+              }
+              {matchTime &&
+              <span className="text-[10px] text-muted-foreground font-medium">
                   {format(matchTime, 'MMM d')}
                 </span>
-              )}
+              }
             </div>
 
             {/* Team B */}
@@ -108,8 +108,8 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
           </div>
 
           {/* Odds/Pool */}
-          {bet ? (
-            <div className="pt-2.5 border-t border-border/50">
+          {bet ?
+          <div className="pt-2.5 border-t border-border/50">
               <div className="grid grid-cols-3 gap-1.5 mb-2">
                 <div className={`rounded-lg px-1.5 py-1 text-center text-xs border ${lpA > 0 ? 'bg-primary/10 border-primary/20' : 'bg-primary/5 border-primary/10'}`}>
                   <p className="text-[9px] text-muted-foreground truncate">{match.team_a.split(' ').pop()}</p>
@@ -128,15 +128,15 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
                 <span>◎{(bet.total_pool || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
                 <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
-            </div>
-          ) : (
-            <div className="pt-2.5 border-t border-border/30 flex items-center justify-between text-[10px] text-muted-foreground">
+            </div> :
+
+          <div className="pt-2.5 border-t border-border/30 flex items-center justify-between text-[10px] text-muted-foreground">
               <span>No pool</span>
               <ChevronRight className="w-3.5 h-3.5 group-hover:text-primary transition-colors" />
             </div>
-          )}
+          }
         </div>
       </Link>
-    </motion.div>
-  );
+    </motion.div>);
+
 }
