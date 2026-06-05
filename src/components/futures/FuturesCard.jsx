@@ -102,19 +102,24 @@ export default function FuturesCard({ market, index, onSelect }) {
           </div>
 
           {/* Pool Summary */}
-          <div className="pt-2.5 border-t border-border/50">
-            <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-2">
+          <div className="pt-3 border-t border-border/50">
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-2.5">
               <span>Total Pool</span>
               <span className="font-bold text-foreground">◎{totalPool.toFixed(1)}</span>
             </div>
-            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Droplets className="w-2.5 h-2.5 text-accent" />
-                LP Offers
-              </span>
-              <span className="font-bold text-accent">{totalLpOffers}</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 bg-accent/10 px-2 py-1 rounded-lg border border-accent/20">
+                  <Droplets className="w-3 h-3 text-accent" />
+                  <span className="text-[10px] font-bold text-accent uppercase tracking-wide">LP Offers</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-muted-foreground">Total:</span>
+                <span className="font-heading font-bold text-lg text-accent">{totalLpOffers}</span>
+              </div>
             </div>
-            <div className="flex items-center justify-end text-[10px] text-muted-foreground mt-2">
+            <div className="flex items-center justify-end text-[10px] text-muted-foreground mt-2.5">
               <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
             </div>
           </div>
