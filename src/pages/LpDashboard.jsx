@@ -115,14 +115,13 @@ export default function LpDashboard() {
   const { data: myOffers = [], refetch: refetchOffers } = useQuery({
     queryKey: ['myOffers', walletAddress],
     queryFn: async () => {
-      // STRICT P2P MODE: Only fetch UserBets with role='lp' (no parimutuel fallback)
-      const lpUserBets = await base44.entities.UserBet.filter({ 
-        wallet_address: walletAddress,
-        role: 'lp'
-      });
+      // Fetch ALL UserBets for this wallet, then filter for role='lp' client-side
+      const allUserBets = await base44.entities.UserBet.list('-created_date', 100);
+      const lpUserBets = allUserBets.filter(ub => ub.wallet_address === walletAddress && ub.role === 'lp');
       
       console.log('=== LP DEBUG ===');
-      console.log('LP UserBets (role=lp):', lpUserBets);
+      console.log('All UserBets:', allUserBets.length);
+      console.log('LP UserBets (role=lp, wallet match):', lpUserBets);
       
       const offersWithDetails = await Promise.all(lpUserBets.map(async (ub) => {
         console.log('Processing UserBet:', ub.id, 'offer_id:', ub.offer_id);
