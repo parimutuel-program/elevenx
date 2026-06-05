@@ -167,14 +167,11 @@ function FuturesMarketLpCard({ market, onProvideLiquidity }) {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -6 }}
-      className="relative rounded-3xl h-full overflow-hidden"
+      className="relative rounded-3xl h-full overflow-hidden bg-[#1c1c1c]"
       style={{
-        background: '#1c1c1c',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)'
+        boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
       }}
     >
-      {/* Subtle glow effect */}
-      <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-10" style={{ background: '#21c45d' }} />
       
       {/* Content */}
       <div className="relative p-5 h-full flex flex-col">
