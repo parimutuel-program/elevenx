@@ -25,15 +25,15 @@ export default function MatchLiquidityCard({ bet, match, isSelected, onClick }) 
         background: 'linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%)',
         boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
         border: '1px solid rgba(255,255,255,0.1)'
-      }}
-    >
+      }}>
+      
       {/* Glow effect */}
-      <div 
-        className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-10`} 
-        style={{ background: isSelected ? '#14f195' : '#a69cf2' }} 
-      />
+      <div
+        className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-10`}
+        style={{ background: isSelected ? '#14f195' : '#a69cf2' }} />
+      
 
-      <div className="relative p-4 sm:p-5 space-y-3">
+      <div className="relative p-4 sm:p-5 space-y-3 text-[#1c1c1c]">
         {/* Header - Match Info & Status */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -122,10 +122,10 @@ export default function MatchLiquidityCard({ bet, match, isSelected, onClick }) 
         {/* Action Button */}
         <div className={`pt-2 border-t border-white/10`}>
           <div className={`flex items-center justify-between px-3 py-2 rounded-xl transition-all ${
-            isSelected 
-              ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-500/10 border border-emerald-500/30' 
-              : 'bg-white/5 border border-white/10 hover:bg-white/10'
-          }`}>
+          isSelected ?
+          'bg-gradient-to-r from-emerald-500/20 to-emerald-500/10 border border-emerald-500/30' :
+          'bg-white/5 border border-white/10 hover:bg-white/10'}`
+          }>
             <div className="flex items-center gap-2">
               <TrendingUp className={`w-3.5 h-3.5 ${isSelected ? 'text-emerald-400' : 'text-white/50'}`} />
               <span className={`text-[10px] font-bold ${isSelected ? 'text-emerald-400' : 'text-white/60'}`}>
@@ -136,6 +136,6 @@ export default function MatchLiquidityCard({ bet, match, isSelected, onClick }) 
           </div>
         </div>
       </div>
-    </motion.button>
-  );
+    </motion.button>);
+
 }
