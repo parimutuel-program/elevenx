@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { PublicKey } from 'npm:@solana/web3.js@1.98.4';
 import { Buffer } from 'node:buffer';
+import { sha256 } from 'npm:@noble/hashes@1.4.0/sha256';
 
 /**
  * Bulk deploy all futures markets to Solana in a single transaction batch.
@@ -74,40 +75,42 @@ Deno.serve(async (req) => {
         programId
       );
 
-      // Calculate settlement timestamp based on category
-      const now = Date.now();
-      const openUntil = market.open_until ? new Date(market.open_until).getTime() : now + (30 * 24 * 60 * 60 * 1000);
-      const settleTimestamp = Math.floor(openUntil / 1000);
+      // Calculate timestamps — World Cup Final: July 19, 2026 13:00 Costa Rica (UTC-6) = 19:00 UTC
+      const WORLD_CUP_FINAL_KICKOFF = new Date('2026-07-19T13:00:00-06:00');
+      const WORLD_CUP_FINAL_ENDS = new Date('2026-07-19T15:00:00-06:00');
+      const openUntil = Math.floor(WORLD_CUP_FINAL_KICKOFF.getTime() / 1000);
+      const settleAfter = Math.floor(WORLD_CUP_FINAL_ENDS.getTime() / 1000);
 
-      // Serialize market data for instruction (171 bytes total)
-      const outcomeData = market.outcomes.map(o => ({
-        label: o.label,
-        position: o.position,
-        flag: o.flag || '',
-        odds: o.odds,
-        pool: o.pool || 0,
-        lp_offers: o.lp_offers || 0,
-      }));
+      // Build proper Anchor binary instruction data (matches createFuturesMarketOnChain exactly)
+      const discriminator = Buffer.from(sha256('global:create_market')).slice(0, 8);
 
-      const marketData = {
-        title: market.title || `${market.country} Futures`,
-        subtitle: market.subtitle || `Where will ${market.country} finish?`,
-        category: market.category || 'tournament',
-        country: market.country || 'Unknown',
-        country_flag: market.country_flag || '',
-        icon: market.icon || '',
-        open_until: Math.floor(openUntil / 1000),
-        settle_timestamp: settleTimestamp,
-        outcomes: outcomeData,
-      };
+      const outcomeNames = [Buffer.alloc(32), Buffer.alloc(32), Buffer.alloc(32)];
+      for (let i = 0; i < 3; i++) {
+        const label = market.outcomes[i]?.label || `Outcome ${i + 1}`;
+        Buffer.from(label).copy(outcomeNames[i], 0, 0, Math.min(label.length, 32));
+      }
 
-      const instructionData = {
-        discriminator: 'create_market',
-        marketData,
-      };
+      // params: match_id(32) + outcome_names(32*3) + open_until(8) + settle_after(8) + fee_percent(2) + outcome_count(1) + oracle_odds(8*3) = 179 bytes
+      const paramsData = Buffer.alloc(32 + (32 * 3) + 8 + 8 + 2 + 1 + (8 * 3));
+      let offset = 0;
 
-      const serializedData = JSON.stringify(instructionData);
-      const instructionDataBase64 = Buffer.from(serializedData).toString('base64');
+      const matchIdBytes = Buffer.alloc(32);
+      Buffer.from(market.id, 'utf-8').copy(matchIdBytes, 0, 0, Math.min(market.id.length, 32));
+      matchIdBytes.copy(paramsData, offset); offset += 32;
+
+      outcomeNames.forEach(name => { name.copy(paramsData, offset); offset += 32; });
+
+      paramsData.writeBigInt64LE(BigInt(openUntil), offset); offset += 8;
+      paramsData.writeBigInt64LE(BigInt(settleAfter), offset); offset += 8;
+      paramsData.writeUInt16LE(0, offset); offset += 2;
+      paramsData.writeUInt8(3, offset); offset += 1;
+
+      for (let i = 0; i < 3; i++) {
+        const oddsBps = BigInt(Math.round((market.outcomes[i]?.odds || 1) * 100));
+        paramsData.writeBigUInt64LE(oddsBps, offset); offset += 8;
+      }
+
+      const instructionDataBase64 = Buffer.concat([discriminator, paramsData]).toString('base64');
 
       console.log(`[bulkDeployFutures] Prepared market ${market.country} (${market.id})`);
 
