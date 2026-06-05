@@ -68,7 +68,16 @@ Deno.serve(async (req) => {
       status: { $in: ['open', 'partially_matched'] }
     });
 
-    const totalLiquidity = existingOffers.reduce((sum, offer) => sum + (offer.amount_unmatched || 0), 0);
+    // CRITICAL FIX: Filter out offers with zero or negative unmatched amounts BEFORE calculating total
+    const validOffers = existingOffers.filter(offer => (offer.amount_unmatched || 0) > 0);
+    const totalLiquidity = validOffers.reduce((sum, offer) => sum + (offer.amount_unmatched || 0), 0);
+    
+    console.log('[placeBet] Liquidity check:', {
+      totalOffers: existingOffers.length,
+      validOffers: validOffers.length,
+      totalLiquidity,
+      amount,
+    });
 
     console.log('[placeBet] Hybrid model check:', {
       outcome,
@@ -108,9 +117,17 @@ Deno.serve(async (req) => {
     );
     
     // Find the best matching LP offer (highest unmatched amount)
-    const bestOffer = existingOffers.reduce((best, current) => 
+    // CRITICAL: Must use validOffers (filtered to only positive unmatched amounts)
+    const bestOffer = validOffers.reduce((best, current) => 
       (current.amount_unmatched || 0) > (best.amount_unmatched || 0) ? current : best
-    , existingOffers[0]);
+    , validOffers[0]);
+    
+    if (!bestOffer) {
+      return Response.json({
+        error: 'No valid liquidity available (all offers fully matched)',
+        hint: 'Please wait for LPs to add more liquidity',
+      }, { status: 400 });
+    }
 
     // Use the LP's wallet from the best offer to derive the LP offer PDA
     const lpPubkey = new PublicKey(bestOffer.lp_wallet_address);
