@@ -1,9 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronRight, Trophy } from 'lucide-react';
+import { ChevronRight, Trophy, Droplets } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { getTeamFlag } from '@/utils/flags';
 
 const statusStyles = {
   open: 'bg-accent/10 text-accent border border-accent/20',
@@ -14,7 +13,7 @@ const statusStyles = {
 
 export default function FuturesCard({ market, index }) {
   const totalPool = market.outcomes.reduce((sum, o) => sum + (o.pool || 0), 0);
-  const topOutcome = market.outcomes.reduce((max, o) => o.odds > (max?.odds || 0) ? o : max, null);
+  const totalLpOffers = market.outcomes.reduce((sum, o) => sum + (o.lp_offers || 0), 0);
 
   return (
     <motion.div
@@ -28,7 +27,7 @@ export default function FuturesCard({ market, index }) {
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
             <span className="text-[10px] text-muted-foreground font-semibold truncate">
-              {market.category === 'tournament' ? 'Tournament Futures' : market.category === 'player' ? 'Player Markets' : 'Special'}
+              {market.country}
             </span>
             <Badge className={`text-[9px] font-semibold uppercase tracking-wider flex-shrink-0 ${statusStyles[market.status] || statusStyles.open}`}>
               {market.status === 'open' && <span className="w-1 h-1 rounded-full bg-accent animate-pulse mr-1" />}
@@ -36,54 +35,64 @@ export default function FuturesCard({ market, index }) {
             </Badge>
           </div>
 
-          {/* Country/Market Info */}
-          <div className="flex items-center justify-between gap-2 mb-3">
-            {/* Country Icon */}
-            <div className="flex-1 text-center">
-              <div className="text-3xl mb-1">{market.icon || '🏆'}</div>
-              <p className="text-[10px] text-foreground truncate font-medium">{market.country}</p>
-            </div>
-
-            {/* VS Divider */}
-            <div className="flex flex-col items-center gap-1 px-2 flex-shrink-0">
-              <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">VS</span>
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                <Trophy className="w-3 h-3" />
-                <span>{market.outcomes.length} outcomes</span>
-              </div>
-            </div>
-
-            {/* Pool Info */}
-            <div className="flex-1 text-center">
-              <div className="text-2xl mb-1">💰</div>
-              <p className="text-[10px] text-foreground truncate font-medium">◎{totalPool.toFixed(1)}</p>
+          {/* Market Icon & Title */}
+          <div className="flex items-center gap-3 mb-3">
+            <div className="text-4xl">{market.icon || '🏆'}</div>
+            <div className="flex-1">
+              <h3 className="font-heading font-bold text-sm text-foreground truncate">{market.title}</h3>
+              <p className="text-[10px] text-muted-foreground">{market.subtitle}</p>
             </div>
           </div>
 
-          {/* Top Odds / Pool Info */}
-          {topOutcome ? (
-            <div className="pt-2.5 border-t border-border/50">
-              <div className="grid grid-cols-2 gap-1.5 mb-2">
-                <div className="rounded-lg px-1.5 py-1 text-center text-xs border bg-primary/10 border-primary/20">
-                  <p className="text-[9px] text-muted-foreground truncate">Top Odds</p>
-                  <p className="font-bold text-primary text-xs">{topOutcome.odds.toFixed(2)}x</p>
+          {/* Outcomes Grid - 1st, 2nd, 3rd */}
+          <div className="grid grid-cols-3 gap-1.5 mb-3">
+            {market.outcomes.slice(0, 3).map((outcome) => {
+              const hasLiquidity = (outcome.pool || 0) > 0 || (outcome.lp_offers || 0) > 0;
+              return (
+                <div
+                  key={outcome.position}
+                  className={`rounded-lg px-2 py-2 text-center border ${
+                    hasLiquidity 
+                      ? 'bg-accent/10 border-accent/20' 
+                      : 'bg-secondary/20 border-border/40'
+                  }`}
+                >
+                  <p className="text-[8px] text-muted-foreground font-semibold uppercase tracking-wider mb-0.5">
+                    {outcome.position}
+                  </p>
+                  <p className="font-heading font-black text-xs text-foreground mb-1">
+                    {outcome.odds.toFixed(2)}x
+                  </p>
+                  {hasLiquidity && (
+                    <div className="flex items-center justify-center gap-0.5">
+                      <Droplets className="w-2 h-2 text-accent" />
+                      <p className="text-[8px] font-bold text-accent">
+                        ◎{outcome.pool.toFixed(1)}
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <div className="rounded-lg px-1.5 py-1 text-center text-xs border bg-accent/10 border-accent/20">
-                  <p className="text-[9px] text-muted-foreground truncate">Liquidity</p>
-                  <p className="font-bold text-accent text-xs">◎{topOutcome.pool.toFixed(1)}</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                <span className="truncate">{topOutcome.label}</span>
-                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-              </div>
+              );
+            })}
+          </div>
+
+          {/* Pool Summary */}
+          <div className="pt-2.5 border-t border-border/50">
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-2">
+              <span>Total Pool</span>
+              <span className="font-bold text-foreground">◎{totalPool.toFixed(1)}</span>
             </div>
-          ) : (
-            <div className="pt-2.5 border-t border-border/30 flex items-center justify-between text-[10px] text-muted-foreground">
-              <span>No liquidity</span>
-              <ChevronRight className="w-3.5 h-3.5 group-hover:text-primary transition-colors" />
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Droplets className="w-2.5 h-2.5 text-accent" />
+                LP Offers
+              </span>
+              <span className="font-bold text-accent">{totalLpOffers}</span>
             </div>
-          )}
+            <div className="flex items-center justify-end text-[10px] text-muted-foreground mt-2">
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+            </div>
+          </div>
         </div>
       </Link>
     </motion.div>
