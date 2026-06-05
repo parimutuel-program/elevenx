@@ -512,34 +512,7 @@ export default function MatchDetail() {
 
 
 
-      {/* ── Admin: Settle ── */}
-      {hasBet && isAdmin && !isSettled && (match.status === 'finished' || isOpen) &&
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-      className="bg-card border border-accent/20 rounded-2xl p-5">
-          <div className="text-center mb-4">
-            <Trophy className="w-8 h-8 text-accent mx-auto mb-2" />
-            <h3 className="font-heading font-bold mb-1">Settle Market</h3>
-            <p className="text-xs text-muted-foreground">Select the winner — all matched bets will be settled</p>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {['a', 'b', 'draw'].map((outcome) =>
-          <Button key={outcome}
-          onClick={() => {
-            const label = outcome === 'draw' ? 'Draw' : outcome === 'a' ? bet.outcome_a : bet.outcome_b;
-            if (confirm(`Settle as ${label}?`)) settleMutation.mutate(outcome);
-          }}
-          disabled={settleMutation.isPending}
-          className={`h-10 font-heading font-bold text-xs rounded-xl ${
-          outcome === 'a' ? 'bg-primary hover:bg-primary/90 text-primary-foreground' :
-          outcome === 'b' ? 'bg-accent hover:bg-accent/90 text-accent-foreground' :
-          'bg-yellow-500 hover:bg-yellow-500/90 text-white'}`
-          }>
-                {outcome === 'a' ? bet.outcome_a : outcome === 'b' ? bet.outcome_b : 'Draw'}
-              </Button>
-          )}
-          </div>
-        </motion.div>
-      }
+
 
       {/* ── Settled ── */}
       {hasBet && isSettled &&
