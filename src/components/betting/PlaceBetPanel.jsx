@@ -238,32 +238,25 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
         });
         console.log('[PlaceBetPanel] matchBet response:', res.data);
       } else if (selectedOutcome) {
-        // User clicked odds - auto-select first available offer OR allow bet even if no LP (will go pending)
-        const firstAvailableOffer = allOffers.find(o => 
-          (o.status === 'open' || o.status === 'partially_matched') && 
-          o.outcome === selectedOutcome && 
-          (o.amount_unmatched || 0) > 0
-        );
-        if (firstAvailableOffer) {
-          console.log('[PlaceBetPanel] Auto-selecting offer:', firstAvailableOffer.id);
-          res = await base44.functions.invoke('matchBet', {
-            offer_id: firstAvailableOffer.id,
-            amount: stakeNum,
-            wallet_address: wallet
-          });
-          console.log('[PlaceBetPanel] matchBet response:', res.data);
-        } else {
-          // No LP available - bet will go into pending pool (parimutuel style)
-          console.log('[PlaceBetPanel] No LP - betting into pending pool for outcome:', selectedOutcome);
-          res = await base44.functions.invoke('matchBet', {
-            bet_id: bet.id,
-            match_id: matchId,
-            outcome: selectedOutcome,
-            amount: stakeNum,
-            wallet_address: wallet
-          });
-          console.log('[PlaceBetPanel] matchBet pending pool response:', res.data);
-        }
+      // User clicked odds - auto-select first available offer
+      const firstAvailableOffer = allOffers.find(o => 
+        (o.status === 'open' || o.status === 'partially_matched') && 
+        o.outcome === selectedOutcome && 
+        (o.amount_unmatched || 0) > 0
+      );
+      if (firstAvailableOffer) {
+        console.log('[PlaceBetPanel] Auto-selecting offer:', firstAvailableOffer.id);
+        res = await base44.functions.invoke('matchBet', {
+          offer_id: firstAvailableOffer.id,
+          amount: stakeNum,
+          wallet_address: wallet
+        });
+        console.log('[PlaceBetPanel] matchBet response:', res.data);
+      } else {
+        // No LP available - block betting (strict LP-first model)
+        console.log('[PlaceBetPanel] No LP available for outcome:', selectedOutcome, '- blocking bet');
+        throw new Error(`No liquidity available for ${outcomeLabel}. LP must seed this outcome first.`);
+      }
       }
       if (res.data?.error) throw new Error(res.data.error);
       // Include commit_data in instruction for post-tx commit
@@ -582,7 +575,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
 
       <Button
         onClick={handleGetInstruction}
-        disabled={stakeNum <= 0 || isPreparing || isBettingClosed}
+        disabled={stakeNum <= 0 || isPreparing || isBettingClosed || bettingMode === 'no_liquidity'}
         className="w-full h-12 font-heading font-bold text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
         
         {(() => {
@@ -597,6 +590,11 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
         <>
               <Clock className="w-4 h-4 mr-2" />
               Betting Closed
+            </> :
+        bettingMode === 'no_liquidity' ?
+        <>
+              <Wallet className="w-4 h-4 mr-2" />
+              No Liquidity Available
             </> :
         bettingMode === 'dynamic_pool' ?
         <>
