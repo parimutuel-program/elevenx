@@ -110,17 +110,17 @@ Deno.serve(async (req) => {
         offer_id: null, // CRITICAL: null for parimutuel - no separate offer created
         outcome,
         amount,
-        role: 'lp', // CRITICAL: This is an LP position, not a matcher bet
+        role: 'matcher', // CRITICAL: Treat as bet (UI shows in My Bets tab)
         status: 'active',
         outcome_label: outcomeLabel,
         match_title: match ? `${match.team_a} vs ${match.team_b}` : '',
         potential_payout: 0,
         wallet_address: walletAddress,
-        // LP-specific fields
+        // Parimutuel bet fields (self-backed)
         liquidity_deposited: amount,
         liquidity_matched: 0,
         liquidity_unmatched: amount,
-        _isParimutuel: true, // CRITICAL: Flag for UI to treat as bet, not LP position
+        _isParimutuel: true, // CRITICAL: Flag for UI to allow withdrawal of unmatched
       },
       betUpdate: {
         bet_id,
