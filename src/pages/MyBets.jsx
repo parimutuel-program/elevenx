@@ -251,7 +251,9 @@ export default function MyBets() {
       }
     }
     setPendingWithdrawTx(null);
+    // Invalidate both lpOffers AND myBets to refresh totals and remove withdrawn bets
     queryClient.invalidateQueries({ queryKey: ['lpOffers', walletAddress] });
+    queryClient.invalidateQueries({ queryKey: ['myBets'] });
   };
 
   const handleWithdrawError = (err) => {

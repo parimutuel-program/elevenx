@@ -120,7 +120,18 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
   });
 
   const handleWithdrawSuccess = async (txResult) => {
-    await base44.entities.UserBet.update(bet.id, { liquidity_unmatched: 0 });
+    const signature = txResult.signature;
+    // Commit withdrawal to DB
+    try {
+      await base44.functions.invoke('finalizeWithdrawal', {
+        signature,
+        userBetId: bet.id,
+        offerId: bet.offer_id
+      });
+    } catch (err) {
+      console.error('[BetCard] finalizeWithdrawal error:', err);
+    }
+    // Invalidate queries to refresh UI - bet will disappear or update
     queryClient.invalidateQueries({ queryKey: ['myBets'] });
     setWithdrawDialogOpen(false);
   };
