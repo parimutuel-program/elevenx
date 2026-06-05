@@ -193,13 +193,22 @@ Deno.serve(async (req) => {
     
     const claimAmount = positionData.potential_payout || positionData.claimable || BigInt(0);
     
+    // Build accounts array in the EXACT order required by ClaimWinnings struct:
+    // 1. market (mutable, PDA)
+    // 2. bet_position (mutable, PDA)
+    // 3. fee_vault (mutable, PDA)
+    // 4. bettor (mutable, signer)
+    // 5. system_program (readonly, not signer)
     const claimInstruction = {
       instruction_type: 'claim_winnings',
       programId: SOLANA_PROGRAM_ID,
-      marketPda: marketPda.toBase58(),
-      positionPda: positionPda.toBase58(),
-      feeVaultPda: feeVaultPda.toBase58(),
-      bettorPubkey: trimmedWallet,
+      keys: [
+        { pubkey: marketPda.toBase58(), isSigner: false, isWritable: true },
+        { pubkey: positionPda.toBase58(), isSigner: false, isWritable: true },
+        { pubkey: feeVaultPda.toBase58(), isSigner: false, isWritable: true },
+        { pubkey: trimmedWallet, isSigner: true, isWritable: true },
+        { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false },
+      ],
       amountLamports: Number(claimAmount),
     };
     

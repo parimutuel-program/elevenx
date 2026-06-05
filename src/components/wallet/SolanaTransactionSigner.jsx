@@ -236,16 +236,23 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         console.log('Creating claim_winnings program instruction:', instruction);
         
         const programId = new PublicKey(instruction.programId);
+        
+        // Use keys array from instruction (includes all 5 required accounts)
         const keys = instruction.keys?.map(k => ({
           pubkey: new PublicKey(k.pubkey),
           isSigner: k.isSigner,
           isWritable: k.isWritable,
-        })) || [
-          { pubkey: new PublicKey(instruction.marketPda), isSigner: false, isWritable: true },
-          { pubkey: new PublicKey(instruction.positionPda), isSigner: false, isWritable: true },
-          { pubkey: new PublicKey(instruction.feeVaultPda), isSigner: false, isWritable: true },
-          { pubkey: new PublicKey(instruction.bettorPubkey), isSigner: false, isWritable: true },
-        ];
+        }));
+        
+        if (!keys || keys.length !== 5) {
+          throw new Error('claim_winnings requires exactly 5 accounts');
+        }
+        
+        console.log('[SolanaTransactionSigner] claim_winnings keys:', keys.map(k => ({
+          pubkey: k.pubkey.toBase58(),
+          isSigner: k.isSigner,
+          isWritable: k.isWritable,
+        })));
         
         // Create 8-byte Anchor discriminator for claim_winnings
         const data = await anchorDiscriminator('claim_winnings');
