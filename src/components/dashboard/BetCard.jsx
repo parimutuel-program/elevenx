@@ -321,7 +321,7 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
         transition={{ delay: index * 0.05 }}
         className="h-full"
       >
-        <Card className="bg-card border border-border/50 rounded-2xl overflow-hidden h-full flex flex-col">
+        <Card className="bg-[#1c1c1c] border border-primary/20 rounded-2xl overflow-hidden h-full flex flex-col">
           <CardContent className="p-0 flex-1 flex flex-col">
             <div className="p-5 space-y-4 flex-1 flex flex-col">
               {/* Header with Flag */}
@@ -362,7 +362,7 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
               </div>
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-3 gap-3 bg-secondary/30 rounded-xl p-4">
+              <div className="grid grid-cols-3 gap-3 bg-[#1a1a1a] rounded-xl p-4 border border-border/30">
                 <div>
                   <p className="text-[10px] text-muted-foreground mb-1">
                     {bet.betCount && bet.betCount > 1 ? 'Total Stake' : 'Stake'}
@@ -385,7 +385,7 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
 
               {/* Pool Share Display - For parimutuel LP bets only */}
               {isParimutuelActive && (
-                <div className="bg-gradient-to-br from-accent/10 to-primary/10 border border-accent/20 rounded-xl p-4 space-y-3">
+                <div className="bg-gradient-to-br from-accent/5 to-primary/5 border border-accent/20 rounded-xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <PieChart className="w-4 h-4 text-accent" />
@@ -406,7 +406,7 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
 
               {/* Match Progress Gauge - For fixed-odds bets only */}
               {!isParimutuelActive && (bet.status === 'pending' || bet.status === 'active') && (
-                <div className="bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20 rounded-xl p-4 space-y-3">
+                <div className="bg-gradient-to-br from-primary/5 to-accent/5 border border-primary/20 rounded-xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Target className={`w-4 h-4 ${isFullyMatched ? 'text-accent' : 'text-primary'}`} />
