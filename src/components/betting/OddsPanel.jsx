@@ -183,9 +183,19 @@ export default function OddsPanel({ bet, match, onSelectOutcome, selectedOutcome
           )}
         </h3>
         <div className="flex items-center gap-2">
-          <Badge className={`text-[10px] ${bet?.status === 'open' ? 'bg-accent/20 text-accent' : 'bg-secondary text-secondary-foreground'}`}>
-            {bet?.status}
-          </Badge>
+          {(() => {
+            const now = new Date().getTime();
+            const closeTime = bet?.open_until ? new Date(bet.open_until).getTime() : 0;
+            const isWindowClosed = closeTime > 0 && now > closeTime;
+            const displayStatus = isWindowClosed ? 'closed' : (bet?.status || 'open');
+            const isActuallyOpen = !isWindowClosed && bet?.status === 'open';
+            
+            return (
+              <Badge className={`text-[10px] ${isActuallyOpen ? 'bg-accent/20 text-accent' : 'bg-destructive/20 text-destructive'}`}>
+                {displayStatus}
+              </Badge>
+            );
+          })()}
           {onRefreshOdds && (
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onRefreshOdds} disabled={isRefreshingOdds}>
               <RefreshCw className={`w-3 h-3 ${isRefreshingOdds ? 'animate-spin' : ''}`} />
