@@ -115,13 +115,22 @@ export default function LpDashboard() {
   const { data: myOffers = [], refetch: refetchOffers } = useQuery({
     queryKey: ['myOffers', walletAddress],
     queryFn: async () => {
+      console.log('=== LP QUERY STARTED ===');
+      console.log('walletAddress:', walletAddress);
+      console.log('enabled:', !!walletAddress);
+      
       // Fetch ALL UserBets for this wallet, then filter for role='lp' client-side
       const allUserBets = await base44.entities.UserBet.list('-created_date', 100);
-      const lpUserBets = allUserBets.filter((ub) => ub.wallet_address === walletAddress && ub.role === 'lp');
-
-      console.log('=== LP DEBUG ===');
-      console.log('All UserBets:', allUserBets.length);
-      console.log('LP UserBets (role=lp, wallet match):', lpUserBets);
+      console.log('Total UserBets fetched:', allUserBets.length);
+      
+      const lpUserBets = allUserBets.filter((ub) => {
+        const match = ub.wallet_address === walletAddress && ub.role === 'lp';
+        console.log('UserBet check:', ub.id, 'wallet:', ub.wallet_address, 'role:', ub.role, 'matches:', match);
+        return match;
+      });
+      
+      console.log('LP UserBets found:', lpUserBets.length);
+      console.log('LP UserBets:', lpUserBets);
 
       const offersWithDetails = await Promise.all(lpUserBets.map(async (ub) => {
         console.log('Processing UserBet:', ub.id, 'offer_id:', ub.offer_id);
