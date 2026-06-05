@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import OddsPanel from '@/components/betting/OddsPanel';
-import OfferBook from '@/components/betting/OfferBook';
 import PlaceBetPanel from '@/components/betting/PlaceBetPanel';
 
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
@@ -511,12 +510,7 @@ export default function MatchDetail() {
         </p>
       }
 
-      {/* ── Open Offer Book ── */}
-      {hasBet &&
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <OfferBook betId={bet.id} bet={bet} onSelectOffer={isOpen ? handleSelectOffer : undefined} />
-        </motion.div>
-      }
+
 
       {/* ── Admin: Settle ── */}
       {hasBet && isAdmin && !isSettled && (match.status === 'finished' || isOpen) &&
