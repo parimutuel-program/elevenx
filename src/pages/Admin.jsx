@@ -34,7 +34,7 @@ export default function Admin() {
     queryFn: async () => {
       const bets = await base44.entities.Bet.list();
       return bets;
-    },
+    }
   });
 
   const { data: allMatches = {} } = useQuery({
@@ -42,11 +42,11 @@ export default function Admin() {
     queryFn: async () => {
       const matches = await base44.entities.Match.list();
       const matchMap = {};
-      matches.forEach(m => {
+      matches.forEach((m) => {
         matchMap[m.id] = m;
       });
       return matchMap;
-    },
+    }
   });
 
   const handleSettle = async (bet, outcome) => {
@@ -55,7 +55,7 @@ export default function Admin() {
       const res = await base44.functions.invoke('settleMarketOnChain', {
         bet_id: bet.id,
         winning_outcome: outcome,
-        admin_wallet: walletAddress,
+        admin_wallet: walletAddress
       });
 
       if (res.data.error) {
@@ -66,7 +66,7 @@ export default function Admin() {
       setSettleDialog({
         instruction: res.data.solana_instruction,
         bet,
-        outcome,
+        outcome
       });
     } catch (err) {
       alert('Failed to prepare settlement: ' + err.message);
@@ -79,7 +79,7 @@ export default function Admin() {
       const res = await base44.functions.invoke('settleMarketOnChain', {
         bet_id: bet.id,
         winning_outcome: 'void',
-        admin_wallet: walletAddress,
+        admin_wallet: walletAddress
       });
 
       if (res.data.error) {
@@ -89,7 +89,7 @@ export default function Admin() {
 
       setVoidDialog({
         instruction: res.data.solana_instruction,
-        bet,
+        bet
       });
     } catch (err) {
       alert('Failed to prepare void: ' + err.message);
@@ -150,30 +150,30 @@ export default function Admin() {
             <Card className="bg-white border border-gray-200 p-4">
               <h2 className="font-heading font-bold text-xl text-black mb-4">Betting Markets ({allBets.length})</h2>
               
-              {isLoadingBets ? (
-                <div className="flex items-center justify-center py-12">
+              {isLoadingBets ?
+              <div className="flex items-center justify-center py-12">
                   <Loader className="w-6 h-6 animate-spin text-blue-600 mr-2" />
                   <span className="text-gray-600">Loading bets...</span>
-                </div>
-              ) : allBets.length === 0 ? (
-                <div className="flex items-center gap-3 py-6">
+                </div> :
+              allBets.length === 0 ?
+              <div className="flex items-center gap-3 py-6">
                   <AlertCircle className="w-5 h-5 text-gray-400" />
                   <p className="text-gray-600">No bets found</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {allBets.map((bet) => (
-                    <div key={bet.id} className="border border-gray-200 rounded-lg p-3">
+                </div> :
+
+              <div className="space-y-4">
+                  {allBets.map((bet) =>
+                <div key={bet.id} className="border border-gray-200 rounded-lg p-3">
                       <AdminBetRow
-                        bet={bet}
-                        match={allMatches[bet.match_id]}
-                        onSettle={handleSettle}
-                        onVoid={handleVoid}
-                      />
+                    bet={bet}
+                    match={allMatches[bet.match_id]}
+                    onSettle={handleSettle}
+                    onVoid={handleVoid} />
+                  
                     </div>
-                  ))}
+                )}
                 </div>
-              )}
+              }
             </Card>
           </TabsContent>
 
@@ -195,8 +195,8 @@ export default function Admin() {
                       alert('Error: ' + err.message);
                     }
                   }}
-                  className="h-24 flex flex-col gap-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl"
-                >
+                  className="h-24 flex flex-col gap-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl">
+                  
                   <span className="font-bold text-lg text-black">⚡ Create Quick Test</span>
                   <span className="text-xs text-gray-600">Instant match + bet</span>
                 </Button>
@@ -210,8 +210,8 @@ export default function Admin() {
                       alert('Error: ' + err.message);
                     }
                   }}
-                  className="h-24 flex flex-col gap-2 bg-green-50 hover:bg-green-100 border border-green-200 rounded-xl"
-                >
+                  className="h-24 flex flex-col gap-2 bg-green-50 hover:bg-green-100 border border-green-200 rounded-xl">
+                  
                   <span className="font-bold text-lg text-black">🚀 Bulk Deploy</span>
                   <span className="text-xs text-gray-600">All matches</span>
                 </Button>
@@ -225,8 +225,8 @@ export default function Admin() {
                       alert('Error: ' + err.message);
                     }
                   }}
-                  className="h-24 flex flex-col gap-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl"
-                >
+                  className="h-24 flex flex-col gap-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl">
+                  
                   <span className="font-bold text-lg text-black">🌍 Sync World Cup</span>
                   <span className="text-xs text-gray-600">Fetch from API</span>
                 </Button>
@@ -239,8 +239,8 @@ export default function Admin() {
                       alert('Error: ' + err.message);
                     }
                   }}
-                  className="h-24 flex flex-col gap-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl"
-                >
+                  className="h-24 flex flex-col gap-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl">
+                  
                   <span className="font-bold text-lg text-black">📊 Deploy Futures</span>
                   <span className="text-xs text-gray-600">All countries</span>
                 </Button>
@@ -254,8 +254,8 @@ export default function Admin() {
                       alert('Error: ' + err.message);
                     }
                   }}
-                  className="h-24 flex flex-col gap-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl"
-                >
+                  className="h-24 flex flex-col gap-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl">
+                  
                   <span className="font-bold text-lg text-black">📈 Live Odds Bet</span>
                   <span className="text-xs text-gray-600">Real API odds</span>
                 </Button>
@@ -269,8 +269,8 @@ export default function Admin() {
                       alert('Error: ' + err.message);
                     }
                   }}
-                  className="h-24 flex flex-col gap-2 bg-green-50 hover:bg-green-100 border border-green-200 rounded-xl"
-                >
+                  className="h-24 flex flex-col gap-2 bg-green-50 hover:bg-green-100 border border-green-200 rounded-xl">
+                  
                   <span className="font-bold text-lg text-black">🎯 API Match</span>
                   <span className="text-xs text-gray-600">Real match data</span>
                 </Button>
@@ -284,8 +284,8 @@ export default function Admin() {
                       alert('Error: ' + err.message);
                     }
                   }}
-                  className="h-24 flex flex-col gap-2 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl"
-                >
+                  className="h-24 flex flex-col gap-2 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl">
+                  
                   <span className="font-bold text-lg text-black">🔄 Reset & Sync</span>
                   <span className="text-xs text-gray-600">Clear all data</span>
                 </Button>
@@ -299,8 +299,8 @@ export default function Admin() {
                       alert('Error: ' + err.message);
                     }
                   }}
-                  className="h-24 flex flex-col gap-2 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl"
-                >
+                  className="h-24 flex flex-col gap-2 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl">
+                  
                   <span className="font-bold text-lg text-black">🗑️ Clear DB</span>
                   <span className="text-xs text-gray-600">Delete everything</span>
                 </Button>
@@ -309,8 +309,8 @@ export default function Admin() {
           </TabsContent>
 
           <TabsContent value="platform" className="mt-4">
-            <Card className="bg-card/50 border-border/50 p-6">
-              <h2 className="font-heading font-bold text-xl text-white mb-4">Platform Settings</h2>
+            <Card className="border-border/50 p-6">
+              <h2 className="font-heading font-bold text-xl mb-4 text-[hsl(var(--background))]">Platform Settings</h2>
               <div className="grid grid-cols-2 gap-3">
                 <Button
                   onClick={async () => {
@@ -321,8 +321,8 @@ export default function Admin() {
                       alert('Error: ' + err.message);
                     }
                   }}
-                  className="h-16 bg-secondary/20 hover:bg-secondary/30 border border-secondary/40 rounded-xl"
-                >
+                  className="h-16 bg-secondary/20 hover:bg-secondary/30 border border-secondary/40 rounded-xl">
+                  
                   Init Platform
                 </Button>
                 <Button
@@ -334,8 +334,8 @@ export default function Admin() {
                       alert('Error: ' + err.message);
                     }
                   }}
-                  className="h-16 bg-secondary/20 hover:bg-secondary/30 border border-secondary/40 rounded-xl"
-                >
+                  className="h-16 bg-secondary/20 hover:bg-secondary/30 border border-secondary/40 rounded-xl">
+                  
                   Check Config
                 </Button>
                 <Button
@@ -347,8 +347,8 @@ export default function Admin() {
                       alert('Error: ' + err.message);
                     }
                   }}
-                  className="h-16 bg-secondary/20 hover:bg-secondary/30 border border-secondary/40 rounded-xl"
-                >
+                  className="h-16 bg-secondary/20 hover:bg-secondary/30 border border-secondary/40 rounded-xl">
+                  
                   Debug Admin
                 </Button>
                 <Button
@@ -360,8 +360,8 @@ export default function Admin() {
                       alert('Error: ' + err.message);
                     }
                   }}
-                  className="h-16 bg-secondary/20 hover:bg-secondary/30 border border-secondary/40 rounded-xl"
-                >
+                  className="h-16 bg-secondary/20 hover:bg-secondary/30 border border-secondary/40 rounded-xl">
+                  
                   Full Test
                 </Button>
               </div>
@@ -369,50 +369,50 @@ export default function Admin() {
           </TabsContent>
         </Tabs>
 
-        {settleDialog && (
-          <Card className="bg-card border-border p-6 fixed inset-4 z-50 max-w-lg mx-auto my-auto">
+        {settleDialog &&
+        <Card className="bg-card border-border p-6 fixed inset-4 z-50 max-w-lg mx-auto my-auto">
             <div className="space-y-4">
               <h3 className="font-heading font-bold text-lg text-white">Settle Market</h3>
               <p className="text-sm text-muted-foreground">Outcome: <span className="text-primary font-bold">{settleDialog.outcome.toUpperCase()}</span></p>
               <SolanaTransactionSigner
-                instruction={settleDialog.instruction}
-                amount={0}
-                onSuccess={handleSettleSuccess}
-                onError={(err) => console.error('[Admin] Settlement failed:', err)}
-              />
+              instruction={settleDialog.instruction}
+              amount={0}
+              onSuccess={handleSettleSuccess}
+              onError={(err) => console.error('[Admin] Settlement failed:', err)} />
+            
               <Button
-                onClick={() => setSettleDialog(null)}
-                variant="outline"
-                className="w-full"
-              >
+              onClick={() => setSettleDialog(null)}
+              variant="outline"
+              className="w-full">
+              
                 Cancel
               </Button>
             </div>
           </Card>
-        )}
+        }
 
-        {voidDialog && (
-          <Card className="bg-card border-border p-6 fixed inset-4 z-50 max-w-lg mx-auto my-auto">
+        {voidDialog &&
+        <Card className="bg-card border-border p-6 fixed inset-4 z-50 max-w-lg mx-auto my-auto">
             <div className="space-y-4">
               <h3 className="font-heading font-bold text-lg text-white">Void Market</h3>
               <p className="text-sm text-muted-foreground">This will refund all bettors</p>
               <SolanaTransactionSigner
-                instruction={voidDialog.instruction}
-                amount={0}
-                onSuccess={handleVoidSuccess}
-                onError={(err) => console.error('[Admin] Void failed:', err)}
-              />
+              instruction={voidDialog.instruction}
+              amount={0}
+              onSuccess={handleVoidSuccess}
+              onError={(err) => console.error('[Admin] Void failed:', err)} />
+            
               <Button
-                onClick={() => setVoidDialog(null)}
-                variant="outline"
-                className="w-full"
-              >
+              onClick={() => setVoidDialog(null)}
+              variant="outline"
+              className="w-full">
+              
                 Cancel
               </Button>
             </div>
           </Card>
-        )}
+        }
       </div>
-    </div>
-  );
+    </div>);
+
 }
