@@ -69,8 +69,8 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
   // Fixed odds mode: bet against existing LP offers
   const hasLiquidityForOutcome = selectedOutcome ? totalLiquidityForOutcome > 0 : selectedOffer ? true : false;
   
-  // Determine betting mode: fixed_lp (bet against LP) or no_liquidity (wait for LP)
-  const bettingMode = selectedOffer ? 'fixed_lp' : totalLiquidityForOutcome > 0 ? 'fixed_lp' : 'no_liquidity';
+  // Betting mode: fixed_lp (bet against LP) or no_liquidity (wait for LP)
+  const bettingMode = totalLiquidityForOutcome > 0 || selectedOffer ? 'fixed_lp' : 'no_liquidity';
 
   console.log('[PlaceBetPanel] Liquidity calculation:', {
     selectedOutcome,
@@ -376,11 +376,11 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs text-muted-foreground">
             {selectedOffer ? (
-              `Max stake: ◎${Number(maxMatcherStake || 0).toFixed(4)} @ ${odds.toFixed(2)}x — locked immediately`
+              `Max stake: ◎${Number(maxMatcherStake || 0).toFixed(4)} @ ${odds.toFixed(2)}x`
             ) : hasLiquidityForOutcome ? (
-              `Max stake: ◎${Number(maxMatcherStake || 0).toFixed(4)} @ ${odds.toFixed(2)}x — limited by LP liquidity`
+              `Max stake: ◎${Number(maxMatcherStake || 0).toFixed(4)} @ ${odds.toFixed(2)}x`
             ) : (
-              <span className="text-accent font-bold">⏳ Pending — your bet waits for LP to seed this outcome</span>
+              <span className="text-accent font-bold">⏳ No liquidity — LP must seed this outcome first</span>
             )}
           </p>
           <button

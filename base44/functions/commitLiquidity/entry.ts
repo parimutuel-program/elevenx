@@ -50,14 +50,11 @@ Deno.serve(async (req) => {
       console.log('[commitLiquidity] Created new BetOffer:', offerId);
     }
     
-    // Commit UserBet (includes LP-specific fields)
-    // Traditional LP (role='lp') has commit_data.offer with bet_id
-    const isTraditionalLp = !!commit_data.offer?.bet_id;
-    
+    // Commit UserBet for LP position (fixed odds betting)
     const newUserBet = await serviceRole.entities.UserBet.create({
       ...userBet,
-      offer_id: isTraditionalLp ? offerId : null,
-      role: userBet.role || 'lp', // Ensure role is set to 'lp'
+      offer_id: offerId,
+      role: 'lp', // Fixed odds LP position
       // Ensure LP fields are set
       liquidity_deposited: userBet.liquidity_deposited || userBet.amount,
       liquidity_matched: userBet.liquidity_matched || 0,
