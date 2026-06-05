@@ -1,11 +1,10 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { PublicKey } from 'npm:@solana/web3.js@1.98.4';
+import { Buffer } from 'node:buffer';
 
 // Provides liquidity for futures markets (tournament winners, player awards).
 // LP bets AGAINST a specific outcome (e.g., against Brazil winning World Cup).
-// Admin-only function.
-
-const PROGRAM_ID = '4epUYJPwoPhG9RPoQ6qT9dsAewJCDBSCGUpR1Xj9UxTm';
-const RPC_URL = 'https://api.devnet.solana.com';
+// Uses REAL Solana PDA derivation for on-chain compatibility.
 
 Deno.serve(async (req) => {
   try {
@@ -15,10 +14,15 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { walletAddress, market_id, outcome_label, outcome_flag, odds, amount } = await req.json();
+    const { walletAddress, market_id, outcome_label, odds, amount } = await req.json();
 
     if (!walletAddress || !market_id || !outcome_label || !odds || !amount) {
       return Response.json({ error: 'Missing required parameters' }, { status: 400 });
+    }
+
+    const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA__PROGRAM_ID');
+    if (!SOLANA_PROGRAM_ID) {
+      return Response.json({ error: 'SOLANA__PROGRAM_ID not configured' }, { status: 500 });
     }
 
     // Fetch futures market
@@ -31,63 +35,64 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Market is not open for liquidity' }, { status: 400 });
     }
 
-    // Find the outcome in the market
-    const outcome = market.outcomes?.find(o => o.label === outcome_label);
-    if (!outcome) {
-      return Response.json({ error: 'Outcome not found in market' }, { status: 404 });
+    // Find the outcome in the market to get the correct index (0, 1, or 2)
+    const outcomeIndex = market.outcomes?.findIndex(o => o.label === outcome_label);
+    if (outcomeIndex === -1 || outcomeIndex === undefined) {
+      return Response.json({ error: 'Outcome not found in market outcomes' }, { status: 404 });
     }
 
     // Convert amount to lamports (1 SOL = 1e9 lamports)
     const amountLamports = Math.floor(amount * 1e9);
 
-    // Generate PDA for the futures LP position
-    // Use market_id and walletAddress as seeds
-    const marketSeed = new TextEncoder().encode(`futures:${market_id}`);
-    const walletSeed = new TextEncoder().encode(walletAddress);
+    // Derive REAL on-chain Solana PDAs
+    const programId = new PublicKey(SOLANA_PROGRAM_ID);
+    const lpPubkey = new PublicKey(walletAddress);
     
-    // Simple hash for PDA (in production, use proper derivePDA)
-    const hashBuffer = await crypto.subtle.digest('SHA-256', new Uint8Array([...marketSeed, ...walletSeed]));
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const pdaSeed = hashArray.slice(0, 32).join('');
+    // Derive market PDA
+    const marketIdBytes = Buffer.from(market_id.padEnd(32, '\0').slice(0, 32));
+    const [marketPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('market'), marketIdBytes],
+      programId
+    );
     
-    const lpOfferPda = `LP_${pdaSeed}_${outcome_label.replace(/\s/g, '_')}`;
+    // Derive LP offer PDA
+    const [lpOfferPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('lp_offer'), marketPda.toBuffer(), lpPubkey.toBuffer(), Buffer.from([outcomeIndex])],
+      programId
+    );
 
-    // Create UserBet record for LP
+    // Derive platform config PDA
+    const [platformConfigPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('platform')],
+      programId
+    );
+
+    // Create UserBet record for LP using standard hex id (auto-generated)
     const userBet = await base44.entities.UserBet.create({
-      bet_id: market_id, // Use market_id as bet_id for futures
+      bet_id: market_id,
       match_id: market_id,
-      offer_id: lpOfferPda,
+      offer_id: "", // Will be linked during commit once BetOffer is created
       role: 'lp',
-      outcome: 'a', // Simplified for futures
+      outcome: outcomeIndex === 0 ? 'a' : outcomeIndex === 1 ? 'b' : 'draw',
       amount: amount,
-      potential_payout: amount * odds, // LP receives stake * odds if outcome wins
+      potential_payout: amount * odds,
       status: 'pending',
       outcome_label: outcome_label,
       match_title: market.title,
       wallet_address: walletAddress,
     });
 
-    // Build Solana instruction for provide_liquidity
-    // This is a simplified version - in production, use proper Anchor instruction encoding
+    // Build valid Solana provide_liquidity instruction
     const instruction = {
-      instruction_type: 'provide_futures_liquidity',
-      programId: PROGRAM_ID,
-      marketPda: `FUTURES_${market_id}`,
-      lpOfferPda: lpOfferPda,
-      amountLamports: amountLamports,
-      outcome: 0, // Simplified
+      instruction_type: 'provide_liquidity',
+      programId: SOLANA_PROGRAM_ID,
       accounts: {
-        market: `FUTURES_${market_id}`,
-        lpOffer: lpOfferPda,
-        lp: walletAddress,
+        market: marketPda.toBase58(),
+        lpOffer: lpOfferPda.toBase58(),
+        platformConfig: platformConfigPda.toBase58(),
       },
-      instruction_data: btoa(JSON.stringify({
-        market_id,
-        outcome_label,
-        odds,
-        amount,
-        wallet: walletAddress,
-      })),
+      outcome: outcomeIndex,
+      amountLamports: amountLamports,
     };
 
     return Response.json({
@@ -95,12 +100,13 @@ Deno.serve(async (req) => {
       solana_instruction: instruction,
       commit_data: {
         userBetId: userBet.id,
-        offerId: lpOfferPda,
         market_id,
         outcome_label,
         amount,
         odds,
         walletAddress,
+        solana_position_pda: lpOfferPda.toBase58(),
+        solana_bet_pool_pda: marketPda.toBase58(),
       },
     });
   } catch (error) {
