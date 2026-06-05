@@ -102,30 +102,11 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
         boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)'
       }}
     >
-      {/* Type Badge - FUTURES vs MATCH */}
-      <div className={`absolute top-3 left-3 z-10 ${
-        isFutures 
-          ? 'bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 border-yellow-500/40 text-yellow-400' 
-          : 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/30 text-primary'
-      } border backdrop-blur-sm rounded-lg px-2.5 py-1 flex items-center gap-1.5`}>
-        {isFutures ? (
-          <>
-            <Trophy className="w-3 h-3" />
-            <span className="text-[9px] font-bold uppercase tracking-wider">Futures LP</span>
-          </>
-        ) : (
-          <>
-            <Calendar className="w-3 h-3" />
-            <span className="text-[9px] font-bold uppercase tracking-wider">Match LP</span>
-          </>
-        )}
-      </div>
-      
       {/* Glow effect */}
       <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-10`} 
         style={{ background: isFutures ? '#fbbf24' : isFullyMatched ? '#14f195' : isPartiallyMatched ? '#fbbf24' : '#a69cf2' }} />
 
-      <div className="relative p-4 sm:p-5 pt-10 space-y-3">
+      <div className="relative p-4 sm:p-5 space-y-3">
         {/* Header - Outcome & Status */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -165,9 +146,29 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
             </div>
           </div>
           <div className="flex flex-col items-end gap-1">
-            <Badge className={`${currentStatus.bg} ${currentStatus.border} ${currentStatus.color} text-[9px] sm:text-[10px] font-bold border`}>
-              {offer.status.replace('_', ' ')}
-            </Badge>
+            <div className="flex items-center gap-1.5">
+              {/* Type Badge - FUTURES vs MATCH */}
+              <div className={`${
+                isFutures 
+                  ? 'bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 border-yellow-500/40 text-yellow-400' 
+                  : 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/30 text-primary'
+              } border backdrop-blur-sm rounded-md px-1.5 py-0.5 flex items-center gap-1`}>
+                {isFutures ? (
+                  <>
+                    <Trophy className="w-2.5 h-2.5" />
+                    <span className="text-[8px] font-bold uppercase tracking-wider">Futures</span>
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="w-2.5 h-2.5" />
+                    <span className="text-[8px] font-bold uppercase tracking-wider">Match</span>
+                  </>
+                )}
+              </div>
+              <Badge className={`${currentStatus.bg} ${currentStatus.border} ${currentStatus.color} text-[9px] sm:text-[10px] font-bold border`}>
+                {offer.status.replace('_', ' ')}
+              </Badge>
+            </div>
             {!isFutures && matchData.match_end_time && (
               <BetCountdown openUntil={matchData.match_end_time} label="Betting closes" className="text-[8px]" />
             )}
