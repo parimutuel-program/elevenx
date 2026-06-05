@@ -24,21 +24,27 @@ export function WalletProvider({ children }) {
   // Restore wallet session from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem(WALLET_SESSION_KEY);
+    console.log('[WalletContext] localStorage key:', WALLET_SESSION_KEY);
+    console.log('[WalletContext] Saved value:', saved);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         const address = normalizeWalletAddress(parsed.address || parsed);
+        console.log('[WalletContext] Parsed address:', address);
         if (address) {
           console.log('[WalletContext] Restored session:', address.slice(0, 8) + '...');
           setWalletAddress(address);
           setIsConnected(true);
         } else {
+          console.log('[WalletContext] Address normalization failed');
           localStorage.removeItem(WALLET_SESSION_KEY);
         }
       } catch (err) {
         console.error('[WalletContext] Failed to parse wallet session:', err);
         localStorage.removeItem(WALLET_SESSION_KEY);
       }
+    } else {
+      console.log('[WalletContext] No saved wallet session found');
     }
   }, []);
 
