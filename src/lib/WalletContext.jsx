@@ -4,6 +4,18 @@ const WalletContext = createContext(null);
 
 const WALLET_SESSION_KEY = 'elevenx_wallet_session';
 
+// Helper to normalize and validate wallet addresses
+const normalizeWalletAddress = (addr) => {
+  if (!addr || typeof addr !== 'string') return null;
+  const trimmed = addr.trim();
+  const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+  if (!base58Regex.test(trimmed)) {
+    console.error('[WalletContext] Invalid address format:', trimmed.slice(0, 8) + '...');
+    return null;
+  }
+  return trimmed;
+};
+
 export function WalletProvider({ children }) {
   const [walletAddress, setWalletAddress] = useState(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -13,24 +25,14 @@ export function WalletProvider({ children }) {
   useEffect(() => {
     const saved = localStorage.getItem(WALLET_SESSION_KEY);
     if (saved) {
-      console.log('[WalletContext] Restoring session:', saved);
       try {
         const parsed = JSON.parse(saved);
-        const address = parsed.address || parsed;
-        console.log('[WalletContext] Parsed address:', address);
-        console.log('[WalletContext] Address length:', address?.length);
-        // Validate Solana address format (base58, 32-44 chars)
-        const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-        const isValid = address && base58Regex.test(address);
-        console.log('[WalletContext] Regex test result:', isValid);
-        if (isValid) {
-          console.log('[WalletContext] Setting wallet as connected:', address.slice(0, 8) + '...');
+        const address = normalizeWalletAddress(parsed.address || parsed);
+        if (address) {
+          console.log('[WalletContext] Restored session:', address.slice(0, 8) + '...');
           setWalletAddress(address);
           setIsConnected(true);
         } else {
-          // Clear corrupted address
-          console.error('[WalletContext] Invalid address format, clearing');
-          console.error('[WalletContext] Invalid chars:', address?.split('').filter(c => !/^[1-9A-HJ-NP-Za-km-z]$/.test(c)));
           localStorage.removeItem(WALLET_SESSION_KEY);
         }
       } catch (err) {
@@ -55,68 +57,32 @@ export function WalletProvider({ children }) {
     }
     setIsConnecting(true);
     try {
-      // Phantom's connect() returns { publicKey: PublicKey } directly
       const { publicKey } = await phantom.connect();
+      let address = publicKey?.toBase58?.() || publicKey?.toString?.() || String(publicKey);
+      address = normalizeWalletAddress(address);
       
-      // Handle publicKey - it's a PublicKey object with toBase58() method
-      let address;
-      if (publicKey && typeof publicKey.toBase58 === 'function') {
-        address = publicKey.toBase58();
-      } else if (publicKey && typeof publicKey.toString === 'function') {
-        address = publicKey.toString();
-      } else {
-        address = String(publicKey);
-      }
-      
-      // Trim and clean the address
-      address = address.trim();
-      console.log('[WalletContext] Raw address from Phantom:', address);
-      console.log('[WalletContext] Address type:', typeof address);
-      console.log('[WalletContext] Address length:', address.length);
-      
-      // Validate Solana address format (base58, 32-44 chars)
-      const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-      if (!base58Regex.test(address)) {
-        console.error('[WalletContext] Invalid wallet address from Phantom:', address);
-        const invalidChars = address.split('').filter(c => !/^[1-9A-HJ-NP-Za-km-z]$/.test(c));
-        console.error('[WalletContext] Invalid characters:', invalidChars.map((c, i) => `pos${i}:'${c}'(code${c.charCodeAt(0)})`));
-        throw new Error('Invalid wallet address format — contains non-base58 characters. Invalid: ' + invalidChars.join(', '));
+      if (!address) {
+        throw new Error('Invalid wallet address from Phantom');
       }
       
       console.log('[WalletContext] Wallet connected:', address.slice(0, 8) + '...');
       setWalletAddress(address);
       setIsConnected(true);
       localStorage.setItem(WALLET_SESSION_KEY, JSON.stringify({ address, connectedAt: Date.now() }));
-      localStorage.setItem('elevenx_authenticated', 'true');
+      localStorage.setItem('elevenx_auth_token', ''); // Clear old token, will be set by walletAuth
       
       // Auto-register wallet with backend and get auth token
-      try {
-        const { base44 } = await import('@/api/base44Client');
-        console.log('[WalletContext] Calling walletAuth to register/check user...');
-        const authRes = await base44.functions.invoke('walletAuth', {
-          walletAddress: address,
-          register: true,
-        });
-        console.log('[WalletContext] walletAuth response:', authRes.data);
-        
-        if (authRes.data.authToken) {
-          // Store auth token in localStorage for backend auth
-          localStorage.setItem('elevenx_auth_token', authRes.data.authToken);
-          console.log('[WalletContext] Auth token stored');
-          
-          // Reload page to ensure base44 client uses new token
-          setTimeout(() => {
-            window.location.reload();
-          }, 500);
-        }
-        
-        if (authRes.data.isNewUser) {
-          console.log('[WalletContext] New user registered:', authRes.data.userId);
-        } else {
-          console.log('[WalletContext] Existing user:', authRes.data.userId);
-        }
-      } catch (err) {
-        console.error('[WalletContext] walletAuth failed:', err);
+      const { base44 } = await import('@/api/base44Client');
+      const authRes = await base44.functions.invoke('walletAuth', {
+        walletAddress: address,
+        register: true,
+      });
+      
+      if (authRes.data.authToken) {
+        localStorage.setItem('elevenx_auth_token', authRes.data.authToken);
+        console.log('[WalletContext] Auth token stored');
+        // Hard reload to ensure all auth state is fresh
+        window.location.reload();
       }
     } catch (err) {
       console.error('Wallet connect failed:', err);

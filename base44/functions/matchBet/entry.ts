@@ -14,6 +14,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     let { offer_id, amount, wallet_address, bet_id, match_id, outcome } = body;
+    let trimmedWallet; // Will be set after normalization
 
     console.log('[matchBet] Request:', { offer_id, amount, wallet_address, bet_id, match_id, outcome });
 
@@ -24,6 +25,17 @@ Deno.serve(async (req) => {
 
     if (!wallet_address) {
       return Response.json({ error: 'Wallet address required' }, { status: 400 });
+    }
+
+    // CRITICAL: Normalize wallet address - trim and validate format
+    trimmedWallet = wallet_address.trim();
+    const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+    if (!base58Regex.test(trimmedWallet)) {
+      console.error('[matchBet] Invalid wallet address:', trimmedWallet);
+      return Response.json({ 
+        error: 'Invalid wallet address format',
+        hint: 'Address must be 32-44 base58 characters (1-9A-HJ-NP-Za-km-z)'
+      }, { status: 400 });
     }
 
     // CRITICAL: Must have EITHER offer_id (fixed-odds) OR bet_id+match_id+outcome (parimutuel)
@@ -53,7 +65,6 @@ Deno.serve(async (req) => {
     }
 
     // Verify wallet is authenticated (exists in WalletUser entity)
-    const trimmedWallet = wallet_address.trim();
     console.log('[matchBet] Authenticating wallet:', trimmedWallet.slice(0, 8) + '...');
     
     const allWalletUsers = await serviceRole.entities.WalletUser.list();
@@ -66,23 +77,6 @@ Deno.serve(async (req) => {
       }, { status: 401 });
     }
     console.log('[matchBet] ✓ Authenticated user');
-
-    // Validate base58 format
-    const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-    if (!base58Regex.test(trimmedWallet)) {
-      console.error('[matchBet] Invalid wallet address:', trimmedWallet);
-      const invalidChars = trimmedWallet.split('').filter(c => !/^[1-9A-HJ-NP-Za-km-z]$/.test(c));
-      console.error('[matchBet] Invalid characters:', invalidChars.map((c, i) => `pos${i}:'${c}'(code${c.charCodeAt(0)})`).join(', '));
-      return Response.json({ 
-        error: 'Invalid wallet address format — contains non-base58 characters', 
-        hint: 'Address must be 32-44 base58 characters. Invalid: ' + invalidChars.map(c => `'${c.char}'@${c.position}`).join(', '),
-        debug: {
-          address: trimmedWallet,
-          length: trimmedWallet.length,
-          invalidCharacters: invalidChars
-        }
-      }, { status: 400 });
-    }
 
     // Try to create PublicKey to validate
     try {

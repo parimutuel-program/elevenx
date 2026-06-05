@@ -26,6 +26,7 @@ import LpDashboard from '@/pages/LpDashboard';
 import Futures from '@/pages/Futures';
 import RecreateMarket from '@/pages/RecreateMarket';
 import InitPlatform from '@/pages/InitPlatform';
+import Diagnostics from '@/pages/Diagnostics';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -68,7 +69,8 @@ const AuthenticatedApp = () => {
         <Route path="/futures" element={<Futures />} />
         <Route path="/recreate-market" element={<RecreateMarket />} />
         <Route path="/init-platform" element={<InitPlatform />} />
-        </Route>
+        <Route path="/diagnostics" element={<Diagnostics />} />
+      </Route>
 
       <Route path="*" element={<PageNotFound />} />
     </Routes>
