@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
     console.log('[settleMarketOnChain] Market discriminator (hex):', marketInfo.data.slice(0, 8).toString('hex'));
     
     // Validate discriminator first
-    const expectedDisc = Buffer.from(sha256.digestSync('global:market')).slice(0, 8);
+    const expectedDisc = Buffer.from(sha256('global:market')).slice(0, 8);
     const actualDisc = marketInfo.data.slice(0, 8);
     if (!expectedDisc.equals(actualDisc)) {
       console.error('[settleMarketOnChain] DISCRIMINATOR MISMATCH!');
