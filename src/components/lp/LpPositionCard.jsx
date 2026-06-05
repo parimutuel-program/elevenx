@@ -53,37 +53,34 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
     if (!onWithdrawRequest) return;
     
     try {
-      // For UserBet entities (from MyBets), use withdrawUnmatchedLiquidity function
-      // For BetOffer entities (from LP Dashboard), use withdrawLiquidity function
-      const isUserBet = !!offer.liquidity_deposited || offer.role === 'lp';
+      // Always use withdrawUnmatchedLiquidity for LP positions (UserBet entities)
+      console.log('[LpPositionCard] Withdrawing for position:', offer.id, 'offer_id:', offer.offer_id);
       
       // Call backend to prepare withdraw instruction
-      const res = isUserBet 
-        ? await base44.functions.invoke('withdrawUnmatchedLiquidity', {
-            userBetId: offer.id,
-            walletAddress
-          })
-        : await base44.functions.invoke('withdrawLiquidity', {
-            walletAddress,
-            userBetId: offer.id,
-            offer_id: offer.offer_id
-          });
+      const res = await base44.functions.invoke('withdrawUnmatchedLiquidity', {
+        userBetId: offer.userBetId || offer.id,
+        walletAddress
+      });
       
       if (res.data.error) {
         console.error('[LpPositionCard] Withdraw error:', res.data.error);
+        alert('Withdraw failed: ' + res.data.error);
         return;
       }
+      
+      console.log('[LpPositionCard] Withdraw response:', res.data);
       
       // Pass withdraw data to parent
       onWithdrawRequest({
         solanaInstruction: res.data.solana_instruction,
         withdrawAmount: res.data.amount,
-        positionId: offer.id,
+        positionId: offer.userBetId || offer.id,
         offerId: offer.offer_id || null,
         match: match
       });
     } catch (err) {
       console.error('[LpPositionCard] Withdraw failed:', err);
+      alert('Withdraw failed: ' + err.message);
     }
   };
 

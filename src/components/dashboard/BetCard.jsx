@@ -161,10 +161,13 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
   const canRefund = bet.status === 'refunded';
   const isCompleted = ['lost', 'claimed', 'void'].includes(bet.status);
   
+  // LP bet: role='lp' with unmatched liquidity - can withdraw
+  const isLp = bet.role === 'lp';
+  const unmatched = isLp && (bet.status === 'pending' || bet.status === 'active') ? (bet.liquidity_unmatched || bet.amount) : 0;
+  const canWithdraw = isLp && unmatched > 0 && (bet.status === 'pending' || bet.status === 'active');
+  
   // Parimutuel LP bet: role='lp' with no offer_id - displays as pool share, not matching progress
   const isParimutuelLp = bet.role === 'lp' && !bet.offer_id;
-  const unmatched = isParimutuelLp && (bet.status === 'pending' || bet.status === 'active') ? bet.amount : (bet.liquidity_unmatched || 0);
-  const canWithdraw = isParimutuelLp && unmatched > 0 && (bet.status === 'pending' || bet.status === 'active');
   
   // For parimutuel bets: calculate pool share instead of match progress
   const poolShare = isParimutuelLp ? calculatePoolShare(bet.amount, bet.total_pool || bet.amount) : 0;

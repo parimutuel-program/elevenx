@@ -811,32 +811,38 @@ export default function LpDashboard() {
                 console.log('Mapping', offersWithUserBet.length, 'offers...');
 
                 return offersWithUserBet.map((offer, idx) => {
-                  console.log(`Rendering offer ${idx}:`, offer.id, offer.outcome_label, offer.status);
-                  try {
-                    const match = matches.find((m) => m.id === offer.match_id);
-                    console.log(`Offer ${idx} match:`, match?.team_a, 'vs', match?.team_b, 'match_id:', offer.match_id);
+                console.log(`Rendering offer ${idx}:`, offer.id, offer.outcome_label, offer.status, 'userBetId:', offer.userBetId);
+                try {
+                  const match = matches.find((m) => m.id === offer.match_id);
+                  console.log(`Offer ${idx} match:`, match?.team_a, 'vs', match?.team_b, 'match_id:', offer.match_id);
 
-                    return (
-                      <LpPositionCard
-                        key={offer.id || offer.userBetId}
-                        position={offer}
-                        match={match}
-                        walletAddress={walletAddress}
-                        onWithdrawRequest={(withdrawData) => {
-                          console.log('[onWithdrawRequest] Withdraw triggered:', withdrawData);
-                          setPendingTx({
-                            instruction: withdrawData.solanaInstruction,
-                            amount: withdrawData.withdrawAmount,
-                            type: 'withdraw_liquidity',
-                            userBetId: withdrawData.positionId,
-                            offerId: withdrawData.offerId
-                          });
-                        }} />);
+                  return (
+                    <LpPositionCard
+                      key={offer.id || offer.userBetId}
+                      position={{...offer, userBetId: offer.userBetId || offer.id}}
+                      match={match}
+                      walletAddress={walletAddress}
+                      onWithdrawRequest={(withdrawData) => {
+                        console.log('[onWithdrawRequest] Withdraw triggered:', withdrawData);
+                        console.log('[onWithdrawRequest] Solana instruction:', withdrawData.solanaInstruction);
+                        if (!withdrawData.solanaInstruction) {
+                          console.error('[onWithdrawRequest] Missing solanaInstruction in withdrawData:', withdrawData);
+                          alert('Error: No instruction received from backend');
+                          return;
+                        }
+                        setPendingTx({
+                          instruction: withdrawData.solanaInstruction,
+                          amount: withdrawData.withdrawAmount || 0,
+                          type: 'withdraw_liquidity',
+                          userBetId: withdrawData.positionId,
+                          offerId: withdrawData.offerId
+                        });
+                      }} />);
 
-                  } catch (err) {
-                    console.error(`Error rendering offer ${idx}:`, err);
-                    return null;
-                  }
+                } catch (err) {
+                  console.error(`Error rendering offer ${idx}:`, err);
+                  return null;
+                }
                 });
               })()}
               </div>
