@@ -77,7 +77,8 @@ Deno.serve(async (req) => {
     }
 
     const outcomeIndex = outcome.position === '1st' ? 0 : outcome.position === '2nd' ? 1 : 2;
-    const outcomeLabel = `${market.country} - ${outcome.position} Place`;
+    // Use the actual outcome label from the market (e.g., "Team Alpha"), not constructed format
+    const outcomeLabel = selectedOutcome.label;
 
     // ── LP-FIRST ENFORCEMENT (same as match bets) ─────────────────────────────
     // Fetch existing LP offers for this outcome
