@@ -6,9 +6,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, CheckCircle, XCircle, Wallet, Loader2 } from 'lucide-react';
 import { useWallet } from '@/lib/WalletContext';
+import { useAuth } from '@/lib/AuthContext';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
 
 export default function FixAdmin() {
+  const { user } = useAuth();
   const { walletAddress, isConnected, connect } = useWallet();
   const [instruction, setInstruction] = useState(null);
   const [preparing, setPreparing] = useState(false);
@@ -23,7 +25,7 @@ export default function FixAdmin() {
     },
   });
 
-  const handleReinit = async () => {
+  const handleSaveWallet = async () => {
     if (!walletAddress) {
       setError('Connect wallet first');
       return;
@@ -32,15 +34,19 @@ export default function FixAdmin() {
     setPreparing(true);
     setError(null);
     try {
-      const res = await base44.functions.invoke('reinitPlatformWithWallet', {
+      // Save wallet to user account
+      await base44.functions.invoke('saveWalletAddress', {
         walletAddress: walletAddress,
+        username: user?.full_name || 'Admin',
       });
       
-      if (res.data.error) {
-        throw new Error(res.data.error);
+      // Check if wallet matches on-chain admin
+      if (platformDebug?.admin && platformDebug.admin.toLowerCase() === walletAddress.toLowerCase()) {
+        setError(null);
+        alert('✓ Perfect! Your wallet matches the on-chain admin.\n\nYou can now create and settle markets.');
+      } else {
+        setError('⚠️ Wallet mismatch!\n\nOn-chain admin: ' + (platformDebug?.admin?.slice(0, 8) + '...' + platformDebug?.admin?.slice(-8)) + '\nYour wallet: ' + walletAddress.slice(0, 8) + '...' + walletAddress.slice(-8) + '\n\nYou MUST connect the exact wallet shown as "On-chain admin" above. If you don\'t have that wallet anymore, you\'ll need to deploy a new program instance.');
       }
-      
-      setInstruction(res.data.solana_instruction);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -138,11 +144,7 @@ export default function FixAdmin() {
         {/* Solution */}
         <Card>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-heading font-bold text-lg">Solution: Reinitialize Platform</h3>
-            <p className="text-sm text-muted-foreground">
-              This will overwrite the old admin address with your current wallet.
-              All existing markets will continue to work.
-            </p>
+            <h3 className="font-heading font-bold text-lg">Solution</h3>
             
             {error && (
               <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-sm">
@@ -150,30 +152,51 @@ export default function FixAdmin() {
               </div>
             )}
 
-            {instruction ? (
-              <SolanaTransactionSigner
-                instruction={instruction}
-                amount={0}
-                onSuccess={handleSuccess}
-              />
+            {platformDebug?.admin && walletAddress?.toLowerCase() === platformDebug.admin.toLowerCase() ? (
+              <div className="p-4 bg-accent/10 border border-accent/30 rounded-lg text-center">
+                <CheckCircle className="w-8 h-8 text-accent mx-auto mb-2" />
+                <p className="font-heading font-bold text-accent">✓ Wallet Matches Admin!</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Your wallet is already the platform admin.
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  You can now create and settle markets.
+                </p>
+              </div>
             ) : (
-              <Button
-                onClick={handleReinit}
-                disabled={preparing || !walletAddress}
-                className="w-full h-12 font-heading font-bold"
-              >
-                {preparing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Preparing...
-                  </>
-                ) : (
-                  <>
-                    <Wallet className="w-4 h-4 mr-2" />
-                    Reinitialize Platform with My Wallet
-                  </>
-                )}
-              </Button>
+              <div className="space-y-4">
+                <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+                  <p className="text-xs text-destructive font-bold">⚠️ Wallet Mismatch</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    The platform was initialized with a different wallet.
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    You need to either:
+                  </p>
+                  <ul className="text-xs text-muted-foreground mt-2 space-y-1">
+                    <li>1. Connect the exact wallet shown above (BfN3...bXDi), OR</li>
+                    <li>2. Deploy a new program instance with your current wallet</li>
+                  </ul>
+                </div>
+                
+                <Button
+                  onClick={handleSaveWallet}
+                  disabled={preparing || !walletAddress}
+                  className="w-full h-12 font-heading font-bold"
+                >
+                  {preparing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Wallet className="w-4 h-4 mr-2" />
+                      Save This Wallet
+                    </>
+                  )}
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>
