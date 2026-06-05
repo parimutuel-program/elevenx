@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronRight, Trophy, Droplets, Target } from 'lucide-react';
+import { ChevronRight, Trophy, Droplets } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 const statusStyles = {
@@ -13,25 +13,25 @@ const statusStyles = {
 
 const positionColors = {
   '1st': {
-    bg: 'bg-yellow-500/10',
-    border: 'border-yellow-500/30',
-    hover: 'hover:border-yellow-500/50 hover:bg-yellow-500/20',
-    text: 'text-yellow-400',
-    badge: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+    bg: 'bg-yellow-500/5',
+    border: 'border-yellow-500/20',
+    hover: 'hover:border-yellow-500/40 hover:bg-yellow-500/10',
+    text: 'text-yellow-500',
+    accent: 'text-yellow-600'
   },
   '2nd': {
-    bg: 'bg-gray-500/10',
-    border: 'border-gray-500/30',
-    hover: 'hover:border-gray-500/50 hover:bg-gray-500/20',
-    text: 'text-gray-400',
-    badge: 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+    bg: 'bg-slate-500/5',
+    border: 'border-slate-500/20',
+    hover: 'hover:border-slate-500/40 hover:bg-slate-500/10',
+    text: 'text-slate-400',
+    accent: 'text-slate-500'
   },
   '3rd': {
-    bg: 'bg-orange-500/10',
-    border: 'border-orange-500/30',
-    hover: 'hover:border-orange-500/50 hover:bg-orange-500/20',
-    text: 'text-orange-400',
-    badge: 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+    bg: 'bg-orange-500/5',
+    border: 'border-orange-500/20',
+    hover: 'hover:border-orange-500/40 hover:bg-orange-500/10',
+    text: 'text-orange-500',
+    accent: 'text-orange-600'
   }
 };
 
@@ -78,24 +78,23 @@ export default function FuturesCard({ market, index, onSelect }) {
                 <button
                   key={outcome.position}
                   onClick={() => onSelect && onSelect(market, outcome)}
-                  className={`flex flex-col items-center justify-center rounded-xl px-2 py-2.5 border-2 transition-all ${colors.bg} ${colors.border} ${colors.hover} hover:scale-105 active:scale-95`}>
+                  className={`flex flex-col items-center justify-center rounded-lg px-2 py-2 border transition-all ${colors.bg} ${colors.border} ${colors.hover} hover:scale-[1.02] active:scale-[0.98]`}>
                   
-                  <div className={`flex items-center gap-1 mb-1 px-1.5 py-0.5 rounded-full ${colors.badge}`}>
-                    <Target className="w-2 h-2" />
-                    <span className="text-[7px] font-black uppercase tracking-wider">{outcome.position}</span>
-                  </div>
-                  <p className={`font-heading font-black text-sm ${colors.text} mb-0.5`}>
+                  <span className={`text-[9px] font-bold uppercase tracking-wide mb-1 ${colors.text}`}>
+                    {outcome.position}
+                  </span>
+                  <p className={`font-heading font-bold text-sm ${colors.text} mb-0.5`}>
                     {outcome.odds.toFixed(2)}x
                   </p>
                   {hasLiquidity ?
                   <div className="flex items-center gap-0.5">
-                      <Droplets className="w-2.5 h-2.5 text-accent" />
-                      <p className="text-[9px] font-bold text-accent">
+                      <Droplets className={`w-2 h-2 ${colors.accent}`} />
+                      <p className={`text-[8px] font-semibold ${colors.accent}`}>
                         ◎{outcome.pool.toFixed(1)}
                       </p>
                     </div> :
 
-                  <p className="text-[8px] text-muted-foreground">No LP</p>
+                  <p className="text-[7px] text-muted-foreground">No LP</p>
                   }
                 </button>);
 
