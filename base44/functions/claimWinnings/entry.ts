@@ -127,8 +127,8 @@ Deno.serve(async (req) => {
       console.log('[claimWinnings] Position data (hex):', data.toString('hex'));
       
       // Parse based on actual BetPosition layout:
-      // 8 (disc) + 32 (market) + 32 (bettor) + 1 (outcome) + 8 (matched_stake) + 8 (pending_stake) + 8 (odds_bps) + 8 (potential_payout) + 8 (claimable) + 1 (claimed) + 1 (bump) = 107 bytes
-      if (data.length >= 107) {
+      // 8 (disc) + 32 (market) + 32 (bettor) + 1 (outcome) + 8 (matched_stake) + 8 (pending_stake) + 8 (odds_bps) + 8 (potential_payout) + 8 (claimable) + 1 (claimed) + 1 (bump) = 115 bytes
+      if (data.length >= 115) {
         positionData = {
           outcome: data[72],
           matched_stake: data.readBigUInt64LE(73),
@@ -192,6 +192,15 @@ Deno.serve(async (req) => {
     );
     
     const claimAmount = positionData.potential_payout || positionData.claimable || BigInt(0);
+    
+    console.log('[claimWinnings] Claim instruction debug:', {
+      marketPda: marketPda.toBase58(),
+      positionPda: positionPda.toBase58(),
+      feeVaultPda: feeVaultPda.toBase58(),
+      bettor: trimmedWallet,
+      claimAmount: Number(claimAmount),
+      positionData,
+    });
     
     // Build accounts array in the EXACT order required by ClaimWinnings struct:
     // 1. market (mutable, PDA)
