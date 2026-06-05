@@ -28,6 +28,8 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
   const [claimDialogOpen, setClaimDialogOpen] = useState(false);
   const [claimInstruction, setClaimInstruction] = useState(null);
   const [claimSignature, setClaimSignature] = useState(null);
+  const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
+  const [withdrawData, setWithdrawData] = useState(null);
 
   const claimMutation = useMutation({
     mutationFn: async () => {
@@ -99,12 +101,76 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
     },
   });
 
+  const withdrawMutation = useMutation({
+    mutationFn: async () => {
+      const res = await base44.functions.invoke('withdrawUnmatchedLiquidity', {
+        userBetId: bet.id,
+        walletAddress
+      });
+      if (res.data.error) throw new Error(res.data.error);
+      return res.data;
+    },
+    onSuccess: (data) => {
+      setWithdrawData(data);
+      setWithdrawDialogOpen(true);
+    },
+    onError: (err) => {
+      alert('Withdraw failed: ' + err.message);
+    }
+  });
+
+  const handleWithdrawSuccess = async (txResult) => {
+    await base44.entities.UserBet.update(bet.id, { liquidity_unmatched: 0 });
+    queryClient.invalidateQueries({ queryKey: ['myBets'] });
+    setWithdrawDialogOpen(false);
+  };
+
   const canClaim = bet.status === 'won';
   const canRefund = bet.status === 'refunded';
   const isCompleted = ['lost', 'claimed', 'void'].includes(bet.status);
+  
+  // Parimutuel LP bet with unmatched liquidity
+  const isParimutuelLp = bet.role === 'lp' && bet._isParimutuel === true;
+  const unmatched = bet.liquidity_unmatched || (isParimutuelLp && bet.status !== 'claimed' ? bet.amount : 0);
+  const canWithdraw = isParimutuelLp && unmatched > 0;
 
   return (
     <>
+      {/* Withdraw Dialog for Parimutuel LP */}
+      <Dialog open={withdrawDialogOpen && withdrawData} onOpenChange={() => setWithdrawDialogOpen(false)}>
+        <DialogContent className="bg-card border-border/50 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading flex items-center gap-2">
+              <Wallet className="w-5 h-5 text-yellow-400" />
+              Withdraw Unmatched Liquidity
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 text-center">
+              <p className="text-sm text-muted-foreground">Withdraw Amount</p>
+              <p className="font-heading font-bold text-2xl text-yellow-400">◎{withdrawData?.amount?.toFixed(4)} SOL</p>
+              <p className="text-xs text-muted-foreground mt-2">Unmatched liquidity returned to wallet</p>
+            </div>
+            {withdrawData?.solana_instruction && (
+              <SolanaTransactionSigner
+                instruction={withdrawData.solana_instruction}
+                amount={withdrawData.amount?.toFixed(4) || '0'}
+                userBetId={bet.id}
+                onSuccess={handleWithdrawSuccess}
+                onError={() => setWithdrawDialogOpen(false)}
+              />
+            )}
+            <Button
+              variant="outline"
+              onClick={() => setWithdrawDialogOpen(false)}
+              className="w-full h-10 text-sm rounded-xl border-border/50"
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Claim Dialog - Only render if we have a solana instruction */}
       <Dialog open={claimDialogOpen && claimInstruction && !claimInstruction.db_only} onOpenChange={handleCloseClaimDialog}>
         <DialogContent className="bg-card border-border/50 max-w-md">
@@ -218,6 +284,22 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
 
               {/* Action Buttons */}
               <div className="flex gap-2">
+                {canWithdraw && (
+                  <Button
+                    onClick={() => withdrawMutation.mutate()}
+                    disabled={withdrawMutation.isPending || withdrawDialogOpen}
+                    className="flex-1 h-11 bg-yellow-500 hover:bg-yellow-500/90 text-white font-bold rounded-xl"
+                  >
+                    {withdrawMutation.isPending ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Wallet className="w-4 h-4 mr-2" />
+                        Withdraw ◎{unmatched.toFixed(4)}
+                      </>
+                    )}
+                  </Button>
+                )}
                 {canClaim && (
                   <Button
                     onClick={() => claimMutation.mutate()}

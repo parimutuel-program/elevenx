@@ -15,8 +15,8 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
   // Get match from position data if not passed - ALWAYS use matchData, never match directly
   const matchData = match || position.match || { team_a: 'Team A', team_b: 'Team B', team_a_flag: '', team_b_flag: '', group_stage: '', match_end_time: null };
 
-  // Handle UserBet entity structure (liquidity_deposited, liquidity_matched, liquidity_unmatched)
-  const liquidityDeposited = offer.liquidity_deposited || offer.amount_offered || 0;
+  // Handle both BetOffer and UserBet structures - use amount as fallback for parimutuel LP
+  const liquidityDeposited = offer.liquidity_deposited || offer.amount_offered || offer.amount || 0;
   const liquidityMatched = offer.liquidity_matched || offer.amount_matched || 0;
   const liquidityUnmatched = offer.liquidity_unmatched || offer.amount_unmatched || 0;
   
