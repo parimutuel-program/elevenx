@@ -33,6 +33,7 @@ Deno.serve(async (req) => {
         amount_offered: (existingOffer.amount_offered || 0) + commit_data.amount,
         amount_unmatched: newAmountUnmatched,
         status: newAmountUnmatched <= 0.0001 ? 'fully_matched' : 'partially_matched',
+        _isFutures: true,
       });
       offerId = existingOffer.id;
     } else {
@@ -50,6 +51,7 @@ Deno.serve(async (req) => {
         lp_wallet_address: commit_data.walletAddress,
         solana_position_pda: commit_data.solana_position_pda,
         solana_bet_pool_pda: commit_data.solana_bet_pool_pda,
+        _isFutures: true,
       });
       offerId = newOffer.id;
     }

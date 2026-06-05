@@ -154,9 +154,6 @@ export default function LpDashboard() {
 
         // FALLBACK: If no matching BetOffer found, build a virtual offer from UserBet so it displays
         if (!offer) {
-          // Detect if this is a futures LP (bet_id matches a FuturesMarket)
-          const isFutures = ub.match_id && ub.match_id === ub.bet_id;
-
           offer = {
             id: ub.offer_id || ub.id,
             bet_id: ub.bet_id,
@@ -169,9 +166,14 @@ export default function LpDashboard() {
             status: ub.status === 'active' ? 'open' : ub.status,
             odds_at_creation: ub.amount > 0 ? ub.potential_payout / ub.amount : 2.0,
             lp_wallet_address: ub.wallet_address,
-            _isFutures: isFutures
+            _isFutures: ub._isFutures || (ub.match_id && ub.match_id === ub.bet_id)
           };
           console.log('Built fallback offer from UserBet:', offer);
+        }
+
+        // Ensure _isFutures is set on offer from BetOffer
+        if (offer && !offer._isFutures && ub._isFutures) {
+          offer._isFutures = true;
         }
 
         return { ...offer, userBetId: ub.id, userBet: ub };
