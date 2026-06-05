@@ -29,6 +29,7 @@ import InitPlatform from '@/pages/InitPlatform';
 import Diagnostics from '@/pages/Diagnostics';
 import FixAdmin from '@/pages/FixAdmin';
 import DebugWallet from '@/pages/DebugWallet';
+import DebugClaim from '@/pages/DebugClaim';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -74,6 +75,7 @@ const AuthenticatedApp = () => {
         <Route path="/diagnostics" element={<Diagnostics />} />
         <Route path="/fix-admin" element={<FixAdmin />} />
         <Route path="/debug-wallet" element={<DebugWallet />} />
+        <Route path="/debug-claim" element={<DebugClaim />} />
       </Route>
 
       <Route path="*" element={<PageNotFound />} />
