@@ -13,7 +13,10 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const serviceRole = base44.asServiceRole;
 
-    const { userBetId, batchBetIds, walletAddress } = await req.json();
+    const payload = await req.json();
+    const { userBetId, batchBetIds, walletAddress } = payload;
+    
+    console.log('[claimWinnings] Request payload:', { userBetId, batchBetIds, walletAddress: walletAddress?.slice(0, 8) + '...' });
     
     if (!walletAddress) {
       console.error('[claimWinnings] Missing wallet address in request');
@@ -24,8 +27,8 @@ Deno.serve(async (req) => {
     const trimmedWallet = walletAddress.trim();
     const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
     if (!base58Regex.test(trimmedWallet)) {
-      console.error('[claimWinnings] Invalid wallet format:', trimmedWallet);
-      return Response.json({ error: 'Invalid wallet address format' }, { status: 400 });
+      console.error('[claimWinnings] Invalid wallet format:', trimmedWallet, 'length:', trimmedWallet.length);
+      return Response.json({ error: 'Invalid wallet address format', received: trimmedWallet, length: trimmedWallet.length }, { status: 400 });
     }
 
     // Support both single bet and batch claiming
