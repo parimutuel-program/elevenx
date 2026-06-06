@@ -16,7 +16,30 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
   const isFutures = offer._isFutures || position._isFutures || false;
   
   // Get match from position data if not passed - ALWAYS use matchData, never match directly
-  const matchData = match || position.match || { team_a: 'Team A', team_b: 'Team B', team_a_flag: '', team_b_flag: '', group_stage: '', match_end_time: null };
+  const matchData = match || position.match || { team_a: 'Team A', team_b: 'Team B', team_a_flag: '', team_b_flag: '', group_stage: '', match_end_time: null, winner: '' };
+  
+  // Determine if LP WON or LOST based on actual match result
+  // LP wins when their backed outcome LOSES (parimutuel model)
+  const getLpResult = () => {
+    if (!matchData.winner || matchData.winner === '') return 'unsettled';
+    
+    // Map match winner to outcome
+    const winningOutcome = matchData.winner === 'team_a' ? 'a' : matchData.winner === 'team_b' ? 'b' : 'draw';
+    
+    // LP backed this outcome
+    const lpBackedOutcome = offer.outcome;
+    
+    // LP WINS when backed outcome LOSES (different from winning outcome)
+    if (lpBackedOutcome !== winningOutcome) {
+      return 'won';
+    } else {
+      return 'lost';
+    }
+  };
+  
+  const lpResult = getLpResult();
+  const isLpWon = lpResult === 'won';
+  const isLpLost = lpResult === 'lost';
 
   // Handle both BetOffer and UserBet structures - use amount as fallback for parimutuel LP
   const liquidityDeposited = offer.liquidity_deposited || offer.amount_offered || offer.amount || 0;
@@ -301,10 +324,8 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
         {/* Actions */}
         <div className="flex gap-2 pt-2 border-t border-white/10">
           {(() => {
-            const isWon = offer.status === 'won' || offer.userBet?.status === 'won';
-            const isSettled = offer.status === 'settled' || offer.userBet?.status === 'settled';
             const isClaimed = offer.status === 'claimed' || offer.userBet?.status === 'claimed';
-            const isLost = offer.status === 'lost';
+            const isSettled = offer.status === 'settled' || offer.userBet?.status === 'settled';
             
             if (isClaimed) {
               return (
@@ -320,8 +341,8 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
             }
             
             // LP LOST = backed the winning outcome (had to pay winners, nothing left)
-            // Don't show claim button - show "No Funds" instead
-            if (isLost || (isSettled && !isWon && !hasUnmatched)) {
+            // Show "No Funds" - no claim button
+            if (isLpLost || (isSettled && !isLpWon && !hasUnmatched)) {
               return (
                 <Button
                   disabled
@@ -335,7 +356,7 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
             }
             
             // Show "Fully Matched" when position is open/active but no unmatched liquidity
-            if (!hasUnmatched && !isWon && !isSettled && !isLost && (offer.status === 'open' || offer.status === 'partially_matched' || offer.status === 'fully_matched')) {
+            if (!hasUnmatched && !isSettled && !isLpWon && !isLpLost && (offer.status === 'open' || offer.status === 'partially_matched' || offer.status === 'fully_matched')) {
               return (
                 <Button
                   disabled
@@ -349,7 +370,7 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
             }
             
             // Show "Market Closed" when market is closed but not yet settled
-            if (offer.status === 'closed' || (!isWon && !isSettled && !hasUnmatched && offer.status !== 'open')) {
+            if (offer.status === 'closed' || (!isSettled && !hasUnmatched && offer.status !== 'open')) {
               return (
                 <Button
                   disabled
@@ -363,8 +384,7 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
             }
             
             // Only show "Claim Winnings" if LP actually WON (backed the losing outcome)
-            // If LP lost (backed winner), don't show claim button - already handled above
-            if (isWon && onWithdrawRequest) {
+            if (isLpWon && onWithdrawRequest) {
               return (
                 <Button
                   onClick={handleWithdraw}
