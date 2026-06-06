@@ -143,7 +143,8 @@ Deno.serve(async (req) => {
     );
 
     // Use the STORED LP offer PDA from database (this is what was created on-chain)
-    const outcomeValue = userBet.outcome === 'a' ? 0 : userBet.outcome === 'draw' ? 1 : 2;
+    // NOTE: Outcome mapping MUST match what was used when LP offer was created
+    const outcomeValue = userBet.outcome === 'a' ? 0 : userBet.outcome === 'b' ? 1 : 2;
     const lpOfferPda = offer.solana_position_pda ? new PublicKey(offer.solana_position_pda) : null;
     
     if (!lpOfferPda) {
@@ -151,11 +152,32 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'LP position PDA not found. Market may not be properly initialized.' }, { status: 400 });
     }
 
+    // ALSO derive the PDA to verify it matches what's stored
+    const [derivedLpOfferPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('lp_offer'), marketPda.toBuffer(), userPubkey.toBuffer(), Buffer.from([outcomeValue])],
+      programId
+    );
+
+    console.log('[withdrawLpWinnings] PDA comparison:', {
+      stored_pda: lpOfferPda.toBase58(),
+      derived_pda: derivedLpOfferPda.toBase58(),
+      match: lpOfferPda.equals(derivedLpOfferPda),
+      outcomeValue,
+      userBet_outcome: userBet.outcome,
+    });
+
     // Fee vault PDA
     const [feeVaultPda] = PublicKey.findProgramAddressSync(
       [Buffer.from('fee_vault')],
       programId
     );
+
+    console.log('[withdrawLpWinnings] PDAs:', {
+      marketPda: marketPda.toBase58(),
+      lpOfferPda: lpOfferPda.toBase58(),
+      feeVaultPda: feeVaultPda.toBase58(),
+      lpWalletPubkey: userPubkey.toBase58(),
+    });
 
     // Check if LP already withdrew (DB flag)
     if (offer.withdrawn === true) {
