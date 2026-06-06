@@ -472,8 +472,9 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
           simple_format: discSimple.toString('hex'),
         });
         
-        // Use simple format (no "global:" prefix) - matches most Anchor programs
-        const wlwDisc = discSimple;
+        // Try global: format first (Anchor default), fall back to simple if needed
+        const wlwDisc = discGlobal;
+        console.log('[withdraw_lp_winnings] Using global: format discriminator:', wlwDisc.toString('hex'));
         const data = Buffer.alloc(16);
         wlwDisc.copy(data, 0);
         data.writeBigUInt64LE(BigInt(instruction.withdrawAmountLamports || 0), 8);
