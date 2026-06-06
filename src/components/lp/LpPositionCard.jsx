@@ -60,9 +60,10 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
     
     try {
       const isWon = offer.status === 'won' || offer.userBet?.status === 'won';
+      const isSettled = offer.status === 'settled' || offer.userBet?.status === 'settled';
       
       let res;
-      if (isWon) {
+      if (isWon || isSettled) {
         console.log('[LpPositionCard] Withdrawing winnings (settled) for position:', offer.id);
         res = await base44.functions.invoke('withdrawLpWinnings', {
           userBetId: offer.userBetId || offer.id
@@ -77,7 +78,16 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
       
       if (res.data.error) {
         console.error('[LpPositionCard] Withdraw error:', res.data.error);
-        alert('Withdraw failed: ' + res.data.error);
+        // Show user-friendly error message
+        let errorMsg = res.data.error;
+        if (errorMsg.includes('No unmatched liquidity')) {
+          errorMsg = 'This position is fully matched. No liquidity available to withdraw.';
+        } else if (errorMsg.includes('Cannot withdraw from this market')) {
+          errorMsg = 'Market is closed. Wait for settlement to claim winnings.';
+        } else if (errorMsg.includes('No funds available on-chain')) {
+          errorMsg = 'No funds available. DB may be out of sync with blockchain.';
+        }
+        alert('Withdraw failed: ' + errorMsg);
         return;
       }
       
@@ -251,6 +261,7 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
             const isWon = offer.status === 'won' || offer.userBet?.status === 'won';
             const isSettled = offer.status === 'settled' || offer.userBet?.status === 'settled';
             const isClaimed = offer.status === 'claimed' || offer.userBet?.status === 'claimed';
+            const isLost = offer.status === 'lost';
             const hasUnmatchedOrWon = isWon || isSettled || hasUnmatched;
             
             if (isClaimed) {
@@ -262,6 +273,34 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
                 >
                   <CheckCircle2 className="w-3 h-3 mr-1" />
                   Claimed
+                </Button>
+              );
+            }
+            
+            // Show "Fully Matched" when position is open/active but no unmatched liquidity
+            if (!hasUnmatched && !isWon && !isSettled && !isLost && (offer.status === 'open' || offer.status === 'partially_matched' || offer.status === 'fully_matched')) {
+              return (
+                <Button
+                  disabled
+                  variant="outline"
+                  className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-border/30 text-muted-foreground bg-secondary/10 rounded-xl font-heading font-bold"
+                >
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Fully Matched
+                </Button>
+              );
+            }
+            
+            // Show "Market Closed" when market is closed but not yet settled
+            if (offer.status === 'closed' || (!isWon && !isSettled && !hasUnmatched && offer.status !== 'open')) {
+              return (
+                <Button
+                  disabled
+                  variant="outline"
+                  className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-border/30 text-muted-foreground bg-secondary/10 rounded-xl font-heading font-bold"
+                >
+                  <Clock className="w-3 h-3 mr-1" />
+                  Market Closed
                 </Button>
               );
             }
