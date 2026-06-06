@@ -652,16 +652,16 @@ export default function LpDashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                 <div className="space-y-1.5">
                   <span className="text-lg sm:text-xl">🎯</span>
-                  <h3 className="font-heading font-bold text-[11px] sm:text-xs text-primary">Back Your Team</h3>
+                  <h3 className="font-heading font-bold text-[11px] sm:text-xs text-primary">LP on the Loser</h3>
                   <p className="text-[10px] sm:text-[11px] text-muted-foreground leading-relaxed">
-                    Provide liquidity on outcomes you believe will <strong>WIN</strong>. If it wins, you profit! If it loses, bettors take the pool.
+                    Provide liquidity on outcomes you believe will <strong>LOSE</strong>. When bettors lose, you keep their stake + earn fees!
                   </p>
                 </div>
                 <div className="space-y-1.5">
                   <span className="text-lg sm:text-xl">💰</span>
-                  <h3 className="font-heading font-bold text-[11px] sm:text-xs text-accent">Earn Fees + Winnings</h3>
+                  <h3 className="font-heading font-bold text-[11px] sm:text-xs text-accent">Earn 2% Fees Always</h3>
                   <p className="text-[10px] sm:text-[11px] text-muted-foreground leading-relaxed">
-                    Earn <strong>2% fees</strong> on every bet matched against your liquidity, plus keep the pool if your outcome wins!
+                    Every bet matched against your LP charges <strong>2% fees</strong> — paid to you regardless of outcome. Pure passive income.
                   </p>
                 </div>
                 <div className="space-y-1.5">
