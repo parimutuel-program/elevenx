@@ -86,13 +86,20 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
     setClaimSignature(signature);
 
     // Update bet status in DB AFTER successful on-chain claim
-    await base44.entities.UserBet.update(bet.id, { 
-      status: 'claimed',
-      actual_payout: bet.potential_payout || 0
-    });
-    // Force immediate refetch
-    await queryClient.refetchQueries({ queryKey: ['myBets'], type: 'active' });
+    try {
+      await base44.entities.UserBet.update(bet.id, { 
+        status: 'claimed',
+        actual_payout: bet.potential_payout || 0
+      });
+      console.log('[BetCard] Updated bet status to claimed:', bet.id);
+    } catch (err) {
+      console.error('[BetCard] Failed to update bet status:', err);
+    }
+    
+    // Force immediate refetch with cancelation of ongoing queries
+    await queryClient.cancelQueries({ queryKey: ['myBets'] });
     queryClient.invalidateQueries({ queryKey: ['myBets'] });
+    await queryClient.refetchQueries({ queryKey: ['myBets'] });
   };
 
   const handleCloseClaimDialog = () => {
