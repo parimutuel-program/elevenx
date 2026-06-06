@@ -55,13 +55,9 @@ export default function FuturesCard({ market, index, onSelect }) {
               {market.country}
             </span>
             <div className="flex items-center gap-2">
-              {market.status === 'open' && market.open_until ? (
-                <BetCountdown openUntil={market.open_until} label="Closes" className="text-[8px]" />
-              ) : null}
-              <Badge className={`text-[9px] font-semibold uppercase tracking-wider flex-shrink-0 ${statusStyles[market.status] || statusStyles.open}`}>
-                {market.status === 'open' && <span className="w-1 h-1 rounded-full bg-accent animate-pulse mr-1" />}
-                {market.status.replace('_', ' ')}
-              </Badge>
+              {market.open_until && (
+                <BetCountdown openUntil={market.open_until} label="" className="text-[8px]" />
+              )}
             </div>
           </div>
 
