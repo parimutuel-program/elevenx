@@ -168,25 +168,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Key benefits */}
-          <div className="relative z-10 mt-6">
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-accent/10 backdrop-blur-md border border-accent/30 rounded-xl px-3 py-2">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <DollarSign className="w-3 h-3 text-accent" />
-                  <span className="text-[10px] font-bold text-accent">2% Fees to LPs</span>
-                </div>
-                <p className="text-[9px] text-white/50">No house cut</p>
-              </div>
-              <div className="bg-primary/10 backdrop-blur-md border border-primary/30 rounded-xl px-3 py-2">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Users className="w-3 h-3 text-primary" />
-                  <span className="text-[10px] font-bold text-primary">Community Pool</span>
-                </div>
-                <p className="text-[9px] text-white/50">P2P betting</p>
-              </div>
-            </div>
-          </div>
+
         </motion.div>
       </div>
 
