@@ -79,7 +79,6 @@ export function WalletProvider({ children }) {
       localStorage.setItem('elevenx_auth_token', ''); // Clear old token, will be set by walletAuth
       
       // Generate challenge and request signature for secure auth
-      const phantom = getPhantom();
       const challenge = `Sign to authenticate with ElevenX\n\nWallet: ${address}\nNonce: ${Date.now()}`;
       const encoder = new TextEncoder();
       const messageBytes = encoder.encode(challenge);
