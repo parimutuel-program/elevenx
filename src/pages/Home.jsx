@@ -88,9 +88,21 @@ export default function Home() {
 
 
               
-              <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm border border-white/10 px-2.5 sm:px-3 py-1 rounded-full">
-                <Zap className="w-3 h-3 text-purple-400" />
-                <span className="text-[10px] sm:text-[11px] font-bold text-white/80 tracking-wide">Powered by Solana</span>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm border border-white/10 px-2.5 sm:px-3 py-1 rounded-full">
+                  <Zap className="w-3 h-3 text-purple-400" />
+                  <span className="text-[10px] sm:text-[11px] font-bold text-white/80 tracking-wide">Powered by Solana</span>
+                </div>
+                <button
+                  onClick={() => navigator.clipboard.writeText('ElevenXContractAddr1111111111111111111')}
+                  className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm border border-white/10 px-2.5 sm:px-3 py-1 rounded-full hover:border-primary/30 transition-all group"
+                  title="Copy contract address"
+                >
+                  <span className="text-[10px] sm:text-[11px] font-bold text-white/60 tracking-wide">Contract</span>
+                  <svg className="w-3 h-3 text-white/60 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
