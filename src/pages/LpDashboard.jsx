@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { useWallet } from '@/lib/WalletContext';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Wallet, TrendingUp, DollarSign, ArrowRight, Plus, Clock, CheckCircle2, AlertCircle, ExternalLink, Trophy } from 'lucide-react';
+import { Wallet, TrendingUp, DollarSign, ArrowRight, Plus, Clock, CheckCircle2, AlertCircle, ExternalLink, Trophy, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -111,6 +111,7 @@ export default function LpDashboard() {
   const [matchViewMode, setMatchViewMode] = useState('all');
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedBetForDetail, setSelectedBetForDetail] = useState(null);
+  const [isInfoExpanded, setIsInfoExpanded] = useState(false);
 
   const { data: openBets = [] } = useQuery({
     queryKey: ['openBets'],
@@ -599,76 +600,93 @@ export default function LpDashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative overflow-hidden rounded-2xl sm:rounded-3xl p-4 sm:p-8"
-        style={{ background: 'linear-gradient(135deg, #1a1040 0%, #0f0a1e 50%, #12102a 100%)' }}>
-        
-        <div className="absolute top-0 right-0 w-56 h-56 rounded-full blur-3xl opacity-30" style={{ background: '#a69cf2' }} />
-        <div className="absolute bottom-0 left-0 w-40 h-40 rounded-full blur-3xl opacity-20" style={{ background: '#14f195' }} />
-        
+        className="relative overflow-hidden rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-border/50 bg-card"
+      >
         <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="flex items-center gap-1.5 bg-primary/20 border border-primary/30 px-2.5 sm:px-3 py-1 rounded-full">
-              <Trophy className="w-3 h-3 text-primary" />
-              <span className="text-[10px] sm:text-[11px] font-bold text-primary tracking-widest">LIQUIDITY PROVIDER</span>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-full">
+                <Trophy className="w-3 h-3 text-primary" />
+                <span className="text-[9px] sm:text-[10px] font-bold text-primary tracking-widest">LIQUIDITY PROVIDER</span>
+              </div>
             </div>
+            {/* Mobile Expand/Collapse Button */}
+            <button
+              onClick={() => setIsInfoExpanded(!isInfoExpanded)}
+              className="sm:hidden flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
+            >
+              {isInfoExpanded ? (
+                <>
+                  <span>Hide</span>
+                  <ChevronUp className="w-3 h-3" />
+                </>
+              ) : (
+                <>
+                  <span>Info</span>
+                  <ChevronDown className="w-3 h-3" />
+                </>
+              )}
+            </button>
           </div>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h1 className="font-heading font-black text-2xl sm:text-3xl md:text-4xl leading-tight mb-2 text-white">
+              <h1 className="font-heading font-black text-xl sm:text-2xl md:text-3xl leading-tight mb-2">
                 LP Dashboard
               </h1>
-              <p className="text-white/50 text-xs sm:text-sm max-w-md mb-4">
+              <p className="text-muted-foreground text-xs sm:text-sm mb-4">
                 Provide liquidity for matches & futures. Earn fees and back your team.
-                {walletAddress && <span className="ml-2 text-[10px] font-mono opacity-50">({walletAddress.slice(0, 6)}...{walletAddress.slice(-4)})</span>}
+                {walletAddress && <span className="ml-2 text-[10px] font-mono text-muted-foreground/50">({walletAddress.slice(0, 6)}...{walletAddress.slice(-4)})</span>}
               </p>
             </div>
-            <Button variant="outline" onClick={() => refetchOffers()} className="gap-2 rounded-xl h-10 px-4 text-xs sm:text-sm shrink-0">
+            <Button variant="outline" onClick={() => refetchOffers()} className="gap-2 rounded-xl h-10 px-4 text-xs sm:text-sm shrink-0 border-border/50">
               Refresh
             </Button>
           </div>
 
-          {/* How LP Works - Integrated into Hero */}
-          <div className="border-t border-white/10 pt-4">
-            <div className="inline-flex items-center gap-1.5 bg-primary/20 border border-primary/30 px-2.5 sm:px-3 py-1 rounded-full text-primary text-[9px] sm:text-[10px] font-bold tracking-widest uppercase mb-3">
-              👑 How Liquidity Providing Works
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-              <div className="space-y-1.5">
-                <span className="text-lg sm:text-xl">🎯</span>
-                <h3 className="font-heading font-bold text-[11px] sm:text-xs text-primary">Back Your Team</h3>
-                <p className="text-[10px] sm:text-[11px] text-white/60 leading-relaxed">
-                  Provide liquidity on outcomes you believe will <strong>WIN</strong>. If it wins, you profit! If it loses, bettors take the pool.
-                </p>
+          {/* How LP Works - Expandable on mobile */}
+          <div className={`overflow-hidden transition-all duration-300 ${isInfoExpanded ? 'max-h-[800px]' : 'max-h-[0px]'} sm:max-h-none`}>
+            <div className="border-t border-border/50 pt-4">
+              <div className="inline-flex items-center gap-1.5 bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-full text-primary text-[9px] sm:text-[10px] font-bold tracking-widest uppercase mb-3">
+                👑 How Liquidity Providing Works
               </div>
-              <div className="space-y-1.5">
-                <span className="text-lg sm:text-xl">💰</span>
-                <h3 className="font-heading font-bold text-[11px] sm:text-xs text-accent">Earn Fees + Winnings</h3>
-                <p className="text-[10px] sm:text-[11px] text-white/60 leading-relaxed">
-                  Earn <strong>2% fees</strong> on every bet matched against your liquidity, plus keep the pool if your outcome wins!
-                </p>
-              </div>
-              <div className="space-y-1.5">
-                <span className="text-lg sm:text-xl">🔓</span>
-                <h3 className="font-heading font-bold text-[11px] sm:text-xs text-yellow-400">Full Control</h3>
-                <p className="text-[10px] sm:text-[11px] text-white/60 leading-relaxed">
-                  Withdraw unmatched liquidity <strong>instantly anytime</strong>. Only locked when matched. <strong>Instant DB claims</strong> — no on-chain delays.
-                </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                <div className="space-y-1.5">
+                  <span className="text-lg sm:text-xl">🎯</span>
+                  <h3 className="font-heading font-bold text-[11px] sm:text-xs text-primary">Back Your Team</h3>
+                  <p className="text-[10px] sm:text-[11px] text-muted-foreground leading-relaxed">
+                    Provide liquidity on outcomes you believe will <strong>WIN</strong>. If it wins, you profit! If it loses, bettors take the pool.
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <span className="text-lg sm:text-xl">💰</span>
+                  <h3 className="font-heading font-bold text-[11px] sm:text-xs text-accent">Earn Fees + Winnings</h3>
+                  <p className="text-[10px] sm:text-[11px] text-muted-foreground leading-relaxed">
+                    Earn <strong>2% fees</strong> on every bet matched against your liquidity, plus keep the pool if your outcome wins!
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <span className="text-lg sm:text-xl">🔓</span>
+                  <h3 className="font-heading font-bold text-[11px] sm:text-xs text-yellow-400">Full Control</h3>
+                  <p className="text-[10px] sm:text-[11px] text-muted-foreground leading-relaxed">
+                    Withdraw unmatched liquidity <strong>instantly anytime</strong>. Only locked when matched. <strong>Instant DB claims</strong> — no on-chain delays.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </motion.div>
 
+      {/* Close the expandable div */}
       {!isConnected &&
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl border border-primary/20 p-8 text-center"
-        style={{ background: 'linear-gradient(145deg, #1a1040 0%, #0f0a1e 100%)' }}>
-        
+        className="rounded-2xl border border-border/50 p-8 text-center bg-card"
+      >
           <Wallet className="w-12 h-12 text-primary mx-auto mb-4" />
-          <h3 className="font-heading font-black text-xl text-white mb-2">Connect Wallet to Provide Liquidity</h3>
-          <p className="text-white/50 text-sm mb-5 max-w-xs mx-auto">Connect Phantom to start providing LP liquidity.</p>
+          <h3 className="font-heading font-black text-xl mb-2">Connect Wallet to Provide Liquidity</h3>
+          <p className="text-muted-foreground text-sm mb-5 max-w-xs mx-auto">Connect Phantom to start providing LP liquidity.</p>
           <Button onClick={connect} className="font-heading font-bold px-8 h-11 rounded-xl text-sm"
         style={{ background: 'linear-gradient(135deg, #a69cf2, #8b84e8)' }}>
             <Wallet className="w-4 h-4 mr-2" /> Connect Phantom
