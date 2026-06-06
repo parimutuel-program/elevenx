@@ -207,8 +207,12 @@ Deno.serve(async (req) => {
       programId
     );
 
-    // Use the stored LP offer PDA
-    const lpOfferPda = new PublicKey(offer.solana_position_pda);
+    // Derive LP offer PDA correctly: [b"lp_offer", market.key(), lp, &[outcome]]
+    const outcomeValue = userBet.outcome === 'a' ? 0 : userBet.outcome === 'draw' ? 1 : 2;
+    const [lpOfferPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('lp_offer'), marketPda.toBuffer(), userPubkey.toBuffer(), Buffer.from([outcomeValue])],
+      programId
+    );
 
     // Fee vault PDA
     const [feeVaultPda] = PublicKey.findProgramAddressSync(
@@ -247,7 +251,7 @@ Deno.serve(async (req) => {
         feeVaultPda: feeVaultPda.toBase58(),
         lpWalletPubkey: userPubkey.toBase58(),
         withdrawAmountLamports,
-        outcome: userBet.outcome === 'a' ? 0 : userBet.outcome === 'draw' ? 1 : 2,
+        outcome: outcomeValue,
       },
       message: `Sign to withdraw ◎${baseAmount.toFixed(4)} from settled market`,
     });

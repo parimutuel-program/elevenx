@@ -455,6 +455,7 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
           { pubkey: new PublicKey(instruction.lpOfferPda), isSigner: false, isWritable: true },
           { pubkey: new PublicKey(instruction.feeVaultPda), isSigner: false, isWritable: true },
           { pubkey: new PublicKey(instruction.lpWalletPubkey), isSigner: false, isWritable: true },
+          { pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false }, // system_program
         ];
         
         // Anchor discriminator (8 bytes) + amount (u64 LE) = 16 bytes
