@@ -82,6 +82,20 @@ Deno.serve(async (req) => {
       winning_outcome,
     });
 
+    // ALSO settle on-chain by calling settleMarketOnChain
+    console.log('[announceWinner] Calling settleMarketOnChain to update on-chain state...');
+    try {
+      const settleRes = await base44.functions.invoke('settleMarketOnChain', { bet_id, winning_outcome });
+      if (settleRes.data?.error) {
+        console.error('[announceWinner] settleMarketOnChain failed:', settleRes.data.error);
+        // Don't fail the whole operation, just log it
+      } else {
+        console.log('[announceWinner] ✓ Market settled on-chain:', settleRes.data);
+      }
+    } catch (err) {
+      console.error('[announceWinner] settleMarketOnChain threw:', err.message);
+    }
+
     console.log(`✓ Bet ${bet_id} settled. Winner: ${winning_outcome}, Winners: ${winnersCount}, Pending refunds: ${pendingCount}, Total payout: ◎${totalPayout.toFixed(4)}`);
 
     return Response.json({
