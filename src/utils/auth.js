@@ -1,5 +1,3 @@
-import bs58 from 'bs58';
-
 /**
  * Extract wallet address from auth token payload
  * This is the PERMANENT source of truth for wallet - not localStorage
@@ -19,9 +17,11 @@ export const getWalletFromAuth = () => {
       return null;
     }
 
-    // Decode payload (base58)
-    const payloadBytes = bs58.decode(parts[1]);
-    const payload = JSON.parse(new TextDecoder().decode(payloadBytes));
+    // Decode payload (base64url)
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+    const payload = JSON.parse(jsonPayload);
 
     console.log('[getWalletFromAuth] Token payload:', {
       userId: payload.userId,
@@ -31,7 +31,7 @@ export const getWalletFromAuth = () => {
 
     return payload.walletAddress || null;
   } catch (err) {
-    console.error('[getWalletFromAuth] Failed to decode auth token:', err);
+    console.error('[getWalletFromAuth] Failed to decode auth token:', err.message);
     return null;
   }
 };
