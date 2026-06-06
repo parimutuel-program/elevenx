@@ -24,7 +24,7 @@ const FEATURED_MATCHES = [
 { team_a: 'USA', team_b: 'Uruguay', group: 'Group D', date: 'Jun 13', matchId: '6a20ec5003fec97668e1177f', img: 'https://media.base44.com/images/public/6a1da108eb293de119e4e930/6adfc36e9_image.png' },
 { team_a: 'Netherlands', team_b: 'Japan', group: 'Group C', date: 'Jun 14', matchId: '', img: 'https://media.base44.com/images/public/6a1da108eb293de119e4e930/21177f821_image.png' },
 { team_a: 'England', team_b: 'Croatia', group: 'Group D', date: 'Jun 14', matchId: '', img: 'https://media.base44.com/images/public/6a1da108eb293de119e4e930/a48a1d137_image.png' },
-{ team_a: 'Germany', team_b: 'France', group: 'Group F', date: 'Jun 15', matchId: '', img: 'https://media.base44.com/images/public/6a1da108eb293de119e4e930/c601107ff_image.png' },
+{ team_a: 'France', team_b: 'Norway', group: 'Group F', date: 'Jun 15', matchId: '', img: 'https://media.base44.com/images/public/6a1da108eb293de119e4e930/36223e776_image.png' },
 { team_a: 'Spain', team_b: 'Uruguay', group: 'Group H', date: 'Jun 15', matchId: '', img: 'https://media.base44.com/images/public/6a1da108eb293de119e4e930/2b6caa45a_image.png' }];
 
 
@@ -82,6 +82,15 @@ export default function Home() {
           <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(10,8,20,0.97) 0%, rgba(10,8,20,0.6) 50%, rgba(10,8,20,0.2) 100%)' }} />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(166,156,242,0.12) 0%, transparent 60%)' }} />
 
+          <div className="relative z-10 p-5 sm:p-7 pt-6">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm border border-white/10 px-2.5 sm:px-3 py-1 rounded-full">
+                <Globe className="w-3 h-3 text-white/70" />
+                <span className="text-[10px] sm:text-[11px] font-bold text-white/80 tracking-wide">FIFA WORLD CUP 2026™</span>
+              </div>
+            </div>
+          </div>
+
           <div className="relative z-10 p-5 sm:p-7">
             <div className="flex items-center gap-2 mb-2">
               <Star className="w-4 h-4 text-primary" />
@@ -127,8 +136,8 @@ export default function Home() {
           {/* Grid lines decoration */}
           <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'linear-gradient(#a69cf2 1px, transparent 1px), linear-gradient(90deg, #a69cf2 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
-          <div className="relative z-10 p-5 sm:p-7">
-            <div className="flex items-center gap-2 mb-2">
+          <div className="relative z-10 pt-6">
+            <div className="flex items-center gap-2 mb-3 sm:mb-4">
               <div className="flex items-center gap-1.5 bg-accent/20 border border-accent/30 px-2.5 sm:px-3 py-1 rounded-full">
                 <TrendingUp className="w-3 h-3 text-accent" />
                 <span className="text-[10px] sm:text-[11px] font-bold text-accent tracking-widest">HYBRID MODEL</span>
