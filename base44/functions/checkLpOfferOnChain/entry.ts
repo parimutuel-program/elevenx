@@ -80,14 +80,18 @@ Deno.serve(async (req) => {
       }
 
       // Parse the LP offer account data
-      // LpOffer layout: discriminator (8) + lp (32) + outcome (1) + amount_matched (8) + withdrawn (1) + bump (1) = 51 bytes
+      // LpOffer layout: discriminator (8) + market (32) + lp (32) + outcome (1) + odds_bps (8) + amount_committed (8) + amount_matched (8) + closed (1) + matched_stake (8) + withdrawn (1) + bump (1) = 108 bytes
+      // Offsets: 0-7=disc, 8-39=market, 40-71=lp, 72=outcome, 73-80=odds_bps, 81-88=amount_committed, 89-96=amount_matched, 97=closed, 98-105=matched_stake, 106=withdrawn, 107=bump
       const accountData = lpOfferAccountInfo.data;
-      const withdrawnFlag = accountData[41]; // withdrawn is a bool at offset 41
-      const amountMatchedOnChain = accountData.readBigUInt64LE(9); // amount_matched at offset 9
+      const withdrawnFlag = accountData[106]; // withdrawn is a bool at offset 106
+      const amountMatchedOnChain = accountData.readBigUInt64LE(89); // amount_matched at offset 89
 
       console.log('[checkLpOfferOnChain] On-chain state:', {
         withdrawn: withdrawnFlag === 1,
         amountMatchedOnChain: Number(amountMatchedOnChain) / 1e9,
+        lpOfferPda: lpOfferPda.toBase58(),
+        stored_pda: offer.solana_position_pda,
+        accountDataLength: accountData.length,
       });
 
       if (withdrawnFlag === 1) {
