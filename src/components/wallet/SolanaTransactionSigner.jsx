@@ -451,13 +451,13 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         console.log('[withdraw_lp_winnings] Creating instruction:', instruction);
         
         const programId = new PublicKey(instruction.programId);
-        // Add LP signer as required by Anchor (even if not in struct, needed for PDA derivation)
+        // WithdrawLpWinnings expects: market, lp_offer, fee_vault, lp_wallet (must be signer!), system_program
+        // lp_wallet must sign to authorize the withdrawal to their wallet
         const keys = [
           { pubkey: new PublicKey(instruction.marketPda), isSigner: false, isWritable: true },
           { pubkey: new PublicKey(instruction.lpOfferPda), isSigner: false, isWritable: true },
           { pubkey: new PublicKey(instruction.feeVaultPda), isSigner: false, isWritable: true },
-          { pubkey: new PublicKey(instruction.lpWalletPubkey), isSigner: false, isWritable: true },
-          { pubkey: provider.publicKey, isSigner: true, isWritable: true }, // LP signer (REQUIRED)
+          { pubkey: new PublicKey(instruction.lpWalletPubkey), isSigner: true, isWritable: true }, // LP must sign
           { pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false }, // system_program
         ];
         
