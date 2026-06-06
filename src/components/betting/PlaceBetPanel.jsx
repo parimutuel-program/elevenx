@@ -426,11 +426,14 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
           </div>
         )}
 
-        {/* Pending pool mode indicator */}
+        {/* No liquidity indicator - block betting until LP seeds */}
         {mode === 'match' && selectedOutcome && !hasLiquidityForOutcome && (
-          <div className="bg-accent/10 border border-accent/30 rounded-xl p-3 text-center">
-            <p className="text-xs text-accent font-bold mb-1">⏳ Pending Pool Mode</p>
-            <p className="text-[10px] text-muted-foreground">Your bet will wait in the pool until someone takes the opposite side</p>
+          <div className="bg-secondary/30 border border-border/30 rounded-xl p-3 text-center">
+            <p className="text-xs text-muted-foreground font-bold mb-2">⏳ No LP Liquidity Available</p>
+            <p className="text-[10px] text-muted-foreground mb-2">Cannot place bets until LP provides liquidity for this outcome</p>
+            <a href={`/lp?matchId=${matchId}`} className="inline-block bg-accent/10 hover:bg-accent/20 border border-accent/30 text-accent font-bold text-xs py-1.5 px-4 rounded-lg transition-colors">
+              Add LP Liquidity
+            </a>
           </div>
         )}
         
