@@ -128,12 +128,23 @@ export default function MyBets() {
   const { data: myBets = [], isLoading, refetch } = useQuery({
     queryKey: ['myBets', walletAddress, user?.id],
     queryFn: async () => {
-      console.log('[MyBets] Query executing, wallet from auth:', walletAddress?.slice(0, 8));
+      console.log('[MyBets] Query executing, wallet from auth:', walletAddress);
+      console.log('[MyBets] Wallet length:', walletAddress?.length);
+      console.log('[MyBets] Wallet trimmed:', walletAddress?.trim());
       const all = await base44.entities.UserBet.list('-created_date', 100);
       console.log('[MyBets] Total bets in DB:', all.length);
+      console.log('[MyBets] All bets:', all.map(b => ({ id: b.id, wallet: b.wallet_address, amount: b.amount, status: b.status })));
       const filtered = walletAddress ? all.filter((ub) => {
         const match = ub.wallet_address === walletAddress;
+        const trimmedMatch = ub.wallet_address?.trim() === walletAddress?.trim();
+        console.log('[MyBets] Checking bet:', {
+          bet_wallet: ub.wallet_address,
+          auth_wallet: walletAddress,
+          exact_match: match,
+          trimmed_match: trimmedMatch,
+        });
         if (match) console.log('[MyBets] ✓ Found bet:', ub.id, ub.amount, ub.status);
+        if (trimmedMatch && !match) console.log('[MyBets] ⚠️ Trimmed match (whitespace issue):', ub.id);
         return match;
       }) : [];
       console.log('[MyBets] My bets:', filtered.length);
