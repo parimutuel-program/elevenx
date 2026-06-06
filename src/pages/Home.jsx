@@ -152,7 +152,7 @@ export default function Home() {
               <Link to="/lp" className="flex-1">
                 <Button className="w-full font-heading font-bold px-4 sm:px-6 h-10 sm:h-12 rounded-xl text-xs sm:text-sm text-black" style={{ background: 'linear-gradient(135deg, #14f195, #00ff87)', boxShadow: '0 0 24px rgba(20,241,147,0.35)' }}>
                   <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
-                  Become an LP
+                  Provide Liquidity
                 </Button>
               </Link>
               <Link to="/matches" className="flex-1">
