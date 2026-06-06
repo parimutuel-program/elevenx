@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, Trophy, BarChart3, User, Layers, TrendingUp, Shield, Flame, Activity } from 'lucide-react';
+import { Home, Trophy, BarChart3, User, Layers, TrendingUp, Shield, Flame } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import WalletButton from '@/components/wallet/WalletButton';
 
@@ -22,7 +22,6 @@ const navItems = [
   { path: '/futures', icon: Flame, label: 'Futures' },
   { path: '/lp', icon: TrendingUp, label: 'LP' },
   { path: '/my-bets', icon: BarChart3, label: 'My Bets' },
-  { path: '/stats', icon: Activity, label: 'Stats' },
   { path: '/profile', icon: User, label: 'Profile' },
 ];
 
