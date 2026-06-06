@@ -1,3 +1,5 @@
+import bs58 from 'bs58';
+
 /**
  * Extract wallet address from auth token payload
  * This is the PERMANENT source of truth for wallet - not localStorage
@@ -18,8 +20,7 @@ export const getWalletFromAuth = () => {
     }
 
     // Decode payload (base58)
-    const bs58 = await import('bs58');
-    const payloadBytes = bs58.default.decode(parts[1]);
+    const payloadBytes = bs58.decode(parts[1]);
     const payload = JSON.parse(new TextDecoder().decode(payloadBytes));
 
     console.log('[getWalletFromAuth] Token payload:', {
