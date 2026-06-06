@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { useWallet } from '@/lib/WalletContext';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Wallet, TrendingUp, DollarSign, ArrowRight, Plus, Clock, CheckCircle2, AlertCircle, ExternalLink, Trophy, ChevronDown, ChevronUp } from 'lucide-react';
+import { Wallet, TrendingUp, DollarSign, ArrowRight, Plus, Clock, CheckCircle2, AlertCircle, ExternalLink, Trophy, ChevronDown, ChevronUp, Target, Coins, Lock, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -647,25 +647,25 @@ export default function LpDashboard() {
           <div className={`overflow-hidden transition-all duration-300 ${isInfoExpanded ? 'max-h-[800px]' : 'max-h-[0px]'} sm:max-h-none`}>
             <div className="border-t border-border/50 pt-4">
               <div className="inline-flex items-center gap-1.5 bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-full text-primary text-[9px] sm:text-[10px] font-bold tracking-widest uppercase mb-3">
-                👑 How Liquidity Providing Works
+                <Target className="w-3 h-3" /> How Liquidity Providing Works
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                 <div className="space-y-1.5">
-                  <span className="text-lg sm:text-xl">🎯</span>
+                  <Target className="w-6 h-6 text-primary" />
                   <h3 className="font-heading font-bold text-[11px] sm:text-xs text-primary">LP on the Loser</h3>
                   <p className="text-[10px] sm:text-[11px] text-muted-foreground leading-relaxed">
                     Provide liquidity on outcomes you believe will <strong>LOSE</strong>. When bettors lose, you keep their stake + earn fees!
                   </p>
                 </div>
                 <div className="space-y-1.5">
-                  <span className="text-lg sm:text-xl">💰</span>
+                  <Coins className="w-6 h-6 text-accent" />
                   <h3 className="font-heading font-bold text-[11px] sm:text-xs text-accent">Earn 2% Fees Always</h3>
                   <p className="text-[10px] sm:text-[11px] text-muted-foreground leading-relaxed">
                     Every bet matched against your LP charges <strong>2% fees</strong> — paid to you regardless of outcome. Pure passive income.
                   </p>
                 </div>
                 <div className="space-y-1.5">
-                  <span className="text-lg sm:text-xl">🔓</span>
+                  <Lock className="w-6 h-6 text-yellow-400" />
                   <h3 className="font-heading font-bold text-[11px] sm:text-xs text-yellow-400">Full Control</h3>
                   <p className="text-[10px] sm:text-[11px] text-muted-foreground leading-relaxed">
                     Withdraw unmatched liquidity <strong>instantly anytime</strong>. Only locked when matched. <strong>Instant on-chain claims</strong> — direct to your wallet.
