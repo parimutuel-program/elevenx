@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trophy, ArrowRight, Flame, TrendingUp, Zap, Globe, Star, ChevronRight, Clock, Users, DollarSign, Earth } from 'lucide-react';
+import { Trophy, ArrowRight, Flame, TrendingUp, Zap, Globe, Star, ChevronRight, Clock, Users, DollarSign, Earth, Ban, Coins, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import MatchCard from '@/components/betting/MatchCard';
@@ -341,21 +341,21 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {[
           {
-            icon: '🚫',
+            icon: Ban,
             title: 'No House Edge',
             desc: 'Traditional bookies take 5-10%. We take ZERO. The entire pool goes to winners and LPs. Pure P2P fairness.',
             color: 'accent',
             highlight: true
           },
           {
-            icon: '💰',
+            icon: Coins,
             title: 'LP Fee Distribution',
             desc: 'Every bet charges 2% fees — distributed directly to Liquidity Providers. Earn passive income just by holding liquidity.',
             color: 'primary',
             highlight: true
           },
           {
-            icon: '👑',
+            icon: Crown,
             title: 'Everyone Can Be The House',
             desc: 'No gatekeepers. Deposit SOL, back any outcome, and collect fees when bettors match against your liquidity.',
             color: 'yellow',
@@ -373,7 +373,11 @@ export default function Home() {
             'bg-yellow-500/5 border-yellow-500/20'}`
             }>
             
-              <div className="text-3xl mb-3">{item.icon}</div>
+              <item.icon className={`w-8 h-8 mb-3 ${
+                item.color === 'primary' ? 'text-primary' :
+                item.color === 'accent' ? 'text-accent' :
+                'text-yellow-400'
+              }`} />
               <h3 className={`font-heading font-bold text-base mb-2 ${
             item.color === 'primary' ? 'text-primary' :
             item.color === 'accent' ? 'text-accent' :
