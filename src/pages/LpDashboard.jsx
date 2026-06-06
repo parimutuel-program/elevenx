@@ -287,7 +287,19 @@ export default function LpDashboard() {
     },
     onError: (err) => {
       console.error('[provideLiquidity] Error:', err);
-      setError(err.message || 'Failed to provide liquidity');
+      // Check if it's an authentication error
+      if (err.response?.status === 401 || err.message?.includes('Authentication required') || err.message?.includes('logged in')) {
+        const confirmLogin = confirm(
+          '⚠️ You need to log in first!\n\n' +
+          'Your wallet is connected, but you need a platform account to provide liquidity.\n\n' +
+          'Click OK to go to the login/register page, or Cancel to continue browsing.'
+        );
+        if (confirmLogin) {
+          window.location.href = '/login';
+        }
+      } else {
+        setError(err.message || 'Failed to provide liquidity');
+      }
     }
   });
 
@@ -478,6 +490,24 @@ export default function LpDashboard() {
       return;
     }
 
+    // Check if user is logged into the platform (base44.auth.me() will fail if not)
+    try {
+      const currentUser = await base44.auth.me();
+      if (!currentUser) {
+        throw new Error('Not logged in');
+      }
+    } catch (authErr) {
+      const confirmLogin = confirm(
+        '⚠️ You need to log in first!\n\n' +
+        'Your wallet is connected, but you need a platform account to provide liquidity.\n\n' +
+        'Click OK to go to the login/register page, or Cancel to continue browsing.'
+      );
+      if (confirmLogin) {
+        window.location.href = '/login';
+      }
+      return;
+    }
+
     try {
       const res = await base44.functions.invoke('provideFuturesLiquidity', {
         walletAddress,
@@ -502,6 +532,7 @@ export default function LpDashboard() {
         setPendingFuturesCommit(res.data.commit_data);
       }
     } catch (error) {
+      console.error('[handleFuturesLiquidity] Error:', error);
       alert('Failed to provide liquidity: ' + error.message);
     }
   };
