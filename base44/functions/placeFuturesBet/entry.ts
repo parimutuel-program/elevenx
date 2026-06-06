@@ -133,9 +133,9 @@ Deno.serve(async (req) => {
     const potentialPayout = amount * (bestOffer.odds_at_creation || selectedOutcome.odds);
 
     // Get program ID and derive REAL PDAs
-    const PROGRAM_ID = Deno.env.get('SOLANA__PROGRAM_ID');
+    const PROGRAM_ID = Deno.env.get('SOLANA_PROGRAM_ID');
     if (!PROGRAM_ID) {
-      return Response.json({ error: 'SOLANA__PROGRAM_ID not configured' }, { status: 500 });
+      return Response.json({ error: 'SOLANA_PROGRAM_ID not configured' }, { status: 500 });
     }
 
     const programId = new PublicKey(PROGRAM_ID);
