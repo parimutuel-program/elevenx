@@ -4,7 +4,9 @@ import { base44 } from '@/api/base44Client';
 import { useWallet } from '@/lib/WalletContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Loader2, CheckCircle, AlertTriangle, Key } from 'lucide-react';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
 
 export default function InitPlatform() {
@@ -12,6 +14,9 @@ export default function InitPlatform() {
   const [instruction, setInstruction] = useState(null);
   const [error, setError] = useState(null);
   const { walletAddress } = useWallet();
+  const [newProgramId, setNewProgramId] = useState('');
+  const [isUpdatingProgramId, setIsUpdatingProgramId] = useState(false);
+  const [programIdUpdateResult, setProgramIdUpdateResult] = useState(null);
 
   const { data: platformStatus } = useQuery({
     queryKey: ['platformStatus'],
@@ -34,6 +39,45 @@ export default function InitPlatform() {
   const handleSuccess = () => {
     setInstruction(null);
     setError(null);
+  };
+
+  const handleUpdateProgramId = async () => {
+    if (!newProgramId.trim()) {
+      setError('Please enter a valid program ID');
+      return;
+    }
+
+    setIsUpdatingProgramId(true);
+    setError(null);
+
+    try {
+      // Validate it's a valid Solana address format
+      const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+      if (!base58Regex.test(newProgramId.trim())) {
+        throw new Error('Invalid Solana address format. Must be 32-44 base58 characters.');
+      }
+
+      const res = await base44.functions.invoke('solanaConfig', { 
+        action: 'update_program_id',
+        newProgramId: newProgramId.trim()
+      });
+
+      if (res.data.error) {
+        throw new Error(res.data.error);
+      }
+
+      setProgramIdUpdateResult({
+        success: true,
+        oldId: res.data.oldProgramId,
+        newId: res.data.newProgramId,
+      });
+      setNewProgramId('');
+    } catch (err) {
+      setError(err.message);
+      setProgramIdUpdateResult(null);
+    } finally {
+      setIsUpdatingProgramId(false);
+    }
   };
 
   return (
@@ -74,6 +118,56 @@ export default function InitPlatform() {
             </CardContent>
           </Card>
         )}
+
+        <Card className="bg-card/50 border-border/50">
+          <CardContent className="p-6 space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Key className="w-5 h-5 text-primary" />
+              <h2 className="font-heading font-bold text-lg">Update Solana Program ID</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              After deploying a new contract, update the program ID here instead of going to the dashboard.
+            </p>
+            
+            <div className="space-y-2">
+              <Label htmlFor="programId">New Program ID</Label>
+              <Input
+                id="programId"
+                placeholder="e.g., 4TCfhcrrn6dZjTVhrhbvQu21Euc7tfF1bkBNcT7kzptd"
+                value={newProgramId}
+                onChange={(e) => setNewProgramId(e.target.value)}
+                className="font-mono text-sm"
+              />
+            </div>
+
+            {programIdUpdateResult && (
+              <div className="bg-accent/10 border border-accent/30 rounded-lg p-3">
+                <p className="text-accent text-sm font-bold">✓ Program ID Updated!</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Old: {programIdUpdateResult.oldId?.slice(0, 8)}...{programIdUpdateResult.oldId?.slice(-8)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  New: {programIdUpdateResult.newId?.slice(0, 8)}...{programIdUpdateResult.newId?.slice(-8)}
+                </p>
+              </div>
+            )}
+
+            <Button
+              onClick={handleUpdateProgramId}
+              disabled={isUpdatingProgramId || !newProgramId.trim()}
+              className="w-full"
+            >
+              {isUpdatingProgramId ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                <>Update Program ID</>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
 
         {instruction ? (
           <SolanaTransactionSigner
