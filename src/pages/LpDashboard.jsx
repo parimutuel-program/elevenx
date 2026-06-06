@@ -18,6 +18,7 @@ import FuturesLpPanel from '@/components/lp/FuturesLpPanel';
 import MatchLiquidityCard from '@/components/lp/MatchLiquidityCard';
 import LiquidityDetailModal from '@/components/lp/LiquidityDetailModal';
 import LpPositionCard from '@/components/lp/LpPositionCard';
+import { getWalletFromAuth } from '@/utils/auth';
 
 const SuccessDialog = ({ open, onClose, data, isWithdraw }) => {
   const solscanUrl = `https://solscan.io/tx/${data?.signature}?cluster=devnet`;
@@ -86,12 +87,16 @@ const SuccessDialog = ({ open, onClose, data, isWithdraw }) => {
 
 export default function LpDashboard() {
   const { user } = useAuth();
-  const { isConnected, connect, walletAddress } = useWallet();
+  const { isConnected, connect } = useWallet();
   const queryClient = useQueryClient();
 
+  // Get wallet from auth token (permanent source of truth - not localStorage)
+  const walletAddressFromAuth = getWalletFromAuth();
+  const walletAddress = walletAddressFromAuth;
+  
   // Debug: Log wallet address and query state
   React.useEffect(() => {
-    console.log('[LpDashboard] Render:', { walletAddress, isConnected });
+    console.log('[LpDashboard] Render:', { walletAddress, isConnected, source: walletAddressFromAuth ? 'auth_token' : 'wallet_context' });
   }, [walletAddress, isConnected]);
 
   const [activeTab, setActiveTab] = useState('matches');
@@ -116,7 +121,7 @@ export default function LpDashboard() {
     queryKey: ['myOffers', walletAddress],
     queryFn: async () => {
       console.log('=== LP QUERY STARTED ===');
-      console.log('walletAddress:', walletAddress);
+      console.log('walletAddress (from auth):', walletAddress);
       console.log('enabled:', !!walletAddress);
 
       // Step 1: Fetch ALL UserBets

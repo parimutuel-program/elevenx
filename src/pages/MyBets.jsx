@@ -15,6 +15,7 @@ import QuickStat from '@/components/dashboard/QuickStat';
 import EmptyState from '@/components/dashboard/EmptyState';
 import BetCard from '@/components/dashboard/BetCard';
 import LpPositionCard from '@/components/lp/LpPositionCard';
+import { getWalletFromAuth } from '@/utils/auth';
 
 const statusConfig = {
   active: { color: 'bg-primary/10 text-primary border-primary/20', icon: Clock, label: 'Active' },
@@ -121,40 +122,21 @@ export default function MyBets() {
   const [batchClaimMatchId, setBatchClaimMatchId] = useState(null);
   const [pendingWithdrawTx, setPendingWithdrawTx] = useState(null);
 
-  const getWalletAddress = () => {
-    const walletSession = localStorage.getItem('elevenx_wallet_session');
-    if (walletSession) {
-      try {
-        const parsed = JSON.parse(walletSession);
-        return parsed.address || parsed;
-      } catch {return walletSession;}
-    }
-    return null;
-  };
-  const walletAddress = getWalletAddress();
+  // Get wallet from auth token (permanent source of truth - not localStorage)
+  const walletAddress = getWalletFromAuth();
 
   const { data: myBets = [], isLoading, refetch } = useQuery({
     queryKey: ['myBets', walletAddress, user?.id],
     queryFn: async () => {
-      console.log('[MyBets] Query executing, wallet:', walletAddress);
-      console.log('[MyBets] Wallet length:', walletAddress?.length);
-      console.log('[MyBets] Wallet trimmed:', walletAddress?.trim());
+      console.log('[MyBets] Query executing, wallet from auth:', walletAddress?.slice(0, 8));
       const all = await base44.entities.UserBet.list('-created_date', 100);
       console.log('[MyBets] Total bets in DB:', all.length);
-      console.log('[MyBets] All bet wallet addresses:', all.map(b => ({ id: b.id, wallet: b.wallet_address, len: b.wallet_address?.length })));
       const filtered = walletAddress ? all.filter((ub) => {
         const match = ub.wallet_address === walletAddress;
-        const trimmedMatch = ub.wallet_address === walletAddress?.trim();
-        console.log('[MyBets] Comparing:', {
-          betWallet: ub.wallet_address,
-          sessionWallet: walletAddress,
-          match,
-          trimmedMatch
-        });
-        if (match) console.log('[MyBets] ✓ Found matching bet:', ub.id, ub.amount, ub.status);
+        if (match) console.log('[MyBets] ✓ Found bet:', ub.id, ub.amount, ub.status);
         return match;
       }) : [];
-      console.log('[MyBets] Filtered to my bets:', filtered.length);
+      console.log('[MyBets] My bets:', filtered.length);
       if (walletAddress) return filtered;
       if (user?.id) return all.filter((ub) => ub.created_by_id === user.id);
       return [];
