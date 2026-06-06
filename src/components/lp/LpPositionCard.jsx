@@ -219,15 +219,15 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
       animate={{ opacity: 1, y: 0 }}
       className="relative rounded-2xl overflow-hidden border border-white/10"
       style={{
-        background: isFutures 
-          ? 'linear-gradient(180deg, #2d1f4e 0%, #1a0f2e 100%)' // Purple gradient for futures
-          : 'linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%)', // Dark blue for matches
+        background: '#121212',
         boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)'
       }}
     >
-      {/* Glow effect */}
-      <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-10`} 
-        style={{ background: isFutures ? '#fbbf24' : isFullyMatched ? '#14f195' : isPartiallyMatched ? '#fbbf24' : '#a69cf2' }} />
+      {/* Glow orbs */}
+      <div className="absolute top-0 right-0 w-56 h-56 rounded-full blur-3xl opacity-30" style={{ background: '#a69cf2' }} />
+      <div className="absolute bottom-0 left-0 w-40 h-40 rounded-full blur-3xl opacity-20" style={{ background: '#14f195' }} />
+      {/* Grid lines decoration */}
+      <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'linear-gradient(#a69cf2 1px, transparent 1px), linear-gradient(90deg, #a69cf2 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
       <div className="relative p-4 sm:p-5 space-y-3">
         {/* Header - Outcome & Status */}
