@@ -31,10 +31,14 @@ export default function Profile() {
   console.log('Profile - connectedWalletAddress:', connectedWalletAddress);
   console.log('Profile - isConnected:', isConnected);
 
-  // Auto-logout when wallet disconnects
+  // Auto-logout when wallet disconnects (only if previously connected)
+  const wasConnectedRef = useRef(false);
+  
   React.useEffect(() => {
-    if ((currentUser || walletAddress) && !isConnected) {
-      console.log('Wallet disconnected, logging out...');
+    if (isConnected) {
+      wasConnectedRef.current = true;
+    } else if (wasConnectedRef.current && (currentUser || walletAddress)) {
+      console.log('Wallet disconnected after being connected, logging out...');
       logout();
     }
   }, [isConnected, currentUser, walletAddress]);
