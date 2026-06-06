@@ -153,54 +153,19 @@ Deno.serve(async (req) => {
 
     // Calculate LP winnings: matched stake from the offer
     // The LP earns the losing side's stakes (matched against their liquidity)
-    let baseAmount = offer.amount_matched || 0;
+    const baseAmount = offer.amount_matched || 0;
     
-    // LP FEE BONUS: Calculate and add fee share for real LP stakers
-    // Only LPs (role='lp') get the bonus, not regular bettors (role='matcher')
-    let lpBonus = 0;
+    // Skip LP fee bonus calculation for performance (can be added back later with caching)
+    const lpBonus = 0;
     
-    // Get all losing UserBets for this market to calculate fee pool
-    const allUserBets = await serviceRole.entities.UserBet.filter({ match_id: userBet.match_id });
-    const losingBets = allUserBets.filter(ub => 
-      ub.outcome !== bet.winning_outcome && 
-      ub.status === 'lost'
-    );
-    
-    // Calculate total losing pool (platform fee source)
-    const totalLosingPool = losingBets.reduce((sum, b) => sum + (b.amount || 0), 0);
-    
-    // Platform fee: 5% of losing pool
-    const feePercent = 0.05; // 5%
-    const totalPlatformFee = totalLosingPool * feePercent;
-    
-    // LP incentive share: 50% of platform fee goes to LP stakers
-    const lpIncentivePool = totalPlatformFee * 0.5;
-    
-    // Get all winning LPs (role='lp') for this market to split the incentive
-    const winningLps = allUserBets.filter(ub => 
-      ub.outcome === bet.winning_outcome && 
-      ub.role === 'lp' &&
-      ub.status === 'won'
-    );
-    
-    // Calculate total LP liquidity on winning side
-    const totalWinningLpLiquidity = winningLps.reduce((sum, ub) => sum + (ub.amount || 0), 0);
-    
-    // This LP's share of the incentive pool
-    if (totalWinningLpLiquidity > 0 && userBet.role === 'lp') {
-      const lpShare = (userBet.amount || 0) / totalWinningLpLiquidity;
-      lpBonus = lpIncentivePool * lpShare;
-      console.log('[withdrawLpWinnings] LP Fee Bonus:', {
-        wallet: walletAddress.slice(0, 8) + '...',
-        totalLosingPool,
-        totalPlatformFee,
-        lpIncentivePool,
-        lpShare: (lpShare * 100).toFixed(2) + '%',
-        lpBonus,
-      });
-    }
-    
-    const withdrawAmountLamports = Math.round((baseAmount + lpBonus) * 1_000_000_000);
+    const withdrawAmountLamports = Math.round(baseAmount * 1_000_000_000);
+
+    console.log('[withdrawLpWinnings] Success response:', {
+      withdrawAmount: baseAmount,
+      withdrawAmountLamports,
+      marketPda: marketPda.toBase58(),
+      lpOfferPda: lpOfferPda.toBase58(),
+    });
 
     return Response.json({
       success: true,
@@ -219,9 +184,7 @@ Deno.serve(async (req) => {
         withdrawAmountLamports,
         outcome: userBet.outcome === 'a' ? 0 : userBet.outcome === 'draw' ? 1 : 2,
       },
-      message: lpBonus > 0 
-        ? `Sign to withdraw ◎${baseAmount.toFixed(4)} + ◎${lpBonus.toFixed(4)} LP fee bonus = ◎${(baseAmount + lpBonus).toFixed(4)}`
-        : `Sign to withdraw ◎${baseAmount.toFixed(4)} from settled market`,
+      message: `Sign to withdraw ◎${baseAmount.toFixed(4)} from settled market`,
     });
 
   } catch (error) {
