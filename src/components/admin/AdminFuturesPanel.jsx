@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Trophy, CheckCircle, Zap, Loader, Globe, Rocket, RefreshCcw, TrendingUp, Wand2 } from 'lucide-react';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
 
-export default function AdminFuturesPanel() {
+export default function AdminFuturesPanel({ walletAddress }) {
   const queryClient = useQueryClient();
   const [pendingDeploy, setPendingDeploy] = useState(null);
   const [deployingMarketId, setDeployingMarketId] = useState(null);
@@ -102,6 +102,7 @@ export default function AdminFuturesPanel() {
     console.log('Futures market deploy success:', result);
     
     if (pendingDeploy?.futures_market_id) {
+      // Now set solana_market_created: true AFTER successful on-chain confirmation
       await base44.entities.FuturesMarket.update(pendingDeploy.futures_market_id, {
         solana_market_created: true,
         solana_market_pda: pendingDeploy.marketPda || result.marketPda,
@@ -144,6 +145,7 @@ export default function AdminFuturesPanel() {
       const res = await base44.functions.invoke('settleFuturesMarketOnChain', {
         futures_market_id: marketId,
         winning_position: manual_winning_position,
+        admin_wallet: walletAddress,
       });
       if (res.data.error) throw new Error(res.data.error);
       return res.data;
