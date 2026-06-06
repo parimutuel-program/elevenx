@@ -486,28 +486,28 @@ export default function Home() {
         
         <div className="relative z-10">
           {/* Main CTA */}
-          <div className="text-center mb-8 hidden">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <Trophy className="w-10 h-10 text-primary" />
-              <div className="w-10 h-10 flex items-center justify-center text-4xl">⚽</div>
-              <Earth className="w-10 h-10 text-accent" />
-            </div>
-            <h2 className="font-heading font-black text-2xl md:text-3xl mb-3 text-white">
-              48 Teams. 104 Matches. <span className="text-primary">One Champion.</span>
-            </h2>
-            <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto">
-              Join thousands of bettors on the most decentralized sports betting platform — built on Solana for speed, transparency, and zero fees to the house.
-            </p>
-            <Link to="/matches">
-              <Button className="font-heading font-bold px-10 h-12 rounded-xl text-sm text-white"
-              style={{ background: 'linear-gradient(135deg, #21c45d, #10b981)', boxShadow: '0 0 28px rgba(33,196,93,0.3)' }}
-              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}>
-                <Trophy className="w-4 h-4 mr-2" />
-                Start Betting Now
-              </Button>
-            </Link>
-          </div>
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          
 
           {/* Divider */}
           <div className="border-t border-white/10 mb-8" />
