@@ -102,6 +102,7 @@ export default function BetDetail() {
       queryClient.invalidateQueries({ queryKey: ['bet', betId] });
       queryClient.invalidateQueries({ queryKey: ['myBetsForBet', betId] });
       queryClient.invalidateQueries({ queryKey: ['bets'] });
+      queryClient.invalidateQueries({ queryKey: ['myBets'] });
       setSelectedOutcome(null);
     },
     onError: () => {},
