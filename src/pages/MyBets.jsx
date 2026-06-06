@@ -291,8 +291,13 @@ export default function MyBets() {
         </div>
       </div>
 
-      <Tabs defaultValue="bets" className="space-y-4">
+      <Tabs defaultValue="stats" className="space-y-4">
         <TabsList className="grid w-full grid-cols-4 bg-card border border-border/50 rounded-xl">
+          <TabsTrigger value="stats" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg text-xs sm:text-sm">
+            <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+            <span className="hidden sm:inline">Stats</span>
+            <span className="sm:hidden">Stats</span>
+          </TabsTrigger>
           <TabsTrigger value="bets" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg text-xs sm:text-sm">
             <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
             <span className="hidden sm:inline">My Bets ({myMatcherBets.length})</span>
@@ -303,17 +308,48 @@ export default function MyBets() {
             <span className="hidden sm:inline">LP ({myLpPositions.length})</span>
             <span className="sm:hidden">LP</span>
           </TabsTrigger>
-          <TabsTrigger value="stats" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg text-xs sm:text-sm">
-            <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-            <span className="hidden sm:inline">Stats</span>
-            <span className="sm:hidden">Stats</span>
-          </TabsTrigger>
           <TabsTrigger value="history" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg text-xs sm:text-sm">
             <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
             <span className="hidden sm:inline">History ({completedBets.length})</span>
             <span className="sm:hidden">History</span>
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="stats">
+          {groupedBetsArray.filter(b => b.status === 'active' || b.status === 'pending' || b.status === 'won').length > 0 ?
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
+              {groupedBetsArray.filter(b => b.status === 'active' || b.status === 'pending' || b.status === 'won').map((bet, i) =>
+            <BetCard
+              key={bet.betIds[0]}
+              bet={bet}
+              index={i}
+              walletAddress={walletAddress}
+              onRefundRequest={(data) => setRefundDialog(data)} />
+
+            )}
+            </div> :
+
+          <EmptyState message="No active bets" actionText="Browse Matches" link="/matches" />
+          }
+        </TabsContent>
+
+        <TabsContent value="lp">
+          {myLpPositions.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
+              {myLpPositions.map((lp, i) => (
+                <LpPositionCard
+                  key={lp.id}
+                  offer={lp}
+                  index={i}
+                  walletAddress={walletAddress}
+                  onWithdrawRequest={(data) => setRefundDialog(data)}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyState message="No LP positions" actionText="Provide Liquidity" link="/lp" />
+          )}
+        </TabsContent>
 
         <TabsContent value="bets">
           {groupedBetsArray.filter(b => b.status === 'active' || b.status === 'pending' || b.status === 'won').length > 0 ?
