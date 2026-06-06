@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { useWallet } from '@/lib/WalletContext';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Wallet, TrendingUp, DollarSign, ArrowRight, Plus, Clock, CheckCircle2, AlertCircle, ExternalLink, Trophy, ChevronDown, ChevronUp, Target, Coins, Lock, Zap } from 'lucide-react';
+import { Wallet, TrendingUp, DollarSign, ArrowRight, Plus, Clock, CheckCircle2, AlertCircle, ExternalLink, Trophy, ChevronDown, ChevronUp, Target, Coins, Lock, Zap, Bug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -903,7 +903,27 @@ export default function LpDashboard() {
 
             {/* LP Positions List */}
             <div className="space-y-3">
-              <h2 className="font-heading font-bold text-sm text-muted-foreground">Your LP Positions</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="font-heading font-bold text-sm text-muted-foreground">Your LP Positions</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const losingLp = offersWithUserBet.find((o) => o.userBet?.status === 'lost');
+                    if (!losingLp) {
+                      alert('No losing LP positions found. You need a settled LP where your backed outcome WON (so the LP lost).');
+                      return;
+                    }
+                    const testId = losingLp.userBetId || losingLp.id;
+                    alert(`Testing LOSING LP withdrawal (UserBet: ${testId})\n\nIf this transaction SUCCEEDS, the on-chain logic is BUGGY (inverted).\nIf it FAILS with error 6009, the on-chain logic is CORRECT.`);
+                    window.open(`/debug-claim?test=${testId}`, '_blank');
+                  }}
+                  className="gap-2 h-8 text-xs border-destructive/30 text-destructive hover:bg-destructive/10 rounded-xl"
+                >
+                  <Bug className="w-3 h-3" />
+                  Test Losing LP
+                </Button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {(() => {
                 console.log('=== RENDER DEBUG ===');

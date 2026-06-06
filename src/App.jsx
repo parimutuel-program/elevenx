@@ -31,6 +31,7 @@ import FixAdmin from '@/pages/FixAdmin';
 import DebugWallet from '@/pages/DebugWallet';
 import DebugClaim from '@/pages/DebugClaim';
 import DebugStorage from '@/pages/DebugStorage';
+import TestLosingLp from '@/pages/TestLosingLp';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -78,6 +79,7 @@ const AuthenticatedApp = () => {
         <Route path="/debug-wallet" element={<DebugWallet />} />
         <Route path="/debug-claim" element={<DebugClaim />} />
         <Route path="/debug-storage" element={<DebugStorage />} />
+        <Route path="/test-losing-lp" element={<TestLosingLp />} />
       </Route>
 
       <Route path="*" element={<PageNotFound />} />
