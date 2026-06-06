@@ -268,79 +268,79 @@ export default function MatchDetail() {
       }
 
       {/* ── Admin: Create Market On-Chain ── */}
-      {hasBet && isAdmin && isOpen &&
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-      className="bg-card border border-primary/20 rounded-2xl p-5 text-center hidden">
-          <Zap className="w-8 h-8 text-primary mx-auto mb-3" />
-          <h3 className="font-heading font-bold mb-1">
-            {bet.solana_market_created ? 'Market On-Chain ✓' : 'Create Market On-Chain'}
-          </h3>
-          <p className="text-xs text-muted-foreground mb-4">
-            {bet.solana_market_created ?
-          `Market initialized at ${bet.solana_market_pda?.slice(0, 20)}...` :
-          'Initialize the pari-mutuel market on Solana'}
-          </p>
-          {!bet.solana_market_created && !marketCreationTx &&
-        <Button onClick={async () => {
-          const res = await base44.functions.invoke('createMarketOnChain', { bet_id: bet.id, match_id: match.id });
-          if (res.data.error) {
-            alert('Error: ' + res.data.error);
-          } else if (res.data.alreadyExists) {
-            await base44.entities.Bet.update(bet.id, {
-              solana_market_created: true,
-              solana_market_pda: res.data.marketPda
-            });
-            alert('Market already exists on-chain!');
-            queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
-          } else {
-            setMarketCreationTx(res.data.solana_instruction);
-          }
-        }}
-        className="bg-primary hover:bg-primary/90 font-heading font-bold h-11 rounded-xl px-8">
-              Prepare Transaction
-            </Button>
-        }
-          {!bet.solana_market_created && marketCreationTx &&
-        <SolanaTransactionSigner
-          instruction={marketCreationTx}
-          amount={0}
-          isConnected={!!provider}
-          onSuccess={async () => {
-            await base44.entities.Bet.update(bet.id, {
-              solana_market_created: true,
-              solana_market_pda: marketCreationTx.accounts.market
-            });
-            alert('Market created on-chain!');
-            setMarketCreationTx(null);
-            queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
-          }}
-          onError={(err) => alert('Failed: ' + err.message)} />
+      
 
-        }
-          {bet.solana_market_created ?
-        <div className="flex items-center justify-center gap-2">
-              <Badge className="bg-accent/20 text-accent text-xs py-2 px-4 rounded-xl">
-                <CheckCircle2 className="w-3 h-3 mr-1" /> Initialized
-              </Badge>
-              <Button size="sm" variant="outline" onClick={async () => {
-            const res = await base44.functions.invoke('checkMarketStatus', { match_id: match.id });
-            if (res.data.status === 'initialized') {
-              await base44.entities.Bet.update(bet.id, {
-                solana_market_created: true,
-                solana_market_pda: res.data.marketPda || bet.solana_market_pda
-              });
-              alert('Status synced with blockchain!');
-              queryClient.invalidateQueries({ queryKey: ['betsForMatch', matchId] });
-            } else {
-              alert('Market not found on-chain. Please create it.');
-            }
-          }} className="h-8 text-xs rounded-lg">
-                Sync Status
-              </Button>
-            </div> :
-        null}
-        </motion.div>
-      }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      
 
       {!hasBet && !isAdmin &&
       <div className="text-center py-10 bg-card border border-border/50 rounded-2xl">
