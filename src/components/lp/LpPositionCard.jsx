@@ -388,7 +388,6 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
         <div className="flex gap-2 pt-2 border-t border-white/10">
           {(() => {
             const isClaimed = offer.status === 'claimed' || offer.userBet?.status === 'claimed';
-            const isSettled = offer.status === 'settled' || offer.userBet?.status === 'settled';
             
             if (isClaimed) {
               return (
@@ -403,50 +402,7 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
               );
             }
             
-            // LP LOST = backed the winning outcome (had to pay winners, nothing left)
-            // Show "No Funds" - no claim button
-            if (isLpLost || (isSettled && !isLpWon && !hasUnmatched)) {
-              return (
-                <Button
-                  disabled
-                  variant="outline"
-                  className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-destructive/20 text-destructive/50 bg-destructive/5 rounded-xl font-heading font-bold"
-                >
-                  <XCircle className="w-3 h-3 mr-1" />
-                  No Funds
-                </Button>
-              );
-            }
-            
-            // Show "Fully Matched" when position is open/active but no unmatched liquidity
-            if (!hasUnmatched && !isSettled && !isLpWon && !isLpLost && (offer.status === 'open' || offer.status === 'partially_matched' || offer.status === 'fully_matched')) {
-              return (
-                <Button
-                  disabled
-                  variant="outline"
-                  className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-border/30 text-muted-foreground bg-secondary/10 rounded-xl font-heading font-bold"
-                >
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  Fully Matched
-                </Button>
-              );
-            }
-            
-            // Show "Market Closed" when market is closed but not yet settled
-            if (offer.status === 'closed' || (!isSettled && !hasUnmatched && offer.status !== 'open')) {
-              return (
-                <Button
-                  disabled
-                  variant="outline"
-                  className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-border/30 text-muted-foreground bg-secondary/10 rounded-xl font-heading font-bold"
-                >
-                  <Clock className="w-3 h-3 mr-1" />
-                  Market Closed
-                </Button>
-              );
-            }
-            
-            // Has unmatched liquidity - withdraw unmatched (ALWAYS available, priority over everything)
+            // Priority 1: Has unmatched liquidity - withdraw unmatched (ALWAYS available)
             if ((hasUnmatched || liquidityUnmatched > 0) && onWithdrawRequest) {
               return (
                 <Button
@@ -459,7 +415,7 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
               );
             }
             
-            // LP WON with matched liquidity - claim winnings (matched + fees)
+            // Priority 2: LP WON with matched liquidity - claim winnings
             if (isLpWon && liquidityMatched > 0 && onWithdrawRequest) {
               return (
                 <Button
@@ -468,21 +424,35 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
                   style={{ background: 'linear-gradient(135deg, #14f195, #00ff87)' }}
                 >
                   <Trophy className="w-3 h-3 mr-1" />
-                  Claim ◎{liquidityMatched.toFixed(4)}
+                  Claim ◎{(liquidityMatched * 0.02).toFixed(4)}
                 </Button>
               );
             }
             
-            // LP WON but no matched/unmatched - show disabled (already handled by No Funds)
-            if (isLpWon && liquidityMatched === 0 && liquidityUnmatched === 0) {
+            // LP LOST - no funds to claim
+            if (isLpLost) {
               return (
                 <Button
                   disabled
                   variant="outline"
-                  className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-accent/30 text-accent bg-accent/10 rounded-xl font-heading font-bold"
+                  className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-destructive/20 text-destructive/50 bg-destructive/5 rounded-xl font-heading font-bold"
                 >
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  Fully Locked
+                  <XCircle className="w-3 h-3 mr-1" />
+                  No Funds
+                </Button>
+              );
+            }
+            
+            // Position not yet settled
+            if (!isLpWon && !isLpLost) {
+              return (
+                <Button
+                  disabled
+                  variant="outline"
+                  className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-border/30 text-muted-foreground bg-secondary/10 rounded-xl font-heading font-bold"
+                >
+                  <Clock className="w-3 h-3 mr-1" />
+                  Pending Settlement
                 </Button>
               );
             }
