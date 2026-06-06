@@ -580,8 +580,8 @@ export default function Home() {
           {/* Bottom Bar */}
           <div className="border-t border-white/10 mt-6 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                <span className="text-white font-black text-sm">11</span>
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center -ml-0.5">
+                <span className="text-white font-black text-[10px] sm:text-sm">11</span>
               </div>
               <span className="text-xs text-white/60">© 2026 ElevenX. All rights reserved.</span>
             </div>
