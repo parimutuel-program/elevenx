@@ -28,8 +28,9 @@ Deno.serve(async (req) => {
     if (userBet.role !== 'lp') {
       return Response.json({ error: 'Not an LP bet' }, { status: 400 });
     }
-    if (userBet.status !== 'pending' && userBet.status !== 'active') {
-      return Response.json({ error: 'Bet is not pending or active' }, { status: 400 });
+    // Allow finalization for won/settled LP positions (winnings claim) or pending/active (unmatched withdrawal)
+    if (!['pending', 'active', 'won', 'settled'].includes(userBet.status)) {
+      return Response.json({ error: 'Bet status does not allow withdrawal' }, { status: 400 });
     }
 
     // For traditional LP (with offer_id), fetch and update BetOffer
@@ -49,12 +50,14 @@ Deno.serve(async (req) => {
     const withdrawAmount = userBet.amount || offer.amount_unmatched || 0;
 
     // Update database records
-    // For parimutuel LP (no offer_id): mark as refunded
-    // For traditional LP (with offer_id): mark as refunded and cancel offer
-    await base44.entities.UserBet.update(userBetId, { status: 'refunded' });
+    // For won/settled LP positions: mark as claimed
+    // For pending/active LP positions (unmatched withdrawal): mark as refunded
+    const newStatus = ['won', 'settled'].includes(userBet.status) ? 'claimed' : 'refunded';
+    await base44.entities.UserBet.update(userBetId, { status: newStatus });
     
     if (offerId && offer) {
-      await base44.entities.BetOffer.update(offerId, { status: 'cancelled' });
+      const offerStatus = ['won', 'settled'].includes(userBet.status) ? 'settled' : 'cancelled';
+      await base44.entities.BetOffer.update(offerId, { status: offerStatus });
     }
     
     // Update Bet LP totals

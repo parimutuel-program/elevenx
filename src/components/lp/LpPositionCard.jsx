@@ -250,19 +250,38 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
           {(() => {
             const isWon = offer.status === 'won' || offer.userBet?.status === 'won';
             const isSettled = offer.status === 'settled' || offer.userBet?.status === 'settled';
-            const canWithdraw = isWon || isSettled || hasUnmatched;
+            const isClaimed = offer.status === 'claimed' || offer.userBet?.status === 'claimed';
+            const hasUnmatchedOrWon = isWon || isSettled || hasUnmatched;
             
-            if (canWithdraw && onWithdrawRequest) {
+            if (isClaimed) {
+              return (
+                <Button
+                  disabled
+                  variant="outline"
+                  className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-accent/20 text-accent/50 bg-accent/5 rounded-xl font-heading font-bold"
+                >
+                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                  Claimed
+                </Button>
+              );
+            }
+            
+            if (hasUnmatchedOrWon && onWithdrawRequest) {
               const withdrawLabel = isWon || isSettled 
-                ? `Claim ◎${(liquidityMatched + (offer.lpFeeBonus || 0)).toFixed(4)}`
+                ? `Claim Winnings`
                 : `Withdraw ◎${liquidityUnmatched.toFixed(4)}`;
               const withdrawIcon = isWon || isSettled ? Trophy : Wallet;
+              const isWinnings = isWon || isSettled;
               
               return (
                 <Button
                   onClick={handleWithdraw}
-                  variant="outline"
-                  className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-accent/30 text-accent hover:bg-accent/10 rounded-xl font-heading font-bold"
+                  className={`flex-1 h-8 sm:h-9 text-[10px] sm:text-xs rounded-xl font-heading font-bold ${
+                    isWinnings 
+                      ? 'text-black' 
+                      : 'border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10'
+                  }`}
+                  style={isWinnings ? { background: 'linear-gradient(135deg, #14f195, #00ff87)' } : {}}
                 >
                   <withdrawIcon className="w-3 h-3 mr-1" />
                   {withdrawLabel}
