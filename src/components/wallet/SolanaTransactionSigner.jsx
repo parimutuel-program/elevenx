@@ -461,8 +461,19 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
           { pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false }, // system_program
         ];
         
-        // Anchor discriminator (8 bytes) + amount (u64 LE) = 16 bytes
-        const wlwDisc = await anchorDiscriminator('withdraw_lp_winnings');
+        // Try multiple discriminator formats to match deployed program
+        // Format 1: Anchor default "global:<name>"
+        const discGlobal = await anchorDiscriminator('global:withdraw_lp_winnings');
+        // Format 2: Just the function name
+        const discSimple = await anchorDiscriminator('withdraw_lp_winnings');
+        
+        console.log('[withdraw_lp_winnings] Discriminator comparison:', {
+          global_format: discGlobal.toString('hex'),
+          simple_format: discSimple.toString('hex'),
+        });
+        
+        // Use simple format (no "global:" prefix) - matches most Anchor programs
+        const wlwDisc = discSimple;
         const data = Buffer.alloc(16);
         wlwDisc.copy(data, 0);
         data.writeBigUInt64LE(BigInt(instruction.withdrawAmountLamports || 0), 8);
