@@ -136,12 +136,22 @@ export default function MyBets() {
   const { data: myBets = [], isLoading, refetch } = useQuery({
     queryKey: ['myBets', walletAddress, user?.id],
     queryFn: async () => {
-      console.log('[MyBets] Query executing, wallet:', walletAddress?.slice(0, 8));
+      console.log('[MyBets] Query executing, wallet:', walletAddress);
+      console.log('[MyBets] Wallet length:', walletAddress?.length);
+      console.log('[MyBets] Wallet trimmed:', walletAddress?.trim());
       const all = await base44.entities.UserBet.list('-created_date', 100);
       console.log('[MyBets] Total bets in DB:', all.length);
+      console.log('[MyBets] All bet wallet addresses:', all.map(b => ({ id: b.id, wallet: b.wallet_address, len: b.wallet_address?.length })));
       const filtered = walletAddress ? all.filter((ub) => {
         const match = ub.wallet_address === walletAddress;
-        if (match) console.log('[MyBets] Found matching bet:', ub.id, ub.amount, ub.status);
+        const trimmedMatch = ub.wallet_address === walletAddress?.trim();
+        console.log('[MyBets] Comparing:', {
+          betWallet: ub.wallet_address,
+          sessionWallet: walletAddress,
+          match,
+          trimmedMatch
+        });
+        if (match) console.log('[MyBets] ✓ Found matching bet:', ub.id, ub.amount, ub.status);
         return match;
       }) : [];
       console.log('[MyBets] Filtered to my bets:', filtered.length);
