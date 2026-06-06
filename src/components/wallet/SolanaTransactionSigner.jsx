@@ -474,14 +474,17 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         const discGlobal = await anchorDiscriminator('global:withdraw_lp_winnings');
         // Format 2: Just the function name
         const discSimple = await anchorDiscriminator('withdraw_lp_winnings');
+        // Format 3: Anchor namespaced "elevenx_betting:withdraw_lp_winnings"
+        const discNamespaced = await anchorDiscriminator('elevenx_betting:withdraw_lp_winnings');
         
         console.log('[withdraw_lp_winnings] Discriminator comparison:', {
           global_format: discGlobal.toString('hex'),
           simple_format: discSimple.toString('hex'),
+          namespaced_format: discNamespaced.toString('hex'),
         });
         
-        // Use simple format (global: gave "Invalid instruction data")
-        const wlwDisc = discSimple;
+        // Use global format (standard Anchor)
+        const wlwDisc = discGlobal;
         console.log('[withdraw_lp_winnings] Using simple format discriminator:', wlwDisc.toString('hex'));
         const data = Buffer.alloc(16);
         wlwDisc.copy(data, 0);
