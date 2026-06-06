@@ -62,8 +62,8 @@ export default function MatchDetail() {
   const walletAddress = getWalletAddress();
   // All bets show as regular bets (no LP positions on match detail page)
   const myMatcherBets = myUserBets.filter((ub) =>
-    (walletAddress && ub.wallet_address === walletAddress || user?.id && ub.created_by_id === user.id) &&
-    (ub.role !== 'lp' || ub.offer_id === null)
+  (walletAddress && ub.wallet_address === walletAddress || user?.id && ub.created_by_id === user.id) && (
+  ub.role !== 'lp' || ub.offer_id === null)
   );
 
   // Calculate won bets and total payout for batch claim (matcher bets only)
@@ -166,9 +166,9 @@ export default function MatchDetail() {
 
   const withdrawMatcherBetMutation = useMutation({
     mutationFn: async (userBetId) => {
-      const res = await base44.functions.invoke('withdrawBet', { 
+      const res = await base44.functions.invoke('withdrawBet', {
         userBetId,
-        walletAddress 
+        walletAddress
       });
       if (res.data.error) throw new Error(res.data.error);
       return res.data;
@@ -270,7 +270,7 @@ export default function MatchDetail() {
       {/* ── Admin: Create Market On-Chain ── */}
       {hasBet && isAdmin && isOpen &&
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-      className="bg-card border border-primary/20 rounded-2xl p-5 text-center">
+      className="bg-card border border-primary/20 rounded-2xl p-5 text-center hidden">
           <Zap className="w-8 h-8 text-primary mx-auto mb-3" />
           <h3 className="font-heading font-bold mb-1">
             {bet.solana_market_created ? 'Market On-Chain ✓' : 'Create Market On-Chain'}
@@ -457,8 +457,8 @@ export default function MatchDetail() {
         }
           
           <div className="space-y-3">
-            {myMatcherBets.map((ub) => (
-              <div key={ub.id} className="bg-secondary/30 rounded-xl p-4">
+            {myMatcherBets.map((ub) =>
+          <div key={ub.id} className="bg-secondary/30 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-bold text-sm">{ub.outcome_label}</span>
@@ -483,11 +483,11 @@ export default function MatchDetail() {
             <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/30">
                   <p className="text-[10px] text-yellow-400">⏳ Waiting to be matched</p>
                   <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => withdrawMatcherBetMutation.mutate(ub.id)}
-                    disabled={withdrawMatcherBetMutation.isPending}
-                    className="h-7 text-xs rounded-lg">
+                size="sm"
+                variant="outline"
+                onClick={() => withdrawMatcherBetMutation.mutate(ub.id)}
+                disabled={withdrawMatcherBetMutation.isPending}
+                className="h-7 text-xs rounded-lg">
                     {withdrawMatcherBetMutation.isPending ? 'Withdrawing...' : 'Withdraw'}
                   </Button>
                 </div>
@@ -499,7 +499,7 @@ export default function MatchDetail() {
                   </p>
             }
               </div>
-            ))}
+          )}
           </div>
         </motion.div>
       }
