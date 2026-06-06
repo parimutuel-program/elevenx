@@ -458,11 +458,12 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
           { pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false }, // system_program
         ];
         
-        // Anchor discriminator (8 bytes) + amount (u64 LE) = 16 bytes
+        // Anchor discriminator (8 bytes) + amount (u64 LE) + outcome (u8) = 17 bytes
         const wlwDisc = await anchorDiscriminator('withdraw_lp_winnings');
-        const data = Buffer.alloc(16);
+        const data = Buffer.alloc(17);
         wlwDisc.copy(data, 0);
         data.writeBigUInt64LE(BigInt(instruction.withdrawAmountLamports || 0), 8);
+        data.writeUInt8(instruction.outcome || 0, 16); // outcome: 0=a, 1=b, 2=draw
         
         const withdrawIx = new TransactionInstruction({
           keys,
