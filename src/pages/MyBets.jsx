@@ -291,8 +291,13 @@ export default function MyBets() {
         </div>
       </div>
 
-      <Tabs defaultValue="bets" className="space-y-4">
+      <Tabs defaultValue="stats" className="space-y-4">
         <TabsList className="grid w-full grid-cols-4 bg-card border border-border/50 rounded-xl">
+          <TabsTrigger value="stats" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg text-xs sm:text-sm">
+            <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+            <span className="hidden sm:inline">Stats</span>
+            <span className="sm:hidden">Stats</span>
+          </TabsTrigger>
           <TabsTrigger value="bets" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg text-xs sm:text-sm">
             <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
             <span className="hidden sm:inline">My Bets ({myMatcherBets.length})</span>
@@ -303,17 +308,21 @@ export default function MyBets() {
             <span className="hidden sm:inline">LP ({myLpPositions.length})</span>
             <span className="sm:hidden">LP</span>
           </TabsTrigger>
-          <TabsTrigger value="stats" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg text-xs sm:text-sm">
-            <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-            <span className="hidden sm:inline">Stats</span>
-            <span className="sm:hidden">Stats</span>
-          </TabsTrigger>
           <TabsTrigger value="history" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg text-xs sm:text-sm">
             <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
             <span className="hidden sm:inline">History ({completedBets.length})</span>
             <span className="sm:hidden">History</span>
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="stats">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <QuickStat label="Total Bets" value={myBets.length.toString()} icon={Trophy} />
+            <QuickStat label="Total Staked" value={`◎${totalStaked.toFixed(2)}`} icon={DollarSign} />
+            <QuickStat label="Total Won" value={`◎${totalWon.toFixed(2)}`} icon={TrendingUp} />
+            <QuickStat label="Win Rate" value={`${winRate}%`} icon={Activity} />
+          </div>
+        </TabsContent>
 
         <TabsContent value="bets">
           {groupedBetsArray.filter(b => b.status === 'active' || b.status === 'pending' || b.status === 'won').length > 0 ?
@@ -349,102 +358,6 @@ export default function MyBets() {
           ) : (
             <EmptyState message="No LP positions" actionText="Provide Liquidity" link="/lp" />
           )}
-        </TabsContent>
-
-        <TabsContent value="stats">
-          <div className="space-y-4">
-            {/* Main Stats */}
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              <StatCard
-                label="Total Staked"
-                value={`◎${totalStaked.toFixed(4)}`}
-                icon={DollarSign}
-                color="text-foreground"
-                delay={0} />
-              
-              <StatCard
-                label="Potential Winnings"
-                value={`◎${potentialWinnings.toFixed(4)}`}
-                icon={TrendingUp}
-                color="text-primary"
-                delay={0.05} />
-              
-              <StatCard
-                label="Total Won"
-                value={`◎${totalWon.toFixed(4)}`}
-                icon={Award}
-                color="text-accent"
-                delay={0.1} />
-              
-              <StatCard
-                label="Win Rate"
-                value={`${winRate}%`}
-                icon={Target}
-                color="text-accent"
-                delay={0.15} />
-              
-            </div>
-
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-              <QuickStat
-                label="Active Bets"
-                value={activeBets.length}
-                icon={Flame}
-                color="bg-primary/10 text-primary" />
-              
-              <QuickStat
-                label="Pending Claims"
-                value={pendingClaims.length}
-                icon={Trophy}
-                color="bg-accent/10 text-accent" />
-              
-              <QuickStat
-                label="Available Refunds"
-                value={availableRefunds.length}
-                icon={Shield}
-                color="bg-yellow-500/10 text-yellow-400" />
-              
-              <QuickStat
-                label="Completed Bets"
-                value={completedBets.length}
-                icon={Activity}
-                color="bg-muted text-muted-foreground" />
-              
-            </div>
-
-            {/* Performance Summary */}
-            <div className="bg-card border border-border/50 rounded-xl p-4 sm:p-5">
-              <h3 className="font-heading font-bold text-sm sm:text-base mb-3 flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-primary" />
-                Performance Summary
-              </h3>
-              <div className="space-y-2 text-xs sm:text-sm">
-                <div className="flex justify-between items-center py-2 border-b border-border/30">
-                  <span className="text-muted-foreground">Total Bets Placed</span>
-                  <span className="font-bold">{myBets.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-border/30">
-                  <span className="text-muted-foreground">Won / Lost</span>
-                  <span className="font-bold">
-                    <span className="text-accent">{myBets.filter(b => b.status === 'won' || b.status === 'claimed').length}</span>
-                    {' / '}
-                    <span className="text-destructive">{myBets.filter(b => b.status === 'lost').length}</span>
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-border/30">
-                  <span className="text-muted-foreground">Net P/L</span>
-                  <span className={`font-bold ${totalWon - totalStaked >= 0 ? 'text-accent' : 'text-destructive'}`}>
-                    ◎{(totalWon - totalStaked).toFixed(4)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-muted-foreground">Average Bet Size</span>
-                  <span className="font-bold">◎{myBets.length > 0 ? (totalStaked / myBets.length).toFixed(4) : '0.0000'}</span>
-                </div>
-              </div>
-            </div>
-          </div>
         </TabsContent>
 
         <TabsContent value="history">
