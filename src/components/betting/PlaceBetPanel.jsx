@@ -437,7 +437,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
             <p className="text-xs text-muted-foreground font-bold mb-2">⏳ No LP Liquidity Available</p>
             <p className="text-[10px] text-muted-foreground mb-2">Cannot place bets until LP provides liquidity for this outcome</p>
             <a href={`/lp?matchId=${matchId}`} className="inline-block bg-accent/10 hover:bg-accent/20 border border-accent/30 text-accent font-bold text-xs py-1.5 px-4 rounded-lg transition-colors">
-              Add LP
+              Add Liquidity
             </a>
           </div>
         }
