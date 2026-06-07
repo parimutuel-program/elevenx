@@ -121,6 +121,7 @@ export default function MyBets() {
   const [claimData, setClaimData] = useState(null);
   const [batchClaimMatchId, setBatchClaimMatchId] = useState(null);
   const [pendingWithdrawTx, setPendingWithdrawTx] = useState(null);
+  const [showAllBets, setShowAllBets] = useState(false);
 
   // Get wallet from auth token (permanent source of truth - not localStorage)
   const walletAddress = getWalletFromAuth();
@@ -172,16 +173,19 @@ export default function MyBets() {
   console.log('[MyBets] myMatcherBets (filtered):', myMatcherBets.length, myMatcherBets);
   console.log('[MyBets] myLpBets (LP positions):', myLpBets.length, myLpBets.map(b => ({ id: b.id, role: b.role, status: b.status })));
   
+  // Debug toggle: show all bets including LP positions
+  const displayBets = showAllBets ? myBets : myMatcherBets;
+  
   // Separate futures bets from match bets
   // Futures bets have futures_market_id (primary indicator)
-  console.log('[MyBets] myMatcherBets:', myMatcherBets.map(b => ({ id: b.id, match_title: b.match_title, futures_market_id: b.futures_market_id, role: b.role })));
-  const myFuturesBets = myMatcherBets.filter(b => {
+  console.log('[MyBets] displayBets:', displayBets.map(b => ({ id: b.id, match_title: b.match_title, futures_market_id: b.futures_market_id, role: b.role })));
+  const myFuturesBets = displayBets.filter(b => {
     const isFutures = !!b.futures_market_id;
     console.log('[MyBets] Checking futures:', { id: b.id, match_title: b.match_title, futures_market_id: b.futures_market_id, isFutures });
     return isFutures;
   });
   console.log('[MyBets] myFuturesBets result:', myFuturesBets.length, myFuturesBets);
-  const myMatchBets = myMatcherBets.filter(b => {
+  const myMatchBets = displayBets.filter(b => {
     const isMatch = b.match_id && !b.futures_market_id;
     console.log('[MyBets] Match bet:', { id: b.id, match_title: b.match_title, isMatch });
     return isMatch;
@@ -372,6 +376,13 @@ export default function MyBets() {
               <span className="sm:hidden">Matches</span>
             </Button>
           </Link>
+          <Button 
+            variant={showAllBets ? "default" : "outline"}
+            onClick={() => setShowAllBets(!showAllBets)}
+            className="gap-2 rounded-xl h-10 px-4 text-xs sm:text-sm"
+          >
+            {showAllBets ? '✓ Showing All' : 'Show LP Bets'}
+          </Button>
           <Button 
             variant="outline" 
             onClick={async () => {
