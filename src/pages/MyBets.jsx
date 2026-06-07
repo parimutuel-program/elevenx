@@ -245,6 +245,7 @@ export default function MyBets() {
 
   const handleClaimSignSuccess = async () => {
     if (claimData?.betIds) {
+      console.log('[MyBets] Updating bets to claimed:', claimData.betIds);
       for (const betId of claimData.betIds) {
         await base44.entities.UserBet.update(betId, { 
           status: 'claimed',
@@ -255,12 +256,13 @@ export default function MyBets() {
     }
     setClaimData(null);
     setBatchClaimMatchId(null);
-    // Small delay to ensure DB update completes, then clear cache and refetch
-    await new Promise(resolve => setTimeout(resolve, 300));
+    // Longer delay to ensure DB update completes
+    await new Promise(resolve => setTimeout(resolve, 500));
+    // Clear ALL queries aggressively
     await queryClient.cancelQueries({ queryKey: ['myBets'] });
-    queryClient.removeQueries({ queryKey: ['myBets'] });
-    queryClient.invalidateQueries({ queryKey: ['myBets'] });
-    await queryClient.refetchQueries({ queryKey: ['myBets'] });
+    await queryClient.cancelQueries({ queryKey: ['myBets', walletAddress] });
+    queryClient.clear();
+    await queryClient.refetchQueries({ queryKey: ['myBets'], type: 'all' });
   };
 
   return (

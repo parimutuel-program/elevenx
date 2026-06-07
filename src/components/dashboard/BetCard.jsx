@@ -24,7 +24,15 @@ const statusConfig = {
 
 export default function BetCard({ bet, index, walletAddress, onRefundRequest }) {
   const queryClient = useQueryClient();
-  const config = statusConfig[bet.status] || statusConfig.active;
+  const [localBetStatus, setLocalBetStatus] = useState(bet.status);
+  const [localActualPayout, setLocalActualPayout] = useState(bet.actual_payout);
+  
+  // Sync local state when bet prop changes (from query refetch)
+  React.useEffect(() => {
+    setLocalBetStatus(bet.status);
+    setLocalActualPayout(bet.actual_payout);
+  }, [bet.id, bet.status, bet.actual_payout]);
+  const config = statusConfig[localBetStatus] || statusConfig.active;
   const StatusIcon = config.icon;
 
   const [claimDialogOpen, setClaimDialogOpen] = useState(false);
@@ -93,9 +101,9 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
       });
       console.log('[BetCard] ✓ Updated bet status to claimed:', bet.id);
       
-      // Update local bet object immediately to prevent stale UI
-      bet.status = 'claimed';
-      bet.actual_payout = bet.potential_payout || 0;
+      // Update local state immediately to reflect claimed status
+      setLocalBetStatus('claimed');
+      setLocalActualPayout(bet.potential_payout || 0);
     } catch (err) {
       console.error('[BetCard] Failed to update bet status:', err);
     }
@@ -167,9 +175,9 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
     alert(`✓ Withdrawal successful! ◎${bet.amount.toFixed(4)} SOL returned to your wallet`);
   };
 
-  const canClaim = bet.status === 'won';
-  const canRefund = bet.status === 'refunded';
-  const isCompleted = ['lost', 'claimed', 'void'].includes(bet.status);
+  const canClaim = localBetStatus === 'won';
+  const canRefund = localBetStatus === 'refunded';
+  const isCompleted = ['lost', 'claimed', 'void'].includes(localBetStatus);
 
   // LP bet: role='lp' with unmatched liquidity - can withdraw
   const isLp = bet.role === 'lp';
@@ -321,8 +329,8 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
                 <span className="text-[9px] text-muted-foreground font-semibold truncate">
                   {bet.match_title || 'Match'}
                 </span>
-                <Badge className={`text-[8px] font-semibold uppercase tracking-wider flex-shrink-0 ${config.color}`}>
-                  {config.label}
+                <Badge className={`text-[8px] font-semibold uppercase tracking-wider flex-shrink-0 ${statusConfig[localBetStatus]?.color || statusConfig.active.color}`}>
+                  {statusConfig[localBetStatus]?.label || 'Active'}
                 </Badge>
               </div>
 
@@ -350,11 +358,11 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
 
               {/* Stats Grid */}
               <div className="grid grid-cols-3 gap-2">
-                <div className={`rounded-lg px-2 py-2 text-center border ${bet.status === 'won' || bet.status === 'claimed' ? 'bg-accent/5 border-accent/10' : 'bg-primary/5 border-primary/10'}`}>
+                <div className={`rounded-lg px-2 py-2 text-center border ${localBetStatus === 'won' || localBetStatus === 'claimed' ? 'bg-accent/5 border-accent/10' : 'bg-primary/5 border-primary/10'}`}>
                   <p className="text-[9px] text-muted-foreground truncate">{bet.betCount && bet.betCount > 1 ? 'Total Stake' : 'Stake'}</p>
                   <p className="font-bold text-foreground text-xs">◎{(bet.totalAmount || bet.amount)?.toFixed(4)}</p>
                 </div>
-                <div className={`rounded-lg px-2 py-2 text-center border ${bet.status === 'won' || bet.status === 'claimed' ? 'bg-accent/5 border-accent/10' : 'bg-primary/5 border-primary/10'}`}>
+                <div className={`rounded-lg px-2 py-2 text-center border ${localBetStatus === 'won' || localBetStatus === 'claimed' ? 'bg-accent/5 border-accent/10' : 'bg-primary/5 border-primary/10'}`}>
                   <p className="text-[9px] text-muted-foreground truncate">Potential</p>
                   <p className="font-bold text-primary text-xs">◎{(bet.totalPayout || bet.potential_payout || 0).toFixed(4)}</p>
                 </div>
@@ -377,7 +385,7 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
                 </div>
               }
 
-              {!isParimutuelActive && (bet.status === 'pending' || bet.status === 'active') &&
+              {!isParimutuelActive && (localBetStatus === 'pending' || localBetStatus === 'active') &&
               <div className="pt-2 border-t border-border/30">
                   <div className="flex items-center justify-between text-[8px] text-muted-foreground mb-1">
                     <span>{isFullyMatched ? 'Fully Matched' : 'Matching'}</span>
@@ -441,11 +449,11 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
                 }
                 {isCompleted &&
                 <div className="text-center text-[9px] text-muted-foreground">
-                    {bet.status === 'claimed' &&
-                  <span className="text-accent font-bold">◎{bet.actual_payout?.toFixed(2)} claimed</span>
+                    {localBetStatus === 'claimed' &&
+                  <span className="text-accent font-bold">◎{(localActualPayout || bet.potential_payout || 0).toFixed(2)} claimed</span>
                   }
-                    {bet.status === 'lost' && <span className="text-destructive">Bet lost</span>}
-                    {bet.status === 'void' && <span>Bet voided</span>}
+                    {localBetStatus === 'lost' && <span className="text-destructive">Bet lost</span>}
+                    {localBetStatus === 'void' && <span>Bet voided</span>}
                   </div>
                 }
               </div>
