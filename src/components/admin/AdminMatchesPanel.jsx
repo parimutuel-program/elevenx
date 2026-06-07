@@ -13,6 +13,7 @@ export default function AdminMatchesPanel({ walletAddress }) {
   const [deployingMatchId, setDeployingMatchId] = useState(null);
   const [fixingTimestampsId, setFixingTimestampsId] = useState(null);
   const [pendingTimestampFix, setPendingTimestampFix] = useState(null);
+  const [deployAllDialog, setDeployAllDialog] = useState(null); // { instruction, remaining, betId }
 
   const { data: matches = [], isLoading } = useQuery({
     queryKey: ['adminMatches'],
@@ -121,6 +122,29 @@ export default function AdminMatchesPanel({ walletAddress }) {
     alert('✓ Market timestamps fixed!');
   };
 
+  const handleDeployAllSuccess = async () => {
+    try {
+      const res = await base44.functions.invoke('deployAllMatches');
+      if (res.data.needsSigning) {
+        setDeployAllDialog({
+          instruction: res.data.solana_instruction,
+          remaining: res.data.remaining,
+          betId: res.data.bet_id,
+        });
+      } else if (res.data.autoContinue) {
+        handleDeployAllSuccess();
+      } else {
+        setDeployAllDialog(null);
+        alert(res.data.message || '✓ All matches deployed!');
+        queryClient.invalidateQueries({ queryKey: ['adminMatches'] });
+        queryClient.invalidateQueries({ queryKey: ['allBetsForMatches'] });
+      }
+    } catch (err) {
+      alert('Error: ' + err.message);
+      setDeployAllDialog(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <Card className="bg-gray-900 border border-gray-800 p-12">
@@ -143,9 +167,34 @@ export default function AdminMatchesPanel({ walletAddress }) {
               <p className="text-xs text-gray-400">Deploy matches to Solana for on-chain betting</p>
             </div>
           </div>
-          <Badge className="bg-purple-600 text-white font-bold">
-            {matches.length} Matches
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={async () => {
+                try {
+                  const res = await base44.functions.invoke('deployAllMatches');
+                  if (res.data.needsSigning) {
+                    setDeployAllDialog({
+                      instruction: res.data.solana_instruction,
+                      remaining: res.data.remaining,
+                      betId: res.data.bet_id,
+                    });
+                  } else {
+                    alert(res.data.message || '✓ All matches deployed!');
+                    queryClient.invalidateQueries({ queryKey: ['adminMatches'] });
+                  }
+                } catch (err) {
+                  alert('Error: ' + err.message);
+                }
+              }}
+              className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold h-8 px-3 rounded-lg gap-2"
+            >
+              <Rocket className="w-3.5 h-3.5" />
+              Deploy All
+            </Button>
+            <Badge className="bg-purple-600 text-white font-bold">
+              {matches.length} Matches
+            </Badge>
+          </div>
         </div>
       </Card>
 
@@ -309,6 +358,35 @@ export default function AdminMatchesPanel({ walletAddress }) {
                 variant="outline" 
                 size="sm" 
                 onClick={() => setPendingTimestampFix(null)} 
+                className="w-full bg-gray-800 hover:bg-gray-700 text-white border-gray-700"
+              >
+                Cancel
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {deployAllDialog && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <Card className="bg-gray-900 border border-gray-800 p-6 max-w-lg w-full">
+            <div className="space-y-4">
+              <div className="bg-purple-600/20 border border-purple-600/30 rounded-xl p-4">
+                <h3 className="font-heading font-bold text-lg text-purple-400 mb-1">Deploy Match {72 - deployAllDialog.remaining} of 72</h3>
+                <p className="text-sm text-gray-400">Sign each transaction to deploy matches one at a time. Remaining: {deployAllDialog.remaining}</p>
+              </div>
+              <SolanaTransactionSigner
+                instruction={deployAllDialog.instruction}
+                amount="0"
+                onSuccess={handleDeployAllSuccess}
+                onError={(err) => {
+                  alert('Failed: ' + err.message);
+                  setDeployAllDialog(null);
+                }}
+              />
+              <Button
+                onClick={() => setDeployAllDialog(null)}
+                variant="outline"
                 className="w-full bg-gray-800 hover:bg-gray-700 text-white border-gray-700"
               >
                 Cancel
