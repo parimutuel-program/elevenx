@@ -32,6 +32,7 @@ import DebugWallet from '@/pages/DebugWallet';
 import DebugClaim from '@/pages/DebugClaim';
 import DebugStorage from '@/pages/DebugStorage';
 import TestLosingLp from '@/pages/TestLosingLp';
+import UpdateSecret from '@/pages/UpdateSecret';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -80,6 +81,7 @@ const AuthenticatedApp = () => {
         <Route path="/debug-claim" element={<DebugClaim />} />
         <Route path="/debug-storage" element={<DebugStorage />} />
         <Route path="/test-losing-lp" element={<TestLosingLp />} />
+        <Route path="/update-secret" element={<UpdateSecret />} />
       </Route>
 
       <Route path="*" element={<PageNotFound />} />
