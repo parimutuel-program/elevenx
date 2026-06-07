@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
 
     const matchPayloads = apiMatches.map(m => {
       const matchTime = new Date(m.utc_date);
-      const matchEndTime = new Date(matchTime.getTime() + 2 * 60 * 60 * 1000); // 2 hours after kickoff
+      const matchEndTime = new Date(matchTime.getTime() + 90 * 60 * 1000); // 90 minutes after kickoff (standard match duration)
       return {
         team_a: m.home_team,
         team_b: m.away_team,
