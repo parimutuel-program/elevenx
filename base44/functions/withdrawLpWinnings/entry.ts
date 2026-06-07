@@ -194,6 +194,15 @@ Deno.serve(async (req) => {
 
     // ON-CHAIN CHECK: Fetch the actual LP offer account AND market from Solana to verify state
     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+    
+    // CRITICAL: Verify fee vault exists on-chain
+    const feeVaultAccountInfo = await connection.getAccountInfo(feeVaultPda);
+    if (!feeVaultAccountInfo) {
+      console.error('[withdrawLpWinnings] Fee vault not found on-chain:', feeVaultPda.toBase58());
+      return Response.json({ error: 'Fee vault not initialized on-chain' }, { status: 400 });
+    }
+    
+    console.log('[withdrawLpWinnings] Fee vault verified on-chain:', feeVaultPda.toBase58());
     try {
       // First check the market account to see the winning_outcome stored on-chain
       const marketAccountInfo = await connection.getAccountInfo(marketPda);
@@ -287,8 +296,8 @@ Deno.serve(async (req) => {
     // Skip LP fee bonus calculation for performance (can be added back later with caching)
     const lpBonus = 0;
     
-    // CRITICAL: On-chain amounts are stored in LAMPORTS, not SOL
-    // lp_offer.amount_matched is in SOL, so convert to lamports for the instruction
+    // CRITICAL: DB stores amounts in SOL, but on-chain uses LAMPORTS
+    // Convert SOL to lamports for the instruction
     const withdrawAmountLamports = Math.round(baseAmount * 1_000_000_000);
     
     console.log('[withdrawLpWinnings] Amount calculation:', {
