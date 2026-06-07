@@ -409,8 +409,9 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
               );
             }
             
-            // Priority 2: LP WON with matched liquidity - claim winnings
+            // Priority 2: LP WON with matched liquidity - claim winnings (matched stake + fees)
             if (isLpWon && liquidityMatched > 0 && onWithdrawRequest) {
+              const claimAmount = liquidityMatched + (liquidityMatched * 0.02); // stake + 2% fees
               return (
                 <Button
                   onClick={handleWithdraw}
@@ -418,7 +419,7 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
                   style={{ background: 'linear-gradient(135deg, #14f195, #00ff87)' }}
                 >
                   <Trophy className="w-3 h-3 mr-1" />
-                  Claim ◎{(liquidityMatched * 0.02).toFixed(4)}
+                  Claim ◎{claimAmount.toFixed(4)}
                 </Button>
               );
             }
