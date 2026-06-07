@@ -190,11 +190,8 @@ export default function LpDashboard() {
     queryFn: () => base44.entities.Match.list()
   });
 
-  // Extract unique groups from open bets, plus all World Cup groups A-L
-  const groupSet = new Set(openBets.map((bet) => {
-    const match = matches.find((m) => m.id === bet.match_id);
-    return match?.group_stage;
-  }).filter(Boolean));
+  // Extract unique groups from ALL matches (not just open bets), plus all World Cup groups A-L
+  const groupSet = new Set(matches.map((m) => m.group_stage).filter(Boolean));
 
   // Ensure all World Cup groups A-L are included
   const allWorldCupGroups = ['Group A', 'Group B', 'Group C', 'Group D', 'Group E', 'Group F', 'Group G', 'Group H', 'Group I', 'Group J', 'Group K', 'Group L'];
