@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useWallet } from '@/lib/WalletContext';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Wallet, ChevronDown, LogOut, Copy } from 'lucide-react';
+import { Wallet, ChevronDown, LogOut, Copy, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import ConnectWalletModal from './ConnectWalletModal';
 
 export default function WalletButton() {
@@ -57,9 +58,17 @@ export default function WalletButton() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setShowDropdown(false)} />
           <div className="absolute right-0 top-full mt-2 w-44 bg-card border border-border/60 rounded-2xl shadow-xl z-50 overflow-hidden">
+            <Link
+              to="/profile"
+              onClick={() => setShowDropdown(false)}
+              className="w-full flex items-center gap-2 px-4 py-3 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+            >
+              <User className="w-3.5 h-3.5" />
+              Profile
+            </Link>
             <button
               onClick={copyAddress}
-              className="w-full flex items-center gap-2 px-4 py-3 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+              className="w-full flex items-center gap-2 px-4 py-3 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors border-t border-border/30"
             >
               <Copy className="w-3.5 h-3.5" />
               {copied ? 'Copied!' : 'Copy Address'}
