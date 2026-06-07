@@ -246,6 +246,14 @@ export default function MyBets() {
     totalAmount: b.totalAmount
   })));
   
+  // Debug: Check which futures bets pass the filter
+  const futuresForMyBets = groupedFuturesBetsArray.filter(b => ['active', 'pending', 'won'].includes(b.status));
+  console.log('[MyBets] Futures for My Bets tab:', futuresForMyBets.length, futuresForMyBets.map(b => ({
+    betIds: b.betIds,
+    status: b.status,
+    outcome: b.outcome_label
+  })));
+  
   const totalStaked = [...groupedMatchBetsArray, ...groupedFuturesBetsArray].reduce((s, b) => s + (b.totalAmount || 0), 0);
   const totalWon = [...groupedMatchBetsArray, ...groupedFuturesBetsArray].filter((b) => b.status === 'won' || b.status === 'claimed').reduce((s, b) => s + (b.totalPayout || 0), 0);
   const activeBets = [...groupedMatchBetsArray, ...groupedFuturesBetsArray].filter((b) => b.status === 'active' || b.status === 'pending');
