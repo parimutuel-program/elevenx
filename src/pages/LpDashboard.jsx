@@ -651,9 +651,9 @@ export default function LpDashboard() {
                 {walletAddress && <span className="ml-2 text-[10px] font-mono text-muted-foreground/50">({walletAddress.slice(0, 6)}...{walletAddress.slice(-4)})</span>}
               </p>
             </div>
-            <Button variant="outline" onClick={() => refetchOffers()} className="gap-2 rounded-xl h-10 px-4 text-xs sm:text-sm shrink-0 border-border/50 hidden">
-              Refresh
-            </Button>
+            
+
+            
           </div>
 
           {/* How LP Works - Expandable on mobile */}
