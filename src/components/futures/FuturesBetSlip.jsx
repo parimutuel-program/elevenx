@@ -20,6 +20,7 @@ export default function FuturesBetSlip({ market, outcome, onClose, onConfirm }) 
   
   // Max bet is the LP pool amount for this outcome
   const maxBetAmount = outcome.pool || 0;
+  const hasLiquidity = maxBetAmount > 0;
 
   const handlePrepareBet = async () => {
     if (!amount || numericAmount <= 0) return;
@@ -150,6 +151,19 @@ export default function FuturesBetSlip({ market, outcome, onClose, onConfirm }) 
           </div>
         </div>
 
+        {/* No Liquidity Warning */}
+        {!hasLiquidity && (
+          <div className="bg-destructive/10 border border-destructive/30 rounded-2xl p-4 mb-6">
+            <div className="flex items-center gap-2 mb-2">
+              <Wallet className="w-4 h-4 text-destructive" />
+              <span className="text-xs font-bold text-destructive">No Liquidity Available</span>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              There are no LP offers for this outcome yet. Wait for a liquidity provider to add funds, or become an LP yourself!
+            </p>
+          </div>
+        )}
+
         {/* Amount Input with Max Button */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
@@ -247,8 +261,8 @@ export default function FuturesBetSlip({ market, outcome, onClose, onConfirm }) 
             </Button>
             <Button
               onClick={handlePrepareBet}
-              disabled={!amount || numericAmount <= 0 || isPreparing || !isConnected}
-              className="flex-1 h-11 rounded-xl font-bold bg-primary hover:bg-primary/90"
+              disabled={!amount || numericAmount <= 0 || isPreparing || !isConnected || !hasLiquidity}
+              className="flex-1 h-11 rounded-xl font-bold bg-primary hover:bg-primary/90 disabled:bg-muted/50 disabled:text-muted-foreground"
             >
               {isPreparing ? (
                 <>
@@ -259,6 +273,11 @@ export default function FuturesBetSlip({ market, outcome, onClose, onConfirm }) 
                 <>
                   <Wallet className="w-4 h-4 mr-2" />
                   Connect Wallet
+                </>
+              ) : !hasLiquidity ? (
+                <>
+                  <Wallet className="w-4 h-4 mr-2" />
+                  No LP Available
                 </>
               ) : (
                 <>
