@@ -250,13 +250,17 @@ export default function MyBets() {
           status: 'claimed',
           actual_payout: claimData.totalPayout / claimData.betIds.length
         });
+        console.log('[MyBets] ✓ Updated bet to claimed:', betId);
       }
     }
     setClaimData(null);
     setBatchClaimMatchId(null);
-    // Force immediate refetch instead of just invalidation
-    await queryClient.refetchQueries({ queryKey: ['myBets'], type: 'active' });
+    // Small delay to ensure DB update completes, then clear cache and refetch
+    await new Promise(resolve => setTimeout(resolve, 300));
+    await queryClient.cancelQueries({ queryKey: ['myBets'] });
+    queryClient.removeQueries({ queryKey: ['myBets'] });
     queryClient.invalidateQueries({ queryKey: ['myBets'] });
+    await queryClient.refetchQueries({ queryKey: ['myBets'] });
   };
 
   return (

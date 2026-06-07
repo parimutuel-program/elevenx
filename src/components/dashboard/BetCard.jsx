@@ -100,7 +100,8 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
       console.error('[BetCard] Failed to update bet status:', err);
     }
     
-    // Force immediate refetch with cancelation of ongoing queries
+    // Small delay to ensure DB update completes, then clear cache completely
+    await new Promise(resolve => setTimeout(resolve, 300));
     await queryClient.cancelQueries({ queryKey: ['myBets'] });
     await queryClient.cancelQueries({ queryKey: ['myBets', walletAddress] });
     queryClient.removeQueries({ queryKey: ['myBets'] });
