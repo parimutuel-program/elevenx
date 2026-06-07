@@ -69,55 +69,97 @@ Deno.serve(async (req) => {
       solana_position_pda: offer.solana_position_pda,
     });
 
-    // Fetch Bet to check settlement
+    // Fetch market - try Bet first (for matches), then FuturesMarket (for tournament futures)
+    let bet = null;
+    let winningOutcome = null;
+    let isFuturesMarket = false;
+    
     const bets = await base44.entities.Bet.filter({ id: userBet.bet_id });
-    const bet = bets[0];
-    if (!bet) {
-      console.error('[withdrawLpWinnings] Bet not found:', userBet.bet_id);
-      return Response.json({ error: 'Bet not found' }, { status: 404 });
+    if (bets.length > 0) {
+      bet = bets[0];
+      winningOutcome = bet.winning_outcome;
+      console.log('[withdrawLpWinnings] Found Bet (match market):', {
+        id: bet.id,
+        status: bet.status,
+        winning_outcome: bet.winning_outcome,
+      });
+    } else {
+      // Try FuturesMarket
+      const futuresMarkets = await base44.entities.FuturesMarket.filter({ id: userBet.bet_id });
+      if (futuresMarkets.length > 0) {
+        isFuturesMarket = true;
+        const futuresMarket = futuresMarkets[0];
+        winningOutcome = futuresMarket.outcomes?.find(o => o.position === userBet.outcome)?.label;
+        console.log('[withdrawLpWinnings] Found FuturesMarket:', {
+          id: futuresMarket.id,
+          status: futuresMarket.status,
+          winning_position: winningOutcome,
+        });
+      }
+    }
+    
+    if (!bet && !isFuturesMarket) {
+      console.error('[withdrawLpWinnings] Market not found:', userBet.bet_id);
+      return Response.json({ error: 'Market not found' }, { status: 404 });
     }
 
-    console.log('[withdrawLpWinnings] Bet:', {
-      id: bet.id,
-      status: bet.status,
-      winning_outcome: bet.winning_outcome,
-      match_id: bet.match_id,
-    });
-
     // Market must be settled
-    if (bet.status !== 'settled') {
-      console.error('[withdrawLpWinnings] Market not settled:', bet.status);
+    const marketStatus = bet?.status || (isFuturesMarket ? 'settled' : 'unknown');
+    if (marketStatus !== 'settled') {
+      console.error('[withdrawLpWinnings] Market not settled:', marketStatus);
       return Response.json({ error: 'Market has not been settled yet' }, { status: 400 });
     }
 
-    // Check if LP's outcome lost (LP wins when bettors lose)
-    // LP backs outcome X — if outcome X loses, LP collects losing bettors' stakes
+    // For futures markets, check if LP backed the winning position
+    // For match markets, LP wins when their backed outcome LOSES
     console.log('[withdrawLpWinnings] Checking win condition:', {
       userBet_outcome: userBet.outcome,
-      bet_winning_outcome: bet.winning_outcome || '(NOT SET)',
-      lp_wins_if_different: userBet.outcome !== bet.winning_outcome,
+      winningOutcome: winningOutcome || '(NOT SET)',
+      isFuturesMarket,
     });
     
     // Validate winning_outcome is actually set
-    if (!bet.winning_outcome || bet.winning_outcome === '') {
-      console.error('[withdrawLpWinnings] Market settled but winning_outcome not set:', bet.id);
+    if (!winningOutcome || winningOutcome === '') {
+      console.error('[withdrawLpWinnings] Market settled but winning outcome not set');
       return Response.json({ error: 'Market is settled but winning outcome not set. Admin must announce winner first.' }, { status: 400 });
     }
     
-    if (userBet.outcome === bet.winning_outcome) {
-      console.error('[withdrawLpWinnings] LP did not win - backed the winning outcome:', {
-        userBet_outcome: userBet.outcome,
-        winning_outcome: bet.winning_outcome,
-        explanation: 'In parimutuel betting, LPs profit when bettors lose. Since you backed the WINNING outcome, you had to pay winners and your position lost value.',
-      });
-      return Response.json({ 
-        error: 'This LP position did not win',
-        hint: 'LPs win when their backed outcome LOSES (they collect losing bettors stakes).\n\nYou backed the WINNING outcome, so your LP position lost value.',
-        details: {
-          your_outcome: userBet.outcome,
-          winning_outcome: bet.winning_outcome,
-        }
-      }, { status: 400 });
+    // For futures: LP wins if they backed the winning position (1st, 2nd, 3rd)
+    // For matches: LP wins if their backed outcome LOSES (bettors lose)
+    if (isFuturesMarket) {
+      // Futures: LP wins when they backed the correct position
+      const userPosition = userBet.outcome === 'a' ? '1st' : userBet.outcome === 'b' ? '2nd' : '3rd';
+      if (userPosition !== winningOutcome) {
+        console.error('[withdrawLpWinnings] LP backed wrong position:', {
+          userPosition,
+          winningOutcome,
+        });
+        return Response.json({ 
+          error: 'This LP position did not win',
+          hint: `You backed ${userPosition}, but the winner was ${winningOutcome}`,
+          details: {
+            your_position: userPosition,
+            winning_position: winningOutcome,
+          }
+        }, { status: 400 });
+      }
+    } else {
+      // Match betting: LP wins when their backed outcome LOSES
+      if (userBet.outcome === winningOutcome) {
+        console.error('[withdrawLpWinnings] LP backed the winning outcome:', {
+          userBet_outcome: userBet.outcome,
+          winning_outcome: winningOutcome,
+          explanation: 'In parimutuel betting, LPs profit when bettors lose.',
+        });
+        return Response.json({ 
+          error: 'This LP position did not win',
+          hint: 'LPs win when their backed outcome LOSES (they collect losing bettors stakes).\n\nYou backed the WINNING outcome, so your LP position lost value.',
+          details: {
+            your_outcome: userBet.outcome,
+            winning_outcome: winningOutcome,
+          }
+        }, { status: 400 });
+      }
     }
 
     // Get wallet address - MUST match what's stored in the LP offer account
