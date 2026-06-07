@@ -370,7 +370,12 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
         {/* Actions */}
         <div className="flex gap-2 pt-2 border-t border-white/10">
           {(() => {
-            if (isClaimed) {
+            // CRITICAL: Check multiple indicators that position was already claimed
+            const alreadyClaimed = isClaimed || 
+              (position.userBet?.actual_payout && position.userBet.actual_payout > 0) ||
+              (position.userBet?.status === 'claimed');
+            
+            if (alreadyClaimed) {
               const claimedAmount = liquidityDeposited + potentialEarnings;
               return (
                 <div className="flex-1 flex flex-col gap-1">
@@ -414,7 +419,8 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
             }
 
             // Priority 2: LP WON with matched liquidity - claim winnings (matched stake + fees)
-            if (isLpWon && liquidityMatched > 0 && onWithdrawRequest) {
+            // CRITICAL: Only show if NOT already claimed
+            if (isLpWon && liquidityMatched > 0 && !alreadyClaimed && onWithdrawRequest) {
               const claimAmount = liquidityMatched + liquidityMatched * 0.02; // stake + 2% fees
               return (
                 <Button
