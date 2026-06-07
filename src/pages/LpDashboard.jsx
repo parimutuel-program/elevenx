@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { useWallet } from '@/lib/WalletContext';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Wallet, TrendingUp, DollarSign, Clock, CheckCircle2, AlertCircle, Trophy, ChevronDown, ChevronUp, Target, Coins, Lock, Bug } from 'lucide-react';
+import { Wallet, TrendingUp, DollarSign, Clock, CheckCircle2, AlertCircle, Trophy, ChevronDown, ChevronUp, Target, Coins, Lock, Bug, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -420,6 +420,7 @@ export default function LpDashboard() {
   const totalMatched = myOffers.reduce((s, o) => s + (o.amount_matched || 0), 0);
   const totalUnmatched = myOffers.reduce((s, o) => s + (o.amount_unmatched || 0), 0);
   const totalFeesEarned = totalMatched * 0.02; // 2% fee on matched portion
+  const totalClaimed = myOffers.filter((o) => o.status === 'claimed' || o.userBet?.status === 'claimed').reduce((s, o) => s + (o.userBet?.actual_payout || o.amount_matched || 0), 0);
   const activeOffers = myOffers.filter((o) => o.status === 'open' || o.status === 'partially_matched');
 
   const offersWithUserBet = myOffers;
@@ -845,12 +846,13 @@ export default function LpDashboard() {
           
 
             {/* My LP Positions Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
               {[
             { label: 'Committed', value: `◎${totalCommitted.toFixed(4)}`, icon: DollarSign, color: 'text-primary' },
             { label: 'Matched', value: `◎${totalMatched.toFixed(4)}`, icon: CheckCircle2, color: 'text-accent' },
             { label: 'Unmatched', value: `◎${totalUnmatched.toFixed(4)}`, icon: Clock, color: 'text-yellow-400' },
             { label: 'Fees Earned', value: `◎${totalFeesEarned.toFixed(4)}`, icon: TrendingUp, color: 'text-accent' },
+            { label: 'Total Claimed', value: `◎${totalClaimed.toFixed(4)}`, icon: CheckCircle, color: 'text-accent' },
             { label: 'Active', value: activeOffers.length.toString(), icon: TrendingUp, color: 'text-chart-2' }].
             map((s, i) =>
             <motion.div key={i} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}

@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trophy, DollarSign, Target, Flame, Shield, BarChart3, Activity, Award, TrendingUp, Clock, Wallet, ArrowRight } from 'lucide-react';
+import { Trophy, DollarSign, Target, Flame, Shield, BarChart3, Activity, Award, TrendingUp, Clock, Wallet, ArrowRight, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -269,6 +269,7 @@ export default function MyBets() {
   
   const totalStaked = [...groupedMatchBetsArray, ...groupedFuturesBetsArray].reduce((s, b) => s + (b.totalAmount || 0), 0);
   const totalWon = [...groupedMatchBetsArray, ...groupedFuturesBetsArray].filter((b) => b.status === 'won' || b.status === 'claimed').reduce((s, b) => s + (b.totalPayout || 0), 0);
+  const totalClaimed = [...groupedMatchBetsArray, ...groupedFuturesBetsArray].filter((b) => b.status === 'claimed').reduce((s, b) => s + (b.totalPayout || 0), 0);
   const activeBets = [...groupedMatchBetsArray, ...groupedFuturesBetsArray].filter((b) => b.status === 'active' || b.status === 'pending');
   const completedBets = [...groupedMatchBetsArray, ...groupedFuturesBetsArray].filter((b) => b.status !== 'active' && b.status !== 'pending');
   const pendingClaims = [...groupedMatchBetsArray, ...groupedFuturesBetsArray].filter((b) => b.status === 'won');
@@ -455,6 +456,13 @@ export default function MyBets() {
                 icon={Award}
                 color="text-accent"
                 delay={0.1} />
+              
+              <StatCard
+                label="Total Claimed"
+                value={`◎${totalClaimed.toFixed(4)}`}
+                icon={CheckCircle}
+                color="text-accent"
+                delay={0.125} />
               
               <StatCard
                 label="Win Rate"
