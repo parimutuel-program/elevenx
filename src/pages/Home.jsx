@@ -505,19 +505,19 @@ export default function Home() {
             {/* Solana Branding */}
             <div className="flex flex-wrap items-center gap-3">
               {/* Hyped Solana badge */}
-              <div className="relative flex items-center gap-3 px-4 py-2.5 rounded-2xl overflow-hidden"
+              <div className="relative flex items-center gap-2 px-3 py-2 rounded-xl overflow-hidden"
                 style={{ background: 'linear-gradient(135deg, #9945FF 0%, #14F195 100%)', boxShadow: '0 0 24px rgba(153,69,255,0.5), 0 0 48px rgba(20,241,149,0.2)' }}>
                 {/* Shine overlay */}
                 <div className="absolute inset-0 opacity-20" style={{ background: 'linear-gradient(105deg, rgba(255,255,255,0.4) 0%, transparent 50%)' }} />
                 {/* Solana diamond logo */}
-                <svg className="relative z-10 w-5 h-5 flex-shrink-0" viewBox="0 0 397 311" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg className="relative z-10 w-4 h-4 flex-shrink-0" viewBox="0 0 397 311" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z" fill="white"/>
                   <path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z" fill="white"/>
                   <path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z" fill="white"/>
                 </svg>
                 <div className="relative z-10 flex flex-col leading-none">
                   <span className="text-[8px] font-bold text-white/70 tracking-[0.15em] uppercase">Powered by</span>
-                  <span className="text-base font-black text-white tracking-tight" style={{ fontFamily: 'Arial Black, sans-serif', letterSpacing: '-0.02em' }}>SOLANA</span>
+                  <span className="text-sm font-black text-white tracking-tight" style={{ fontFamily: 'Arial Black, sans-serif', letterSpacing: '-0.02em' }}>SOLANA</span>
                 </div>
               </div>
 
