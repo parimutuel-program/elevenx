@@ -169,15 +169,14 @@ export default function MyBets() {
   const myMatcherBets = myBets.filter(b => b.role !== 'lp');
   
   // Separate futures bets from match bets
-  // Futures bets have futures_market_id OR match_title containing "Finish"/"Winner"/"Place" (for legacy bets)
+  // Futures bets have futures_market_id (primary indicator)
   const myFuturesBets = myMatcherBets.filter(b => {
-    const isFutures = b.futures_market_id || 
-           (b.match_title && (b.match_title.includes('Finish') || b.match_title.includes('Winner') || b.match_title.includes('Place')));
-    console.log('[MyBets] Checking bet:', { id: b.id, match_title: b.match_title, futures_market_id: b.futures_market_id, isFutures });
+    const isFutures = !!b.futures_market_id;
+    console.log('[MyBets] Checking futures:', { id: b.id, match_title: b.match_title, futures_market_id: b.futures_market_id, isFutures });
     return isFutures;
   });
   const myMatchBets = myMatcherBets.filter(b => {
-    const isMatch = b.match_id && !b.futures_market_id && !(b.match_title && (b.match_title.includes('Finish') || b.match_title.includes('Winner') || b.match_title.includes('Place')));
+    const isMatch = b.match_id && !b.futures_market_id;
     console.log('[MyBets] Match bet:', { id: b.id, match_title: b.match_title, isMatch });
     return isMatch;
   });
