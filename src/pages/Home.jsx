@@ -152,31 +152,20 @@ export default function Home() {
           {/* Grid lines decoration */}
           <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'linear-gradient(#a69cf2 1px, transparent 1px), linear-gradient(90deg, #a69cf2 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
-          <div className="relative z-10 pt-6 flex items-start gap-4 md:gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                <div className="flex items-center gap-1.5 bg-accent/20 border border-accent/30 px-2.5 sm:px-3 py-1 rounded-full">
-                  <TrendingUp className="w-3 h-3 text-accent" />
-                  <span className="text-[10px] sm:text-[11px] font-bold text-accent tracking-widest">HYBRID MODEL</span>
-                </div>
+          <div className="relative z-10 pt-6">
+            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+              <div className="flex items-center gap-1.5 bg-accent/20 border border-accent/30 px-2.5 sm:px-3 py-1 rounded-full">
+                <TrendingUp className="w-3 h-3 text-accent" />
+                <span className="text-[10px] sm:text-[11px] font-bold text-accent tracking-widest">HYBRID MODEL</span>
               </div>
-              <h1 className="font-heading font-black text-2xl sm:text-3xl md:text-4xl leading-tight mb-2 sm:mb-3 text-white">
-                Be The House.<br />
-                <span className="text-emerald-400" style={{ textShadow: '0 0 25px rgba(16,185,129,0.4)' }}>Earn The Fees.</span>
-              </h1>
-              <p className="text-white/60 text-xs sm:text-sm leading-relaxed max-w-xs">
-                Provide liquidity, earn 2% fees on every bet, and profit when bettors lose. No house edge — the community controls the pool.
-              </p>
             </div>
-            
-            {/* FIFA 2026 Logo - Hidden on mobile, visible on md+ */}
-            <div className="hidden md:flex items-center justify-center flex-shrink-0">
-              <img
-                src="https://media.base44.com/images/public/6a1da108eb293de119e4e930/2ec998f73_2026-FIFA-Logo.png"
-                alt="FIFA 2026 World Cup"
-                className="w-32 h-32 lg:w-40 lg:h-40 object-contain drop-shadow-lg"
-              />
-            </div>
+            <h1 className="font-heading font-black text-2xl sm:text-3xl md:text-4xl leading-tight mb-2 sm:mb-3 text-white">
+              Be The House.<br />
+              <span className="text-emerald-400" style={{ textShadow: '0 0 25px rgba(16,185,129,0.4)' }}>Earn The Fees.</span>
+            </h1>
+            <p className="text-white/60 text-xs sm:text-sm leading-relaxed max-w-xs">
+              Provide liquidity, earn 2% fees on every bet, and profit when bettors lose. No house edge — the community controls the pool.
+            </p>
           </div>
 
           <div className="relative z-10 mt-5 sm:mt-6">
