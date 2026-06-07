@@ -62,9 +62,17 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
       transition={{ delay: index * 0.05, duration: 0.4 }}>
       
       <Link to={`/match/${match.id}`} className="group block">
-        <div className="relative rounded-2xl p-4 transition-all duration-300 border border-primary/20 h-full bg-[#1c1c1c]">
+        <div 
+          className="relative rounded-2xl p-4 transition-all duration-300 border border-primary/20 h-full bg-[#1c1c1c] bg-cover bg-center"
+          style={{
+            backgroundImage: (match.team_a === 'France' && match.team_b === 'Norway') || (match.team_a === 'Norway' && match.team_b === 'France')
+              ? 'url(https://media.base44.com/images/public/6a1da108eb293de119e4e930/3d0f9a726_image.png)'
+              : 'none'
+          }}
+        >
+          <div className="absolute inset-0 bg-black/40 rounded-2xl" />
           {/* Header */}
-          <div className="flex items-center justify-between mb-3">
+          <div className="relative z-10 flex items-center justify-between mb-3">
             <span className="text-[10px] text-muted-foreground font-semibold truncate">
               {match.group_stage || 'World Cup 2026'}
             </span>
@@ -75,7 +83,7 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
           </div>
 
           {/* Match Matchup */}
-          <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="relative z-10 flex items-center justify-between gap-2 mb-3">
             {/* Team A */}
             <div className="flex-1 text-center">
               <div className="text-2xl mb-1">{getTeamFlag(match.team_a, match.team_a_flag)}</div>
@@ -109,7 +117,7 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
 
           {/* Odds/Pool */}
           {bet ?
-          <div className="pt-2.5 border-t border-border/50">
+          <div className="relative z-10 pt-2.5 border-t border-border/50">
               <div className="grid grid-cols-3 gap-1.5 mb-2">
                 <div className={`rounded-lg px-1.5 py-1 text-center text-xs border ${lpA > 0 ? 'bg-primary/10 border-primary/20' : 'bg-primary/5 border-primary/10'}`}>
                   <p className="text-[9px] text-muted-foreground truncate">{match.team_a.split(' ').pop()}</p>
@@ -130,7 +138,7 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
               </div>
             </div> :
 
-          <div className="pt-2.5 border-t border-border/30 flex items-center justify-between text-[10px] text-muted-foreground">
+          <div className="relative z-10 pt-2.5 border-t border-border/30 flex items-center justify-between text-[10px] text-muted-foreground">
               <span>No pool</span>
               <ChevronRight className="w-3.5 h-3.5 group-hover:text-primary transition-colors" />
             </div>
