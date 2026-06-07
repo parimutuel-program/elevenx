@@ -11,19 +11,19 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
   // Support both BetOffer (offer) and UserBet (position) entities
   const offer = position;
   if (!offer) return null;
-  
+
   // Detect if this is a futures LP position
   const isFutures = offer._isFutures || position._isFutures || false;
-  
+
   // Get match from position data if not passed - ALWAYS use matchData, never match directly
   const matchData = match || position.match || { team_a: 'Team A', team_b: 'Team B', team_a_flag: '', team_b_flag: '', group_stage: '', match_end_time: null, winner: '' };
-  
+
   // Handle both BetOffer and UserBet structures - use amount as fallback for parimutuel LP
   // CRITICAL: For futures, prefer amount_offered/amount_matched over liquidity_* fields
-  const liquidityDeposited = isFutures ? (offer.amount_offered || 0) : (offer.liquidity_deposited || offer.amount_offered || offer.amount || 0);
-  const liquidityMatched = isFutures ? (offer.amount_matched || 0) : (offer.liquidity_matched || offer.amount_matched || 0);
-  const liquidityUnmatched = isFutures ? (offer.amount_unmatched || 0) : (offer.liquidity_unmatched || offer.amount_unmatched || 0);
-  
+  const liquidityDeposited = isFutures ? offer.amount_offered || 0 : offer.liquidity_deposited || offer.amount_offered || offer.amount || 0;
+  const liquidityMatched = isFutures ? offer.amount_matched || 0 : offer.liquidity_matched || offer.amount_matched || 0;
+  const liquidityUnmatched = isFutures ? offer.amount_unmatched || 0 : offer.liquidity_unmatched || offer.amount_unmatched || 0;
+
   // CRITICAL: Check UserBet status FIRST (settlement info), then BetOffer status (matching info)
   // userBet.status = settlement state (won/lost/claimed)
   // offer.status = matching state (open/partially_matched/fully_matched/withdrawn)
@@ -33,10 +33,10 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
   const isSettled = dbStatus === 'won' || dbStatus === 'lost';
   const isClaimed = dbStatus === 'claimed';
   // Withdrawn = unmatched liquidity already withdrawn (no bets were matched, so nothing left)
-  const isWithdrawn = dbStatus === 'withdrawn' || offer.status === 'withdrawn' || 
-    (dbStatus === 'refunded') ||
-    (liquidityUnmatched === 0 && liquidityDeposited > 0 && liquidityMatched === 0 && (dbStatus === 'active' || dbStatus === 'pending') && offer.status === 'withdrawn');
-  
+  const isWithdrawn = dbStatus === 'withdrawn' || offer.status === 'withdrawn' ||
+  dbStatus === 'refunded' ||
+  liquidityUnmatched === 0 && liquidityDeposited > 0 && liquidityMatched === 0 && (dbStatus === 'active' || dbStatus === 'pending') && offer.status === 'withdrawn';
+
   console.log('[LpPositionCard] Win/Loss Check:', {
     position_id: position.id,
     userBet_status: position.userBet?.status,
@@ -45,9 +45,9 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
     isLpWon,
     isLpLost,
     isSettled,
-    liquidity_matched: liquidityMatched,
+    liquidity_matched: liquidityMatched
   });
-  
+
   console.log('[LpPositionCard] LP Win/Loss Check (using DB status):', {
     offer_id: offer.id,
     offer_status: offer.status,
@@ -57,12 +57,12 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
     isLpLost,
     isSettled,
     backed_outcome: offer.outcome,
-    backed_label: offer.outcome_label,
+    backed_label: offer.outcome_label
   });
-  
-  const matchPct = liquidityDeposited > 0
-    ? Math.round((liquidityMatched / liquidityDeposited) * 100)
-    : 0;
+
+  const matchPct = liquidityDeposited > 0 ?
+  Math.round(liquidityMatched / liquidityDeposited * 100) :
+  0;
 
   const hasUnmatched = liquidityUnmatched > 0;
   const isFullyMatched = offer.status === 'fully_matched' || offer.status === 'settled';
@@ -71,7 +71,7 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
 
   // Calculate potential earnings (2% fee on matched portion)
   const potentialEarnings = liquidityMatched * 0.02;
-  
+
   // Calculate total value (deposited + fees earned)
   const totalValue = liquidityDeposited + potentialEarnings;
 
@@ -86,24 +86,24 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
     partially_matched: { color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30' },
     fully_matched: { color: 'text-accent', bg: 'bg-accent/10', border: 'border-accent/30' },
     withdrawn: { color: 'text-muted-foreground', bg: 'bg-secondary/20', border: 'border-secondary/30' },
-    settled: { color: 'text-accent', bg: 'bg-accent/10', border: 'border-accent/30' },
+    settled: { color: 'text-accent', bg: 'bg-accent/10', border: 'border-accent/30' }
   };
 
   const currentStatus = statusConfig[offer.status] || statusConfig.open;
-  
+
   // Handle withdraw click - fetch match data and prepare withdraw instruction
   const handleWithdraw = async () => {
     if (!onWithdrawRequest) return;
-    
+
     try {
       // First, check on-chain state to prevent "Nothing to claim" errors
       console.log('[LpPositionCard] Checking on-chain state before withdrawal...');
       const checkRes = await base44.functions.invoke('checkLpOfferOnChain', {
         userBetId: offer.userBetId || offer.id
       });
-      
+
       console.log('[LpPositionCard] On-chain check result:', checkRes.data);
-      
+
       if (!checkRes.data.canClaim) {
         let userMessage = checkRes.data.error || 'Cannot withdraw';
         if (checkRes.data.reason === 'already_withdrawn') {
@@ -114,17 +114,17 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
         alert('Cannot withdraw:\n\n' + userMessage);
         return;
       }
-      
+
       // If no matched liquidity, force withdrawUnmatchedLiquidity path
       const hasMatchedOnChain = checkRes.data.hasMatched || checkRes.data.onChainState?.amountMatched > 0;
       const hasMatchedInDb = offer.amount_matched > 0 || offer.liquidity_matched > 0;
       console.log('[LpPositionCard] On-chain matched:', hasMatchedOnChain, checkRes.data.onChainState);
       console.log('[LpPositionCard] DB matched:', hasMatchedInDb, { offer_amount_matched: offer.amount_matched, offer_liquidity_matched: offer.liquidity_matched });
-      
+
       const isWon = offer.status === 'won';
       const isSettled = offer.status === 'settled';
       const isLost = offer.status === 'lost';
-      
+
       console.log('[LpPositionCard] Withdraw attempt:', {
         offer_id: offer.id,
         userBetId: offer.userBetId || offer.id,
@@ -135,9 +135,9 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
         isLost,
         hasUnmatched,
         isLpWon,
-        isLpLost,
+        isLpLost
       });
-      
+
       let res;
       // Decide which withdrawal path based on matched liquidity (not win/loss)
       if ((hasMatchedOnChain || hasMatchedInDb) && isLpWon) {
@@ -164,16 +164,16 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
         console.log('[LpPositionCard] Nothing to withdraw:', { hasUnmatched, isLpWon, isSettled });
         throw new Error('No withdrawable funds. LP position lost or has no unmatched liquidity.');
       }
-      
+
       // Handle HTTP errors (400, 404, 500, etc.)
       if (res.status !== 200 || res.data?.error) {
         const errorMsg = res.data?.error || res.statusText || 'Unknown error';
         console.error('[LpPositionCard] Withdraw failed:', {
           status: res.status,
           error: errorMsg,
-          data: res.data,
+          data: res.data
         });
-        
+
         let userMessage = errorMsg;
         if (errorMsg.includes('did not win') || errorMsg.includes('LP position did not win')) {
           userMessage = 'This LP position did not win. In parimutuel betting, LPs profit when bettors lose.\n\nYour backed outcome won, so the LP position lost value.';
@@ -186,14 +186,14 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
         } else if (errorMsg.includes('Only LP positions')) {
           userMessage = 'Only LP positions can withdraw winnings. This appears to be a regular bet.';
         }
-        
+
         alert('Withdraw failed:\n\n' + userMessage);
         return;
       }
-      
+
       console.log('[LpPositionCard] Withdraw response:', res.data);
       console.log('[LpPositionCard] Solana instruction:', res.data.solana_instruction);
-      
+
       onWithdrawRequest({
         solanaInstruction: res.data.solana_instruction,
         withdrawAmount: res.data.withdrawAmount || res.data.amount,
@@ -208,9 +208,9 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
       console.error('[LpPositionCard] Error details:', {
         message: err.message,
         response: err.response?.data,
-        status: err.response?.status,
+        status: err.response?.status
       });
-      
+
       const backendError = err.response?.data?.error || err.message;
       alert('Withdraw failed:\n\n' + backendError);
     }
@@ -224,8 +224,8 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
       style={{
         background: '#121212',
         boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)'
-      }}
-    >
+      }}>
+      
       {/* Glow orbs */}
       <div className="absolute top-0 right-0 w-56 h-56 rounded-full blur-3xl opacity-30" style={{ background: '#a69cf2' }} />
       <div className="absolute bottom-0 left-0 w-40 h-40 rounded-full blur-3xl opacity-20" style={{ background: '#14f195' }} />
@@ -241,12 +241,12 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
               <div className="relative">
                 <div className={`absolute inset-0 blur-md rounded-full ${isFutures ? 'bg-yellow-500/20' : 'bg-primary/20'}`} />
                 <div className={`relative bg-gradient-to-br border rounded-lg p-1.5 ${
-                  isFutures 
-                    ? 'from-yellow-500/20 to-yellow-600/10 border-yellow-500/30' 
-                    : 'from-primary/20 to-primary/10 border-primary/30'
-                }`}>
+                isFutures ?
+                'from-yellow-500/20 to-yellow-600/10 border-yellow-500/30' :
+                'from-primary/20 to-primary/10 border-primary/30'}`
+                }>
                   <span className="text-xl filter drop-shadow-md">
-                    {isFutures ? '🏆' : offer.outcome === 'a' ? (matchData.team_a_flag || '🏠') : offer.outcome === 'b' ? (matchData.team_b_flag || '🏠') : '🤝'}
+                    {isFutures ? '🏆' : offer.outcome === 'a' ? matchData.team_a_flag || '🏠' : offer.outcome === 'b' ? matchData.team_b_flag || '🏠' : '🤝'}
                   </span>
                 </div>
               </div>
@@ -255,18 +255,18 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
                   <h3 className="font-heading font-bold text-sm sm:text-base text-white truncate">
                     {getOutcomeLabel()}
                   </h3>
-                  {isFutures ? (
-                    <span className={`text-[9px] font-bold ${isFutures ? 'text-yellow-400' : 'text-primary/80'}`}>
+                  {isFutures ?
+                  <span className={`text-[9px] font-bold ${isFutures ? 'text-yellow-400' : 'text-primary/80'}`}>
                       {offer.outcome_label}
-                    </span>
-                  ) : (
-                    <span className="text-[9px] text-primary/80 font-bold">
+                    </span> :
+
+                  <span className="text-[9px] text-primary/80 font-bold">
                       {offer.outcome === 'a' ? matchData.team_a : offer.outcome === 'b' ? matchData.team_b : 'Draw'}
                     </span>
-                  )}
+                  }
                 </div>
                 <p className="text-[9px] sm:text-[10px] text-white/50 truncate">
-                  {isFutures ? 'Tournament Market' : (matchData.group_stage || 'World Cup 2026')}
+                  {isFutures ? 'Tournament Market' : matchData.group_stage || 'World Cup 2026'}
                 </p>
               </div>
             </div>
@@ -275,29 +275,29 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
             <div className="flex items-center gap-1.5">
               {/* Type Badge - FUTURES vs MATCH */}
               <div className={`${
-                isFutures 
-                  ? 'bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 border-yellow-500/40 text-yellow-400' 
-                  : 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/30 text-primary'
-              } border backdrop-blur-sm rounded-md px-1.5 py-0.5 flex items-center gap-1`}>
-                {isFutures ? (
-                  <>
+              isFutures ?
+              'bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 border-yellow-500/40 text-yellow-400' :
+              'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/30 text-primary'} border backdrop-blur-sm rounded-md px-1.5 py-0.5 flex items-center gap-1`
+              }>
+                {isFutures ?
+                <>
                     <Trophy className="w-2.5 h-2.5" />
                     <span className="text-[8px] font-bold uppercase tracking-wider">Futures</span>
-                  </>
-                ) : (
-                  <>
+                  </> :
+
+                <>
                     <Calendar className="w-2.5 h-2.5" />
                     <span className="text-[8px] font-bold uppercase tracking-wider">Match</span>
                   </>
-                )}
+                }
               </div>
               <Badge className={`${currentStatus.bg} ${currentStatus.border} ${currentStatus.color} text-[9px] sm:text-[10px] font-bold border`}>
                 {offer.status.replace('_', ' ')}
               </Badge>
             </div>
-            {!isFutures && matchData.match_end_time && (
-              <BetCountdown openUntil={matchData.match_end_time} label="Betting closes" className="text-[8px]" />
-            )}
+            {!isFutures && matchData.match_end_time &&
+            <BetCountdown openUntil={matchData.match_end_time} label="Betting closes" className="text-[8px]" />
+            }
           </div>
         </div>
 
@@ -352,36 +352,36 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
             <span className="font-bold text-white/60">{matchPct}%</span>
           </div>
           <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/10">
-            <div 
+            <div
               className={`h-full rounded-full transition-all duration-500 ${
-                isFullyMatched ? 'bg-gradient-to-r from-accent to-emerald-400' : 
-                isPartiallyMatched ? 'bg-gradient-to-r from-yellow-500 to-yellow-400' : 
-                'bg-gradient-to-r from-primary/50 to-primary'
-              }`}
-              style={{ width: `${matchPct}%` }}
-            />
+              isFullyMatched ? 'bg-gradient-to-r from-accent to-emerald-400' :
+              isPartiallyMatched ? 'bg-gradient-to-r from-yellow-500 to-yellow-400' :
+              'bg-gradient-to-r from-primary/50 to-primary'}`
+              }
+              style={{ width: `${matchPct}%` }} />
+            
           </div>
         </div>
 
         {/* LP Result Indicator */}
         {isSettled &&
-          <div className={`px-3 py-2 rounded-lg border ${
-            isLpWon 
-              ? (liquidityMatched > 0 ? 'bg-accent/10 border-accent/30 text-accent' : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400')
-              : 'bg-destructive/10 border-destructive/30 text-destructive'
-          }`}>
+        <div className={`px-3 py-2 rounded-lg border ${
+        isLpWon ?
+        liquidityMatched > 0 ? 'bg-accent/10 border-accent/30 text-accent' : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400' :
+        'bg-destructive/10 border-destructive/30 text-destructive'}`
+        }>
             <div className="flex items-center justify-between text-[9px]">
               <span className="font-bold uppercase tracking-wider">
-                {isLpWon 
-                  ? (liquidityMatched > 0 ? '🎉 LP Position Won' : '⚠️ LP Won (No Winnings)')
-                  : '💸 LP Position Lost'
-                }
+                {isLpWon ?
+              liquidityMatched > 0 ? '🎉 LP Position Won' : '⚠️ LP Won (No Winnings)' :
+              '💸 LP Position Lost'
+              }
               </span>
               <span className="text-white/40">
-                {isLpWon 
-                  ? (liquidityMatched > 0 ? 'Backed loser ✓' : 'No matched bets')
-                  : 'Backed winner ✗'
-                }
+                {isLpWon ?
+              liquidityMatched > 0 ? 'Backed loser ✓' : 'No matched bets' :
+              'Backed winner ✗'
+              }
               </span>
             </div>
           </div>
@@ -397,109 +397,109 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
                   <Button
                     disabled
                     variant="outline"
-                    className="w-full h-8 text-[10px] sm:text-xs border-accent/20 text-accent/50 bg-accent/5 rounded-xl font-heading font-bold"
-                  >
+                    className="w-full h-8 text-[10px] sm:text-xs border-accent/20 text-accent/50 bg-accent/5 rounded-xl font-heading font-bold">
+                    
                     <CheckCircle2 className="w-3 h-3 mr-1" />
                     Claimed ◎{claimedAmount.toFixed(4)}
                   </Button>
-                </div>
-              );
+                </div>);
+
             }
-            
+
             if (isWithdrawn) {
               return (
                 <div className="flex-1 flex flex-col gap-1">
                   <Button
                     disabled
                     variant="outline"
-                    className="w-full h-8 text-[10px] sm:text-xs border-white/10 text-white/40 bg-white/5 rounded-xl font-heading font-bold"
-                  >
+                    className="w-full h-8 text-[10px] sm:text-xs border-white/10 text-white/40 bg-white/5 rounded-xl font-heading font-bold">
+                    
                     <CheckCircle2 className="w-3 h-3 mr-1" />
                     Withdrawn ◎{liquidityDeposited.toFixed(4)}
                   </Button>
-                </div>
-              );
+                </div>);
+
             }
-            
+
             // Priority 1: Has unmatched liquidity - withdraw unmatched (ALWAYS available)
             if ((hasUnmatched || liquidityUnmatched > 0) && onWithdrawRequest) {
               return (
                 <Button
                   onClick={handleWithdraw}
-                  className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 rounded-xl font-heading font-bold"
-                >
+                  className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 rounded-xl font-heading font-bold bg-[hsl(var(--background))]">
+                  
                   <Wallet className="w-3 h-3 mr-1" />
                   Withdraw ◎{liquidityUnmatched.toFixed(4)}
-                </Button>
-              );
+                </Button>);
+
             }
-            
+
             // Priority 2: LP WON with matched liquidity - claim winnings (matched stake + fees)
             if (isLpWon && liquidityMatched > 0 && onWithdrawRequest) {
-              const claimAmount = liquidityMatched + (liquidityMatched * 0.02); // stake + 2% fees
+              const claimAmount = liquidityMatched + liquidityMatched * 0.02; // stake + 2% fees
               return (
                 <Button
                   onClick={handleWithdraw}
                   className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs text-black rounded-xl font-heading font-bold"
-                  style={{ background: 'linear-gradient(135deg, #14f195, #00ff87)' }}
-                >
+                  style={{ background: 'linear-gradient(135deg, #14f195, #00ff87)' }}>
+                  
                   <Trophy className="w-3 h-3 mr-1" />
                   Claim ◎{claimAmount.toFixed(4)}
-                </Button>
-              );
+                </Button>);
+
             }
-            
+
             // LP LOST - no funds to claim
             if (isLpLost) {
               return (
                 <Button
                   disabled
                   variant="outline"
-                  className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-destructive/20 text-destructive/50 bg-destructive/5 rounded-xl font-heading font-bold"
-                >
+                  className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-destructive/20 text-destructive/50 bg-destructive/5 rounded-xl font-heading font-bold">
+                  
                   <XCircle className="w-3 h-3 mr-1" />
                   No Funds
-                </Button>
-              );
+                </Button>);
+
             }
-            
+
             // Position not yet settled
             if (!isLpWon && !isLpLost) {
               return (
                 <Button
                   disabled
                   variant="outline"
-                  className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-border/30 text-muted-foreground bg-secondary/10 rounded-xl font-heading font-bold"
-                >
+                  className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-border/30 text-muted-foreground bg-secondary/10 rounded-xl font-heading font-bold">
+                  
                   <Clock className="w-3 h-3 mr-1" />
                   Pending Settlement
-                </Button>
-              );
+                </Button>);
+
             }
-            
+
             return (
               <Button
                 disabled
                 variant="outline"
-                className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-accent/30 text-accent bg-accent/10 rounded-xl font-heading font-bold"
-              >
+                className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-accent/30 text-accent bg-accent/10 rounded-xl font-heading font-bold">
+                
                 <CheckCircle className="w-3 h-3 mr-1" />
                 Fully Locked
-              </Button>
-            );
+              </Button>);
+
           })()}
           
           <Link to={`/match/${offer.match_id}`} className="flex-1">
             <Button
               variant="outline"
-              className="w-full h-8 sm:h-9 text-[10px] sm:text-xs border-border/50 text-white/70 hover:text-white hover:bg-white/5 rounded-xl font-heading font-bold"
-            >
+              className="w-full h-8 sm:h-9 text-[10px] sm:text-xs border-border/50 text-white/70 hover:text-white hover:bg-white/5 rounded-xl font-heading font-bold">
+              
               View Market
               <ArrowRight className="w-3 h-3 ml-1" />
             </Button>
           </Link>
         </div>
       </div>
-    </motion.div>
-  );
+    </motion.div>);
+
 }
