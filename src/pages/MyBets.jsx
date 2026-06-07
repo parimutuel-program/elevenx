@@ -351,12 +351,14 @@ export default function MyBets() {
               const allRaw = await base44.entities.UserBet.list('-created_date', 100);
               const myRaw = allRaw.filter(b => b.wallet_address === walletAddress);
               
-              const debugMsg = `RAW DB DATA:\nTotal bets in DB: ${allRaw.length}\nMy bets: ${myRaw.length}\n\nMy Futures:\n${myRaw.filter(b => b.futures_market_id || (b.match_title && b.match_title.includes('Finish'))).map(b => 
+              const futuresList = myRaw.filter(b => b.futures_market_id || (b.match_title && b.match_title.includes('Finish')));
+              const debugMsg = `RAW DB DATA:\nTotal bets in DB: ${allRaw.length}\nMy bets: ${myRaw.length}\n\nMy Futures (${futuresList.length}):\n${futuresList.map(b => 
                 `ID: ${b.id}\nStatus: ${b.status}\nTitle: ${b.match_title}\nOutcome: ${b.outcome_label}\nAmount: ${b.amount}\nfutures_market_id: ${b.futures_market_id || 'N/A'}\n---`
               ).join('\n')}`;
               
-              console.log('RAW DEBUG:', { allRaw, myRaw });
-              alert(debugMsg);
+              // Copy to clipboard
+              await navigator.clipboard.writeText(debugMsg);
+              alert('Debug data COPIED to clipboard!\n\nPaste it here:\n' + debugMsg.substring(0, 200) + '...');
             }} 
             className="gap-2 rounded-xl h-10 px-4 text-xs sm:text-sm"
           >
