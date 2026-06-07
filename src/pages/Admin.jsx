@@ -318,8 +318,23 @@ export default function Admin() {
                 <Button
                   onClick={async () => {
                     try {
-                      await base44.functions.invoke('createQuickTestMatch');
-                      toast.success('✓ Test match created!');
+                      const res = await base44.functions.invoke('deployAllFutures');
+                      toast.success(res.data.message || '✓ All futures deployed!');
+                      queryClient.invalidateQueries({ queryKey: ['futuresMarkets'] });
+                    } catch (err) {
+                      toast.error('Error: ' + err.message);
+                    }
+                  }}
+                  className="h-24 flex flex-col gap-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-600/30 rounded-xl"
+                >
+                  <span className="font-bold text-lg text-white">🚀 Futures Deploy</span>
+                  <span className="text-xs text-gray-400">Deploy all futures</span>
+                </Button>
+                <Button
+                  onClick={async () => {
+                    try {
+                      const res = await base44.functions.invoke('deployAllMatches');
+                      toast.success(res.data.message || '✓ All matches deployed!');
                       queryClient.invalidateQueries({ queryKey: ['allBets'] });
                     } catch (err) {
                       toast.error('Error: ' + err.message);
@@ -327,67 +342,38 @@ export default function Admin() {
                   }}
                   className="h-24 flex flex-col gap-2 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-600/30 rounded-xl"
                 >
-                  <span className="font-bold text-lg text-white">⚡ Create Quick Test</span>
-                  <span className="text-xs text-gray-400">Instant match + bet</span>
+                  <span className="font-bold text-lg text-white">⚡ Deploy All Matches</span>
+                  <span className="text-xs text-gray-400">Deploy entire DB</span>
                 </Button>
                 <Button
                   onClick={async () => {
                     try {
-                      await base44.functions.invoke('createQuickTestFutures');
-                      toast.success('✓ Future Test created! Betting ends in 10 min, no settlement delay!');
+                      const res = await base44.functions.invoke('deployAllFutures');
+                      toast.success(res.data.message || '✓ All futures deployed!');
+                      queryClient.invalidateQueries({ queryKey: ['futuresMarkets'] });
+                    } catch (err) {
+                      toast.error('Error: ' + err.message);
+                    }
+                  }}
+                  className="h-24 flex flex-col gap-2 bg-yellow-600/20 hover:bg-yellow-600/30 border border-yellow-600/30 rounded-xl"
+                >
+                  <span className="font-bold text-lg text-white">🎯 Initialize Futures</span>
+                  <span className="text-xs text-gray-400">Create on-chain markets</span>
+                </Button>
+                <Button
+                  onClick={async () => {
+                    try {
+                      const res = await base44.functions.invoke('deployAllMatches');
+                      toast.success(res.data.message || '✓ All matches deployed!');
                       queryClient.invalidateQueries({ queryKey: ['allBets'] });
                     } catch (err) {
                       toast.error('Error: ' + err.message);
                     }
                   }}
-                  className="h-24 flex flex-col gap-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-600/30 rounded-xl"
+                  className="h-24 flex flex-col gap-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-600/30 rounded-xl"
                 >
-                  <span className="font-bold text-lg text-white">🚀 Future Test</span>
-                  <span className="text-xs text-gray-400">10 min betting, instant settle</span>
-                </Button>
-                <Button
-                  onClick={async () => {
-                    try {
-                      await base44.functions.invoke('bulkDeployMatches');
-                      toast.success('✓ Matches deployed!');
-                      queryClient.invalidateQueries({ queryKey: ['allBets'] });
-                    } catch (err) {
-                      toast.error('Error: ' + err.message);
-                    }
-                  }}
-                  className="h-24 flex flex-col gap-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-600/30 rounded-xl"
-                >
-                  <span className="font-bold text-lg text-white">🚀 Bulk Deploy</span>
-                  <span className="text-xs text-gray-400">All matches</span>
-                </Button>
-                <Button
-                  onClick={async () => {
-                    try {
-                      await base44.functions.invoke('syncWorldCupMatches');
-                      toast.success('✓ World Cup synced!');
-                      queryClient.invalidateQueries({ queryKey: ['allBets'] });
-                    } catch (err) {
-                      toast.error('Error: ' + err.message);
-                    }
-                  }}
-                  className="h-24 flex flex-col gap-2 bg-gray-700/50 hover:bg-gray-700/70 border border-gray-600/50 rounded-xl"
-                >
-                  <span className="font-bold text-lg text-white">🌍 Sync World Cup</span>
-                  <span className="text-xs text-gray-400">Fetch from API</span>
-                </Button>
-                <Button
-                  onClick={async () => {
-                    try {
-                      await base44.functions.invoke('bulkDeployFutures');
-                      toast.success('✓ Futures deployed!');
-                    } catch (err) {
-                      toast.error('Error: ' + err.message);
-                    }
-                  }}
-                  className="h-24 flex flex-col gap-2 bg-gray-700/50 hover:bg-gray-700/70 border border-gray-600/50 rounded-xl"
-                >
-                  <span className="font-bold text-lg text-white">📊 Deploy Futures</span>
-                  <span className="text-xs text-gray-400">All countries</span>
+                  <span className="font-bold text-lg text-white">🏆 Initialize Matches</span>
+                  <span className="text-xs text-gray-400">Create on-chain markets</span>
                 </Button>
                 <Button
                   onClick={async () => {
