@@ -508,42 +508,22 @@ export default function AdminFuturesPanel({ walletAddress }) {
                 <p className="text-xs text-muted-foreground">Select the winning position for {manualSettleModal.marketName}</p>
               </div>
               
-              <div className="space-y-3">
-                <p className="text-xs text-muted-foreground text-center">Choose settlement method:</p>
+              <div className="space-y-4">
+                <div className="bg-blue-600/10 border border-blue-600/30 rounded-xl p-3">
+                  <p className="text-xs font-bold text-blue-400 mb-1">⚡ Manual Settlement (Recommended)</p>
+                  <p className="text-[10px] text-blue-300/70">Instantly settle in database — no Solana transaction needed</p>
+                </div>
                 
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    onClick={() => settleWithOracleMutation.mutate({ 
-                      marketId: manualSettleModal.marketId, 
-                      manual_winning_position: '1st' 
-                    })}
-                    disabled={settleWithOracleMutation.isPending}
-                    className="bg-accent hover:bg-accent/90 text-accent-foreground text-sm font-bold h-10 rounded-xl"
-                  >
-                    1st (On-Chain)
-                  </Button>
+                <div className="grid grid-cols-3 gap-2">
                   <Button
                     onClick={() => manualSettleMutation.mutate({ 
                       marketId: manualSettleModal.marketId, 
                       winningPosition: '1st' 
                     })}
                     disabled={manualSettleMutation.isPending}
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold h-10 rounded-xl"
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold h-12 rounded-xl"
                   >
-                    1st (DB Only)
-                  </Button>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    onClick={() => settleWithOracleMutation.mutate({ 
-                      marketId: manualSettleModal.marketId, 
-                      manual_winning_position: '2nd' 
-                    })}
-                    disabled={settleWithOracleMutation.isPending}
-                    className="bg-accent hover:bg-accent/90 text-accent-foreground text-sm font-bold h-10 rounded-xl"
-                  >
-                    2nd (On-Chain)
+                    🥇 1st Place
                   </Button>
                   <Button
                     onClick={() => manualSettleMutation.mutate({ 
@@ -551,22 +531,9 @@ export default function AdminFuturesPanel({ walletAddress }) {
                       winningPosition: '2nd' 
                     })}
                     disabled={manualSettleMutation.isPending}
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold h-10 rounded-xl"
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold h-12 rounded-xl"
                   >
-                    2nd (DB Only)
-                  </Button>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    onClick={() => settleWithOracleMutation.mutate({ 
-                      marketId: manualSettleModal.marketId, 
-                      manual_winning_position: '3rd' 
-                    })}
-                    disabled={settleWithOracleMutation.isPending}
-                    className="bg-accent hover:bg-accent/90 text-accent-foreground text-sm font-bold h-10 rounded-xl"
-                  >
-                    3rd (On-Chain)
+                    🥈 2nd Place
                   </Button>
                   <Button
                     onClick={() => manualSettleMutation.mutate({ 
@@ -574,20 +541,18 @@ export default function AdminFuturesPanel({ walletAddress }) {
                       winningPosition: '3rd' 
                     })}
                     disabled={manualSettleMutation.isPending}
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold h-10 rounded-xl"
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold h-12 rounded-xl"
                   >
-                    3rd (DB Only)
+                    🥉 3rd Place
                   </Button>
                 </div>
               </div>
               
-              <p className="text-[10px] text-muted-foreground text-center pt-2">
-                Use "DB Only" for testing (skips on-chain transaction)
-              </p>
-              
-              <Button variant="outline" size="sm" onClick={() => setManualSettleModal({ open: false, marketId: null, marketName: '' })} className="w-full">
-                Cancel
-              </Button>
+              <div className="pt-2 border-t border-white/10">
+                <Button variant="outline" size="sm" onClick={() => setManualSettleModal({ open: false, marketId: null, marketName: '' })} className="w-full">
+                  Cancel
+                </Button>
+              </div>
             </div>
           </div>
         </div>
