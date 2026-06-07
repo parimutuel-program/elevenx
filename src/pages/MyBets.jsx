@@ -426,8 +426,6 @@ export default function MyBets() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="stats">
-
         <TabsContent value="bets">
           <div className="space-y-4">
             {/* Debug info */}
@@ -497,6 +495,8 @@ export default function MyBets() {
             <EmptyState message="No LP positions" actionText="Provide Liquidity" link="/lp" />
           )}
         </TabsContent>
+
+        <TabsContent value="stats">
           <div className="space-y-4">
             {/* Main Stats */}
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
@@ -591,6 +591,7 @@ export default function MyBets() {
             </div>
           </div>
         </TabsContent>
+
 
         <TabsContent value="history">
           <div className="space-y-4">
