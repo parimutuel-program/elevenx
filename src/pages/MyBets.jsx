@@ -171,17 +171,21 @@ export default function MyBets() {
   // Separate futures bets from match bets
   // Futures bets have futures_market_id OR match_title containing "Finish"/"Winner"/"Place" (for legacy bets)
   const myFuturesBets = myMatcherBets.filter(b => {
-    return b.futures_market_id || 
+    const isFutures = b.futures_market_id || 
            (b.match_title && (b.match_title.includes('Finish') || b.match_title.includes('Winner') || b.match_title.includes('Place')));
+    console.log('[MyBets] Checking bet:', { id: b.id, match_title: b.match_title, futures_market_id: b.futures_market_id, isFutures });
+    return isFutures;
   });
   const myMatchBets = myMatcherBets.filter(b => {
-    return b.match_id && !b.futures_market_id && !(b.match_title && (b.match_title.includes('Finish') || b.match_title.includes('Winner') || b.match_title.includes('Place')));
+    const isMatch = b.match_id && !b.futures_market_id && !(b.match_title && (b.match_title.includes('Finish') || b.match_title.includes('Winner') || b.match_title.includes('Place')));
+    console.log('[MyBets] Match bet:', { id: b.id, match_title: b.match_title, isMatch });
+    return isMatch;
   });
   
   console.log('[MyBets] Classified bets:', {
     total: myMatcherBets.length,
-    futures: myFuturesBets.map(b => ({ id: b.id, match_title: b.match_title, futures_market_id: b.futures_market_id })),
-    matches: myMatchBets.map(b => ({ id: b.id, match_title: b.match_title }))
+    futures: myFuturesBets.map(b => ({ id: b.id, match_title: b.match_title, futures_market_id: b.futures_market_id, status: b.status })),
+    matches: myMatchBets.map(b => ({ id: b.id, match_title: b.match_title, status: b.status }))
   });
   
   // Group match bets by match_id + outcome
