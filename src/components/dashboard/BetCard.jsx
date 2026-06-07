@@ -26,14 +26,27 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
   const queryClient = useQueryClient();
   const [localBetStatus, setLocalBetStatus] = useState(bet.status);
   const [localActualPayout, setLocalActualPayout] = useState(bet.actual_payout);
+  const [hasClaimedLocally, setHasClaimedLocally] = useState(false);
   
   // Sync local state when bet prop changes (from query refetch)
-  // But don't override if we already locally marked it as claimed
+  // CRITICAL: Don't override if we've already claimed locally and updated the DB
   React.useEffect(() => {
-    if (localBetStatus === 'claimed' && bet.status !== 'claimed') return;
+    // If we claimed locally, only sync if the DB now confirms it's claimed
+    if (hasClaimedLocally) {
+      if (bet.status === 'claimed' || bet.actual_payout > 0) {
+        // DB confirms claim - safe to sync and reset flag
+        setLocalBetStatus(bet.status);
+        setLocalActualPayout(bet.actual_payout || 0);
+        setHasClaimedLocally(false);
+      }
+      // Otherwise keep local claimed status - don't override with old data
+      return;
+    }
+    
+    // Normal sync when not in claimed state
     setLocalBetStatus(bet.status);
-    setLocalActualPayout(bet.actual_payout);
-  }, [bet.id, bet.status, bet.actual_payout]);
+    setLocalActualPayout(bet.actual_payout || 0);
+  }, [bet.id, bet.status, bet.actual_payout, hasClaimedLocally]);
   const config = statusConfig[localBetStatus] || statusConfig.active;
   const StatusIcon = config.icon;
 
@@ -113,9 +126,10 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
     const signature = txResult.signature;
     setClaimSignature(signature);
 
-    // Immediately update local state so the card shows "Claimed" right away
+    // Mark as claimed locally and set flag to prevent override from query refetch
     setLocalBetStatus('claimed');
     setLocalActualPayout(bet.potential_payout || 0);
+    setHasClaimedLocally(true);
 
     // Update ALL bet IDs in the group to claimed in DB
     const idsToUpdate = bet.betIds || [bet.id];
