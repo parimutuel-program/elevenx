@@ -372,13 +372,7 @@ export default function Home() {
               item.color === 'accent' ? 'text-accent' :
               'text-yellow-400'}`
               } />
-                {item.wcLogo && (
-                  <img
-                    src="https://media.base44.com/images/public/6a1da108eb293de119e4e930/676f19c8c_Pngtree2026fifaworldcuplogo_21016269.png"
-                    alt="FIFA World Cup 2026"
-                    className="h-14 w-auto object-contain"
-                  />
-                )}
+
               </div>
               <h3 className={`font-heading font-bold text-base mb-2 ${
             item.color === 'primary' ? 'text-primary' :
@@ -568,9 +562,11 @@ export default function Home() {
 
           {/* Bottom Bar */}
           <div className="border-t border-white/10 pt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <img src="https://media.base44.com/images/public/6a1da108eb293de119e4e930/e4f13eef5_Make_me_nice_clean_l-4110221.png" alt="ElevenX" className="w-8 h-8 rounded-lg object-cover" />
               <span className="text-xs text-white/50">© 2026 ElevenX. All rights reserved.</span>
+              <div className="h-3 w-px bg-white/10" />
+              <img src="https://media.base44.com/images/public/6a1da108eb293de119e4e930/676f19c8c_Pngtree2026fifaworldcuplogo_21016269.png" alt="FIFA World Cup 2026" className="h-4 w-auto object-contain opacity-60 hover:opacity-100 transition-opacity" />
             </div>
             <div className="flex items-center gap-4 text-[10px] text-white/50">
               <a href="#" className="hover:text-primary transition-colors">Terms</a>
