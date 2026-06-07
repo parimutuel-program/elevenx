@@ -578,7 +578,7 @@ export default function Home() {
             <div className="flex items-center gap-4 text-[10px] text-white/50">
               <a href="#" className="hover:text-primary transition-colors">Terms</a>
               <a href="#" className="hover:text-primary transition-colors">Privacy</a>
-              <a href="#" className="hover:text-primary transition-colors">Docs</a>
+              <Link to="/docs" className="hover:text-primary transition-colors">Docs</Link>
             </div>
           </div>
         </div>
