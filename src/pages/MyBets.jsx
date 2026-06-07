@@ -168,7 +168,9 @@ export default function MyBets() {
   // LP positions are identified by: role='lp'
   console.log('[MyBets] myBets (raw from DB):', myBets.map(b => ({ id: b.id, role: b.role, match_title: b.match_title, futures_market_id: b.futures_market_id, status: b.status })));
   const myMatcherBets = myBets.filter(b => b.role !== 'lp');
+  const myLpBets = myBets.filter(b => b.role === 'lp');
   console.log('[MyBets] myMatcherBets (filtered):', myMatcherBets.length, myMatcherBets);
+  console.log('[MyBets] myLpBets (LP positions):', myLpBets.length, myLpBets.map(b => ({ id: b.id, role: b.role, status: b.status })));
   
   // Separate futures bets from match bets
   // Futures bets have futures_market_id (primary indicator)
