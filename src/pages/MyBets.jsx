@@ -347,13 +347,28 @@ export default function MyBets() {
           <Button 
             variant="outline" 
             onClick={() => {
-              alert('My Bets Debug:\n\nTotal bets: ' + myBets.length + '\nMatch bets: ' + myMatchBets.length + '\nFutures bets: ' + myFuturesBets.length + '\n\nFutures: ' + JSON.stringify(myFuturesBets.map(b => ({ 
-                id: b.id, 
-                match_title: b.match_title, 
-                status: b.status,
-                outcome_label: b.outcome_label,
-                amount: b.amount 
-              })), null, 2));
+              const debug = {
+                totalBets: myBets.length,
+                matchBets: myMatchBets.length,
+                futuresBets: myFuturesBets.length,
+                futuresDetails: myFuturesBets.map(b => ({ 
+                  id: b.id, 
+                  match_title: b.match_title, 
+                  status: b.status,
+                  outcome_label: b.outcome_label,
+                  amount: b.amount,
+                  futures_market_id: b.futures_market_id,
+                  _isFutures: b._isFutures
+                })),
+                groupedFutures: Object.values(groupedFuturesBets).map(b => ({
+                  betIds: b.betIds,
+                  status: b.status,
+                  outcome: b.outcome_label,
+                  totalAmount: b.totalAmount
+                }))
+              };
+              console.log('MY BETS DEBUG:', debug);
+              alert('MY BETS DEBUG (check console):\n\nFutures count: ' + myFuturesBets.length + '\nGrouped count: ' + Object.values(groupedFuturesBets).length + '\n\nStatuses: ' + myFuturesBets.map(b => b.status).join(', '));
             }} 
             className="gap-2 rounded-xl h-10 px-4 text-xs sm:text-sm"
           >
