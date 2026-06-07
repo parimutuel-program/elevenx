@@ -28,21 +28,21 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
       console.log('[PlaceBetPanel] Fetched BetOffers:', {
         bet_id: bet?.id,
         count: offers.length,
-        offers: offers.map(o => ({
+        offers: offers.map((o) => ({
           id: o.id.slice(0, 8) + '...',
           outcome: o.outcome,
           status: o.status,
           amount_unmatched: o.amount_unmatched,
           amount_offered: o.amount_offered,
-          lp_wallet_address: o.lp_wallet_address?.slice(0, 20) + '...',
-        })),
+          lp_wallet_address: o.lp_wallet_address?.slice(0, 20) + '...'
+        }))
       });
       return offers;
     },
     enabled: !!bet?.id,
     staleTime: 5000,
     refetchInterval: 10000,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: false
   });
 
   // For BETTORS (mode='match'): Check total available LP liquidity for selected outcome OR selected offer
@@ -56,7 +56,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
       selectedOutcome,
       status: o.status,
       amount_unmatched: o.amount_unmatched,
-      isValid,
+      isValid
     });
     return isValid;
   }).
@@ -68,7 +68,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
 
   // Fixed odds mode: bet against existing LP offers
   const hasLiquidityForOutcome = selectedOutcome ? totalLiquidityForOutcome > 0 : selectedOffer ? true : false;
-  
+
   // Betting mode: fixed_lp (bet against LP) or no_liquidity (wait for LP)
   const bettingMode = totalLiquidityForOutcome > 0 || selectedOffer ? 'fixed_lp' : 'no_liquidity';
 
@@ -77,7 +77,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
     selectedOffer: selectedOffer?.id,
     totalLiquidityForOutcome,
     hasLiquidityForOutcome,
-    allOffersCount: allOffers.length,
+    allOffersCount: allOffers.length
   });
 
   // Calculate time remaining until betting closes
@@ -108,7 +108,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
     return () => clearInterval(interval);
   }, [bet?.open_until]);
 
-  const isBettingClosed = bet.status !== 'open' || (timeRemaining && timeRemaining.total <= 0);
+  const isBettingClosed = bet.status !== 'open' || timeRemaining && timeRemaining.total <= 0;
 
   const stakeNum = parseFloat(amount) || 0;
 
@@ -117,11 +117,11 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
   const odds = fixedOdds;
 
   // Calculate max stake based on available LP liquidity
-  const maxMatcherStake = bettingMode === 'fixed_lp' ? 
-    (selectedOffer ? 
-      parseFloat((selectedOffer.amount_unmatched || 0).toFixed(4)) : 
-      parseFloat(totalLiquidityForOutcome.toFixed(4))
-    ) : null;
+  const maxMatcherStake = bettingMode === 'fixed_lp' ?
+  selectedOffer ?
+  parseFloat((selectedOffer.amount_unmatched || 0).toFixed(4)) :
+  parseFloat(totalLiquidityForOutcome.toFixed(4)) :
+  null;
 
   // Bettor payout: stake * odds from the Bet entity
   const matcherPayout = stakeNum * odds;
@@ -235,25 +235,25 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
         });
         console.log('[PlaceBetPanel] matchBet response:', res.data);
       } else if (selectedOutcome) {
-      // User clicked odds - auto-select first available offer
-      const firstAvailableOffer = allOffers.find(o => 
-        (o.status === 'open' || o.status === 'partially_matched') && 
-        o.outcome === selectedOutcome && 
+        // User clicked odds - auto-select first available offer
+        const firstAvailableOffer = allOffers.find((o) =>
+        (o.status === 'open' || o.status === 'partially_matched') &&
+        o.outcome === selectedOutcome &&
         (o.amount_unmatched || 0) > 0
-      );
-      if (firstAvailableOffer) {
-        console.log('[PlaceBetPanel] Auto-selecting offer:', firstAvailableOffer.id);
-        res = await base44.functions.invoke('matchBet', {
-          offer_id: firstAvailableOffer.id,
-          amount: stakeNum,
-          wallet_address: wallet
-        });
-        console.log('[PlaceBetPanel] matchBet response:', res.data);
-      } else {
-        // No LP available - block betting (strict LP-first model)
-        console.log('[PlaceBetPanel] No LP available for outcome:', selectedOutcome, '- blocking bet');
-        throw new Error(`No liquidity available for ${outcomeLabel}. LP must seed this outcome first.`);
-      }
+        );
+        if (firstAvailableOffer) {
+          console.log('[PlaceBetPanel] Auto-selecting offer:', firstAvailableOffer.id);
+          res = await base44.functions.invoke('matchBet', {
+            offer_id: firstAvailableOffer.id,
+            amount: stakeNum,
+            wallet_address: wallet
+          });
+          console.log('[PlaceBetPanel] matchBet response:', res.data);
+        } else {
+          // No LP available - block betting (strict LP-first model)
+          console.log('[PlaceBetPanel] No LP available for outcome:', selectedOutcome, '- blocking bet');
+          throw new Error(`No liquidity available for ${outcomeLabel}. LP must seed this outcome first.`);
+        }
       }
       if (res.data?.error) throw new Error(res.data.error);
       // Include commit_data in instruction for post-tx commit
@@ -299,7 +299,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
         // Force immediate refetch and wait for it
         await refetchOffers();
         // Give React Query time to update the data
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
     } catch (commitErr) {
       console.error('[PlaceBetPanel] Commit error:', commitErr);
@@ -345,13 +345,13 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
   return (
     <div className="bg-card border border-primary/20 rounded-2xl p-5 space-y-4">
       {/* Betting Closed Banner - Show at TOP when window has ended */}
-      {timeRemaining && timeRemaining.total <= 0 && (
-        <div className="bg-destructive/20 border border-destructive/40 rounded-xl p-4 text-center mb-2">
+      {timeRemaining && timeRemaining.total <= 0 &&
+      <div className="bg-destructive/20 border border-destructive/40 rounded-xl p-4 text-center mb-2">
           <Clock className="w-6 h-6 text-destructive mx-auto mb-1" />
           <p className="font-heading font-bold text-sm text-destructive">⏰ Betting Has Closed</p>
           <p className="text-[10px] text-muted-foreground mt-1">This match is no longer accepting bets</p>
         </div>
-      )}
+      }
 
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2 mb-0.5">
@@ -359,47 +359,47 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
             <h3 className={`font-heading font-bold text-base ${timeRemaining && timeRemaining.total <= 0 ? 'opacity-50' : ''}`}>
               {selectedOffer ? `Bet Against ${selectedOffer.outcome_label}` : `Bet on ${outcomeLabel}`}
             </h3>
-            {timeRemaining && timeRemaining.total > 0 && (
-              <Badge className="bg-destructive/10 text-destructive border border-destructive/20 text-[9px] font-bold px-2 py-0.5 animate-pulse">
+            {timeRemaining && timeRemaining.total > 0 &&
+            <Badge className="border border-destructive/20 text-[9px] font-bold px-2 py-0.5 animate-pulse text-[hsl(var(--accent))]">
                 OPEN
               </Badge>
-            )}
+            }
           </div>
-          {timeRemaining && timeRemaining.total > 0 && (
-            <div className="flex items-center gap-1 text-xs font-bold text-destructive">
+          {timeRemaining && timeRemaining.total > 0 &&
+          <div className="flex items-center gap-1 text-xs font-bold text-destructive">
               <Clock className="w-3.5 h-3.5" />
               <span className="text-[9px]">Betting closes in</span>
               {timeRemaining.days > 0 ?
-                `${timeRemaining.days}d ${timeRemaining.hours}h` :
-                timeRemaining.hours > 0 ?
-                `${timeRemaining.hours}h ${timeRemaining.minutes}m` :
-                `${timeRemaining.minutes}:${String(timeRemaining.seconds).padStart(2, '0')}`
-              }
+            `${timeRemaining.days}d ${timeRemaining.hours}h` :
+            timeRemaining.hours > 0 ?
+            `${timeRemaining.hours}h ${timeRemaining.minutes}m` :
+            `${timeRemaining.minutes}:${String(timeRemaining.seconds).padStart(2, '0')}`
+            }
             </div>
-          )}
+          }
         </div>
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs text-muted-foreground">
-            {selectedOffer ? (
-              `Max stake: ◎${Number(maxMatcherStake || 0).toFixed(4)} @ ${odds.toFixed(2)}x`
-            ) : hasLiquidityForOutcome ? (
-              `Max stake: ◎${Number(maxMatcherStake || 0).toFixed(4)} @ ${odds.toFixed(2)}x`
-            ) : (
-              <span className="text-accent font-bold">⏳ No liquidity — LP must seed this outcome first</span>
-            )}
+            {selectedOffer ?
+            `Max stake: ◎${Number(maxMatcherStake || 0).toFixed(4)} @ ${odds.toFixed(2)}x` :
+            hasLiquidityForOutcome ?
+            `Max stake: ◎${Number(maxMatcherStake || 0).toFixed(4)} @ ${odds.toFixed(2)}x` :
+
+            <span className="text-accent font-bold">⏳ No liquidity — LP must seed this outcome first</span>
+            }
           </p>
           <button
             onClick={() => refetchOffers()}
-            className="text-[10px] text-primary hover:text-primary/80 font-medium flex items-center gap-1"
-          >
+            className="text-[10px] text-primary hover:text-primary/80 font-medium flex items-center gap-1">
+            
             <Clock className="w-3 h-3" />
             Refresh
           </button>
         </div>
 
         {/* Pool Liquidity Display - Nicely Branded */}
-        {bettingMode === 'fixed_lp' && (
-          <div className="bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/30 rounded-xl p-4 space-y-3">
+        {bettingMode === 'fixed_lp' &&
+        <div className="bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/30 rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-xs font-bold text-muted-foreground">Available Liquidity</p>
               <Badge className="bg-primary/20 text-primary text-[8px] font-bold px-1.5 py-0">
@@ -410,8 +410,8 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
               <span className="text-2xl font-heading font-bold text-primary">◎{maxMatcherStake.toFixed(4)}</span>
               <span className="text-xs text-muted-foreground">SOL available</span>
             </div>
-            {selectedOffer && (
-              <div className="pt-2 border-t border-primary/20">
+            {selectedOffer &&
+          <div className="pt-2 border-t border-primary/20">
                 <div className="flex justify-between text-[10px]">
                   <span className="text-muted-foreground">Offer Status</span>
                   <span className={`font-bold ${selectedOffer.status === 'open' ? 'text-accent' : 'text-primary'}`}>
@@ -427,20 +427,20 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
                   <span className="font-bold text-foreground">◎{(selectedOffer.amount_matched || 0).toFixed(4)}</span>
                 </div>
               </div>
-            )}
+          }
           </div>
-        )}
+        }
 
         {/* No liquidity indicator - block betting until LP seeds */}
-        {mode === 'match' && selectedOutcome && !hasLiquidityForOutcome && (
-          <div className="bg-secondary/30 border border-border/30 rounded-xl p-3 text-center">
+        {mode === 'match' && selectedOutcome && !hasLiquidityForOutcome &&
+        <div className="bg-secondary/30 border border-border/30 rounded-xl p-3 text-center">
             <p className="text-xs text-muted-foreground font-bold mb-2">⏳ No LP Liquidity Available</p>
             <p className="text-[10px] text-muted-foreground mb-2">Cannot place bets until LP provides liquidity for this outcome</p>
             <a href={`/lp?matchId=${matchId}`} className="inline-block bg-accent/10 hover:bg-accent/20 border border-accent/30 text-accent font-bold text-xs py-1.5 px-4 rounded-lg transition-colors">
               Add LP Liquidity
             </a>
           </div>
-        )}
+        }
         
         {/* Block betting when mode='match' and selectedOffer but no unmatched liquidity */}
         {mode === 'match' && selectedOffer && (selectedOffer.amount_unmatched || 0) <= 0 &&
@@ -478,15 +478,15 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className={`text-xs font-bold text-muted-foreground ${timeRemaining && timeRemaining.total <= 0 ? 'opacity-50' : ''}`}>Enter Stake Amount</label>
-          {bettingMode === 'fixed_lp' && maxMatcherStake && maxMatcherStake > 0 && (
-            <button
-              onClick={handleMaxBet}
-              disabled={isBettingClosed}
-              className="text-[10px] font-bold bg-accent/20 hover:bg-accent/30 text-accent px-2 py-0.5 rounded transition-colors disabled:opacity-50"
-            >
+          {bettingMode === 'fixed_lp' && maxMatcherStake && maxMatcherStake > 0 &&
+          <button
+            onClick={handleMaxBet}
+            disabled={isBettingClosed}
+            className="text-[10px] font-bold bg-accent/20 hover:bg-accent/30 text-accent px-2 py-0.5 rounded transition-colors disabled:opacity-50">
+            
               MAX ◎{maxMatcherStake.toFixed(4)}
             </button>
-          )}
+          }
         </div>
         <Input
           type="number"
@@ -500,23 +500,23 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
           className="bg-secondary/50 border-border/50 text-lg font-heading font-bold h-12 disabled:opacity-50 disabled:cursor-not-allowed" />
         
         <div className="flex gap-2 mt-2 flex-wrap">
-          {QUICK_AMOUNTS.map((qa) => (
-            <button
-              key={qa}
-              onClick={() => setAmount(String(Number(qa).toFixed(4)))}
-              disabled={isBettingClosed}
-              className="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+          {QUICK_AMOUNTS.map((qa) =>
+          <button
+            key={qa}
+            onClick={() => setAmount(String(Number(qa).toFixed(4)))}
+            disabled={isBettingClosed}
+            className="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            
               ◎{qa}
             </button>
-          ))}
+          )}
         </div>
       </div>
 
       <AnimatePresence>
       {stakeNum > 0 && mode === 'match' &&
-      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-      className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-2 text-xs overflow-hidden">
+        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+        className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-2 text-xs overflow-hidden">
           <div className="flex items-center justify-between mb-1">
             <p className="font-bold text-foreground">Bet Summary</p>
             <Badge className="bg-primary/20 text-primary text-[8px] font-bold px-1.5 py-0">
@@ -542,7 +542,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
           </div>
           <p className="text-[10px] text-muted-foreground">Funds locked immediately — cannot be withdrawn</p>
         </motion.div>
-      }
+        }
       </AnimatePresence>
 
 
@@ -611,19 +611,19 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
           if (timeRemaining && timeRemaining.total <= 0) console.log('[PlaceBetPanel] Button disabled: betting closed');
           if (bettingMode === 'no_liquidity') console.log('[PlaceBetPanel] Button disabled: no liquidity', { bettingMode, totalLiquidityForOutcome });
           if (mode === 'match' && maxMatcherStake && stakeNum > maxMatcherStake) console.log('[PlaceBetPanel] Button disabled: stake exceeds max', { stakeNum, maxMatcherStake });
-          
+
           return timeRemaining && timeRemaining.total <= 0 ?
-        <>
+          <>
               <Clock className="w-4 h-4 mr-2" />
               Betting Closed
             </> :
-        bettingMode === 'no_liquidity' ?
-        <>
+          bettingMode === 'no_liquidity' ?
+          <>
               <Wallet className="w-4 h-4 mr-2" />
               No Liquidity Available
             </> :
-        isPreparing ? 'Preparing...' :
-        `Bet ◎${stakeNum > 0 ? stakeNum.toFixed(2) : '0.00'} @ ${odds.toFixed(2)}x`;
+          isPreparing ? 'Preparing...' :
+          `Bet ◎${stakeNum > 0 ? stakeNum.toFixed(2) : '0.00'} @ ${odds.toFixed(2)}x`;
         })()}
         </Button>
       }
