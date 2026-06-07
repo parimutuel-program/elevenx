@@ -117,13 +117,16 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
     setLocalBetStatus('claimed');
     setLocalActualPayout(bet.potential_payout || 0);
 
-    // Update bet status in DB AFTER successful on-chain claim
+    // Update ALL bet IDs in the group to claimed in DB
+    const idsToUpdate = bet.betIds || [bet.id];
     try {
-      await base44.entities.UserBet.update(bet.id, { 
-        status: 'claimed',
-        actual_payout: bet.potential_payout || 0
-      });
-      console.log('[BetCard] ✓ Updated bet status to claimed:', bet.id);
+      for (const id of idsToUpdate) {
+        await base44.entities.UserBet.update(id, { 
+          status: 'claimed',
+          actual_payout: (bet.potential_payout || 0) / idsToUpdate.length
+        });
+      }
+      console.log('[BetCard] ✓ Updated all bets to claimed:', idsToUpdate);
     } catch (err) {
       console.error('[BetCard] Failed to update bet status:', err);
     }
