@@ -246,6 +246,9 @@ Deno.serve(async (req) => {
       const withdrawnFlag = accountData[106]; // withdrawn is a bool at offset 106
       const amountMatchedOnChain = accountData.readBigUInt64LE(89); // amount_matched at offset 89
       
+      // CRITICAL: Read the stored LP address from the account (offset 40-71, 32 bytes)
+      const storedLpPubkey = new PublicKey(accountData.slice(40, 72));
+      
       console.log('[withdrawLpWinnings] Stored outcome vs derived:', {
         storedOutcomeValue,
         derivedOutcomeValue: outcomeValue,
@@ -258,6 +261,9 @@ Deno.serve(async (req) => {
         lpOfferPda: lpOfferPda.toBase58(),
         accountDataLength: accountData.length,
         stored_pda: offer.solana_position_pda,
+        storedLpPubkey: storedLpPubkey.toBase58(),
+        walletWeAreUsing: userPubkey.toBase58(),
+        walletsMatch: storedLpPubkey.toBase58() === userPubkey.toBase58(),
       });
 
       if (withdrawnFlag === 1) {
