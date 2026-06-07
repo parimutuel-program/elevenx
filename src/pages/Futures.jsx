@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Loader, Search, Globe, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trophy, Loader, Search, Globe, ChevronDown, ChevronUp, Rocket } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
@@ -17,7 +17,29 @@ export default function Futures() {
   const [activeGroup, setActiveGroup] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [isInfoExpanded, setIsInfoExpanded] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isDeploying, setIsDeploying] = useState(false);
   const queryClient = useQueryClient();
+
+  // Check if user is admin
+  useEffect(() => {
+    base44.auth.me().then(user => {
+      if (user?.role === 'admin') setIsAdmin(true);
+    }).catch(() => {});
+  }, []);
+
+  const handleDeployAll = async () => {
+    setIsDeploying(true);
+    try {
+      const res = await base44.functions.invoke('deployAllFutures');
+      alert(res.data.message || '✓ All futures deployed successfully!');
+      queryClient.invalidateQueries({ queryKey: ['futures-markets'] });
+    } catch (err) {
+      alert('Error deploying futures: ' + err.message);
+    } finally {
+      setIsDeploying(false);
+    }
+  };
 
   // Fetch futures markets from database
   const { data: futuresMarkets = [], isLoading } = useQuery({
@@ -270,6 +292,16 @@ export default function Futures() {
                 <span className="text-[9px] sm:text-[10px] font-bold text-primary tracking-widest">WORLD CUP 2026</span>
               </div>
             </div>
+            {isAdmin && (
+              <button
+                onClick={handleDeployAll}
+                disabled={isDeploying}
+                className="hidden sm:flex items-center gap-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-600/50 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors"
+              >
+                {isDeploying ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Rocket className="w-3.5 h-3.5" />}
+                Deploy All Futures
+              </button>
+            )}
             {/* Mobile Expand/Collapse Button */}
             <button
               onClick={() => setIsInfoExpanded(!isInfoExpanded)}

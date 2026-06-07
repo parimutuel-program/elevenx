@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Trophy, Search, Globe, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trophy, Search, Globe, ChevronDown, ChevronUp, Rocket, Loader } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
@@ -13,7 +13,30 @@ export default function Matches() {
   const [activeGroup, setActiveGroup] = useState('ALL');
   const [search, setSearch] = useState('');
   const [highlightedMatchId, setHighlightedMatchId] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isDeploying, setIsDeploying] = useState(false);
   const queryClient = useQueryClient();
+
+  // Check if user is admin
+  useEffect(() => {
+    base44.auth.me().then(user => {
+      if (user?.role === 'admin') setIsAdmin(true);
+    }).catch(() => {});
+  }, []);
+
+  const handleDeployAll = async () => {
+    setIsDeploying(true);
+    try {
+      const res = await base44.functions.invoke('deployAllMatches');
+      alert(res.data.message || '✓ All matches deployed successfully!');
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
+      queryClient.invalidateQueries({ queryKey: ['bets'] });
+    } catch (err) {
+      alert('Error deploying matches: ' + err.message);
+    } finally {
+      setIsDeploying(false);
+    }
+  };
 
   // Handle deep link from featured matches
   useEffect(() => {
@@ -118,6 +141,16 @@ export default function Matches() {
                 <span className="text-[9px] sm:text-[10px] font-bold text-primary tracking-widest">WORLD CUP 2026</span>
               </div>
             </div>
+            {isAdmin && (
+              <button
+                onClick={handleDeployAll}
+                disabled={isDeploying}
+                className="hidden sm:flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-600/50 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors"
+              >
+                {isDeploying ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Rocket className="w-3.5 h-3.5" />}
+                Deploy All Matches
+              </button>
+            )}
             {/* Mobile Expand/Collapse Button */}
             <button
               onClick={() => setIsInfoExpanded(!isInfoExpanded)}
