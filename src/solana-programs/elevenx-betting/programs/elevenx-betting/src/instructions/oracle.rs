@@ -65,22 +65,7 @@ pub fn submit_oracle_vote(ctx: Context<SubmitOracleVote>, winning_outcome: u8) -
     Ok(())
 }
 
-// ── emergency_settle ──────────────────────────────────────────────────────────
-// Admin-only bypass of oracle consensus for emergency resolution.
 
-pub fn emergency_settle(ctx: Context<EmergencySettle>, winning_outcome: u8) -> Result<()> {
-    let clock = Clock::get()?;
-    let market = &ctx.accounts.market;
-
-    require!(!market.settled && !market.voided, BettingError::AlreadySettled);
-    require!(clock.unix_timestamp >= market.settle_after, BettingError::TooEarlyToSettle);
-    require!(winning_outcome < market.outcome_count, BettingError::InvalidOutcome);
-
-    let market_mut = &mut ctx.accounts.market;
-    execute_settlement(market_mut, winning_outcome)?;
-
-    Ok(())
-}
 
 // ── Accounts ──────────────────────────────────────────────────────────────────
 
@@ -118,27 +103,6 @@ pub struct SubmitOracleVote<'info> {
     // SECURITY FIX: Only the platform admin wallet may act as oracle.
     #[account(mut, constraint = oracle.key() == platform_config.admin @ BettingError::Unauthorized)]
     pub oracle: Signer<'info>,
-
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct EmergencySettle<'info> {
-    #[account(
-        mut,
-        seeds = [b"market", market.match_id.as_ref()],
-        bump = market.bump,
-    )]
-    pub market: Account<'info, BetMarket>,
-
-    #[account(seeds = [b"platform"], bump = platform_config.bump)]
-    pub platform_config: Account<'info, PlatformConfig>,
-
-    #[account(mut, seeds = [b"fee_vault"], bump = fee_vault.bump)]
-    pub fee_vault: Account<'info, FeeVault>,
-
-    #[account(mut, constraint = admin.key() == platform_config.admin @ BettingError::Unauthorized)]
-    pub admin: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 }

@@ -111,24 +111,7 @@ pub fn withdraw_lp_winnings(ctx: Context<WithdrawLpWinnings>, amount: u64) -> Re
     Ok(())
 }
 
-// ── emergency_claim ───────────────────────────────────────────────────────────
-// Admin-only: drains all lamports from a market PDA back to the admin wallet.
-// Used to recover locked SOL in emergency situations.
-pub fn emergency_claim(ctx: Context<EmergencyClaim>) -> Result<()> {
-    let platform = &ctx.accounts.platform_config;
-    require!(
-        ctx.accounts.admin.key() == platform.admin,
-        BettingError::Unauthorized
-    );
 
-    let market_lamports = ctx.accounts.market.to_account_info().lamports();
-    require!(market_lamports > 0, BettingError::ClaimNothing);
-
-    **ctx.accounts.market.to_account_info().try_borrow_mut_lamports()? -= market_lamports;
-    **ctx.accounts.admin.try_borrow_mut_lamports()? += market_lamports;
-
-    Ok(())
-}
 
 // ── Accounts ──────────────────────────────────────────────────────────────────
 
@@ -205,24 +188,6 @@ pub struct WithdrawLpWinnings<'info> {
     /// CHECK: Lamport transfer to LP; address verified against lp_offer.lp.
     #[account(mut, constraint = lp_wallet.key() == lp_offer.lp @ BettingError::Unauthorized)]
     pub lp_wallet: UncheckedAccount<'info>,
-
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct EmergencyClaim<'info> {
-    #[account(
-        mut,
-        seeds = [b"market", market.match_id.as_ref()],
-        bump = market.bump,
-    )]
-    pub market: Account<'info, BetMarket>,
-
-    #[account(seeds = [b"platform"], bump = platform_config.bump)]
-    pub platform_config: Account<'info, PlatformConfig>,
-
-    #[account(mut)]
-    pub admin: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 }

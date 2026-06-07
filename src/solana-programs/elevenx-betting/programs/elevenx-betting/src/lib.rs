@@ -81,14 +81,6 @@ pub mod elevenx_betting {
         instructions::oracle::submit_oracle_vote(ctx, winning_outcome)
     }
 
-    /// Admin emergency settle (bypasses consensus).
-    pub fn emergency_settle(
-        ctx: Context<EmergencySettle>,
-        winning_outcome: u8,
-    ) -> Result<()> {
-        instructions::oracle::emergency_settle(ctx, winning_outcome)
-    }
-
     // ── Claims & Refunds ────────────────────────────────────────────────────
 
     /// Winner claims their payout after settlement.
@@ -104,13 +96,6 @@ pub mod elevenx_betting {
     /// LP withdraws winnings from a settled market.
     pub fn withdraw_lp_winnings(ctx: Context<WithdrawLpWinnings>, amount: u64) -> Result<()> {
         instructions::claims::withdraw_lp_winnings(ctx, amount)
-    }
-
-    // ── Admin Emergency Recovery ────────────────────────────────────────────
-
-    /// CA owner drains all SOL from a market PDA in an emergency (admin only).
-    pub fn emergency_claim(ctx: Context<EmergencyClaim>) -> Result<()> {
-        instructions::claims::emergency_claim(ctx)
     }
 
     // ── Fee Vault ───────────────────────────────────────────────────────────
