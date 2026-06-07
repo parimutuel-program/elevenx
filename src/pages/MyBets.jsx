@@ -170,11 +170,13 @@ export default function MyBets() {
   
   // Separate futures bets from match bets
   // Futures bets have futures_market_id (primary indicator)
+  console.log('[MyBets] myMatcherBets:', myMatcherBets.map(b => ({ id: b.id, match_title: b.match_title, futures_market_id: b.futures_market_id, role: b.role })));
   const myFuturesBets = myMatcherBets.filter(b => {
     const isFutures = !!b.futures_market_id;
     console.log('[MyBets] Checking futures:', { id: b.id, match_title: b.match_title, futures_market_id: b.futures_market_id, isFutures });
     return isFutures;
   });
+  console.log('[MyBets] myFuturesBets result:', myFuturesBets.length, myFuturesBets);
   const myMatchBets = myMatcherBets.filter(b => {
     const isMatch = b.match_id && !b.futures_market_id;
     console.log('[MyBets] Match bet:', { id: b.id, match_title: b.match_title, isMatch });
