@@ -350,7 +350,8 @@ export default function Home() {
             title: 'Everyone Can Be The House',
             desc: 'No gatekeepers. Deposit SOL, back any outcome, and collect fees when bettors match against your liquidity.',
             color: 'yellow',
-            highlight: true
+            highlight: true,
+            wcLogo: true
           }].
           map((item, i) =>
           <motion.div
@@ -364,11 +365,20 @@ export default function Home() {
             'bg-yellow-500/5 border-yellow-500/20'}`
             }>
             
-              <item.icon className={`w-8 h-8 mb-3 ${
-            item.color === 'primary' ? 'text-primary' :
-            item.color === 'accent' ? 'text-accent' :
-            'text-yellow-400'}`
-            } />
+              <div className="flex items-center justify-between mb-3">
+                <item.icon className={`w-8 h-8 ${
+                item.color === 'primary' ? 'text-primary' :
+                item.color === 'accent' ? 'text-accent' :
+                'text-yellow-400'}`
+                } />
+                {item.wcLogo && (
+                  <img
+                    src="https://media.base44.com/images/public/6a1da108eb293de119e4e930/676f19c8c_Pngtree2026fifaworldcuplogo_21016269.png"
+                    alt="2026 World Cup"
+                    className="h-14 w-auto object-contain drop-shadow-lg"
+                  />
+                )}
+              </div>
               <h3 className={`font-heading font-bold text-base mb-2 ${
             item.color === 'primary' ? 'text-primary' :
             item.color === 'accent' ? 'text-accent' :
