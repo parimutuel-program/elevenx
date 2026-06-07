@@ -689,14 +689,32 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
       // Check for on-chain errors BEFORE setting signature
       if (confirmation.value.err) {
         console.error('Transaction failed on-chain:', confirmation.value.err);
+        console.error('[SolanaTransactionSigner] Full error object:', JSON.stringify(confirmation.value.err, null, 2));
         const onChainErr = confirmation.value.err;
         
         // Extract custom error code from various possible locations
         let customCode = null;
         
-        // Try direct InstructionError
+        // Try direct InstructionError - log the full array structure
         if (onChainErr.InstructionError && Array.isArray(onChainErr.InstructionError)) {
-          customCode = onChainErr.InstructionError[1]?.Custom;
+          console.log('[SolanaTransactionSigner] InstructionError array:', onChainErr.InstructionError);
+          console.log('[SolanaTransactionSigner] InstructionError[0]:', onChainErr.InstructionError[0]);
+          console.log('[SolanaTransactionSigner] InstructionError[1]:', onChainErr.InstructionError[1]);
+          
+          // The error code might be nested differently
+          const errorData = onChainErr.InstructionError[1];
+          if (errorData) {
+            // Try Custom field
+            customCode = errorData.Custom;
+            // Try nested Custom
+            if (customCode === undefined && errorData.Custom !== undefined) {
+              customCode = errorData.Custom;
+            }
+            // Try if it's a number directly
+            if (customCode === undefined && typeof errorData === 'number') {
+              customCode = errorData;
+            }
+          }
           console.log('[SolanaTransactionSigner] Extracted error code from InstructionError:', customCode);
         }
         
