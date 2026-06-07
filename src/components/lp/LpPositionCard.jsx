@@ -426,7 +426,7 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
               return (
                 <Button
                   onClick={handleWithdraw}
-                  className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 rounded-xl font-heading font-bold bg-[hsl(var(--background))]">
+                  className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 rounded-xl font-heading font-bold bg-[#242424]">
                   
                   <Wallet className="w-3 h-3 mr-1" />
                   Withdraw ◎{liquidityUnmatched.toFixed(4)}
