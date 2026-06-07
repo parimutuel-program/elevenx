@@ -114,7 +114,7 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
       // Show transaction signer dialog
       setClaimInstruction(data);
       setClaimDialogOpen(true);
-      queryClient.invalidateQueries({ queryKey: ['myBets'] });
+      // DON'T invalidate here - wait until DB confirms claim in handleClaimTransactionSuccess
     },
     onError: (err) => {
       console.error('[BetCard] Claim error:', err);
