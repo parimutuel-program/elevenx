@@ -346,29 +346,17 @@ export default function MyBets() {
           </Link>
           <Button 
             variant="outline" 
-            onClick={() => {
-              const debug = {
-                totalBets: myBets.length,
-                matchBets: myMatchBets.length,
-                futuresBets: myFuturesBets.length,
-                futuresDetails: myFuturesBets.map(b => ({ 
-                  id: b.id, 
-                  match_title: b.match_title, 
-                  status: b.status,
-                  outcome_label: b.outcome_label,
-                  amount: b.amount,
-                  futures_market_id: b.futures_market_id,
-                  _isFutures: b._isFutures
-                })),
-                groupedFutures: Object.values(groupedFuturesBets).map(b => ({
-                  betIds: b.betIds,
-                  status: b.status,
-                  outcome: b.outcome_label,
-                  totalAmount: b.totalAmount
-                }))
-              };
-              console.log('MY BETS DEBUG:', debug);
-              alert('MY BETS DEBUG (check console):\n\nFutures count: ' + myFuturesBets.length + '\nGrouped count: ' + Object.values(groupedFuturesBets).length + '\n\nStatuses: ' + myFuturesBets.map(b => b.status).join(', '));
+            onClick={async () => {
+              // Fetch RAW data from DB
+              const allRaw = await base44.entities.UserBet.list('-created_date', 100);
+              const myRaw = allRaw.filter(b => b.wallet_address === walletAddress);
+              
+              const debugMsg = `RAW DB DATA:\nTotal bets in DB: ${allRaw.length}\nMy bets: ${myRaw.length}\n\nMy Futures:\n${myRaw.filter(b => b.futures_market_id || (b.match_title && b.match_title.includes('Finish'))).map(b => 
+                `ID: ${b.id}\nStatus: ${b.status}\nTitle: ${b.match_title}\nOutcome: ${b.outcome_label}\nAmount: ${b.amount}\nfutures_market_id: ${b.futures_market_id || 'N/A'}\n---`
+              ).join('\n')}`;
+              
+              console.log('RAW DEBUG:', { allRaw, myRaw });
+              alert(debugMsg);
             }} 
             className="gap-2 rounded-xl h-10 px-4 text-xs sm:text-sm"
           >
