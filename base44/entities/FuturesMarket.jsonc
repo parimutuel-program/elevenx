@@ -92,6 +92,21 @@
     "solana_market_created": {
       "type": "boolean",
       "default": false
+    },
+    "winning_outcome": {
+      "type": "string",
+      "enum": [
+        "1st",
+        "2nd",
+        "3rd",
+        ""
+      ],
+      "default": "",
+      "description": "Which position won after settlement (1st, 2nd, 3rd)"
+    },
+    "winning_outcome_label": {
+      "type": "string",
+      "description": "Label of the winning position (e.g. 'Team Beta')"
     }
   },
   "required": [
@@ -101,23 +116,5 @@
     "country",
     "country_flag",
     "outcomes"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {},
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

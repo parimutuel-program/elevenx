@@ -41,7 +41,7 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
   const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
   const [withdrawData, setWithdrawData] = useState(null);
 
-  // Fetch match data to get team flags
+  // Fetch match data OR futures market data
   const { data: match } = useQuery({
     queryKey: ['match', bet.match_id],
     queryFn: async () => {
@@ -51,13 +51,30 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
     enabled: !!bet.match_id
   });
 
-  // Determine which flag to show based on backed outcome
-  const outcomeFlag = bet.outcome === 'a' ? match?.team_a_flag : bet.outcome === 'b' ? match?.team_b_flag : '🤝';
-  const outcomeTeam = bet.outcome === 'a' ? match?.team_a : bet.outcome === 'b' ? match?.team_b : 'Draw';
+  // Fetch futures market if no match found (futures bets use match_id = futures_market_id)
+  const { data: futuresMarket } = useQuery({
+    queryKey: ['futures-market', bet.match_id],
+    queryFn: async () => {
+      const markets = await base44.entities.FuturesMarket.filter({ id: bet.match_id });
+      return markets[0];
+    },
+    enabled: !match && !!bet.match_id
+  });
 
-  // Determine opposing team
-  const opposingFlag = bet.outcome === 'a' ? match?.team_b_flag : bet.outcome === 'b' ? match?.team_a_flag : null;
-  const opposingTeam = bet.outcome === 'a' ? match?.team_b : bet.outcome === 'b' ? match?.team_a : null;
+  // Determine which flag to show based on backed outcome
+  const isFutures = !!futuresMarket;
+  const outcomeFlag = isFutures 
+    ? (bet.outcome === 'a' ? '🥇' : bet.outcome === 'b' ? '🥈' : '🥉')
+    : (bet.outcome === 'a' ? match?.team_a_flag : bet.outcome === 'b' ? match?.team_b_flag : '🤝');
+  const outcomeTeam = isFutures
+    ? (bet.outcome_label || (bet.outcome === 'a' ? '1st Place' : bet.outcome === 'b' ? '2nd Place' : '3rd Place'))
+    : (bet.outcome === 'a' ? match?.team_a : bet.outcome === 'b' ? match?.team_b : 'Draw');
+
+  // Determine opposing team (for futures, show the other positions)
+  const opposingFlag = isFutures ? null : (bet.outcome === 'a' ? match?.team_b_flag : bet.outcome === 'b' ? match?.team_a_flag : null);
+  const opposingTeam = isFutures
+    ? (bet.outcome === 'a' ? '2nd/3rd' : bet.outcome === 'b' ? '1st/3rd' : '1st/2nd')
+    : (bet.outcome === 'a' ? match?.team_b : bet.outcome === 'b' ? match?.team_a : null);
 
   const claimMutation = useMutation({
     mutationFn: async () => {
@@ -342,27 +359,39 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
                 </Badge>
               </div>
 
-              {/* Outcome - VS Style */}
-              <div className="flex items-center justify-between gap-1">
-                {/* Your Team */}
-                <div className="flex-1 text-center">
-                  <div className="text-2xl mb-0.5">{outcomeFlag || '🏆'}</div>
-                  <p className="text-[9px] font-bold text-primary truncate">{outcomeTeam || bet.outcome_label}</p>
-                </div>
-
-                {/* VS Badge */}
-                <div className="flex flex-col items-center px-1 flex-shrink-0">
-                  <span className="text-[7px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">VS</span>
-                </div>
-
-                {/* Opposing Team */}
-                {opposingFlag &&
-                <div className="flex-1 text-center">
-                    <div className="text-2xl mb-0.5">{opposingFlag}</div>
-                    <p className="text-[9px] font-medium text-muted-foreground truncate">{opposingTeam}</p>
+              {/* Outcome - VS Style for matches, Position badge for futures */}
+              {isFutures ? (
+                /* Futures betting display */
+                <div className="flex items-center justify-center gap-2">
+                  <div className="flex-1 text-center">
+                    <div className="text-3xl mb-0.5">{outcomeFlag || '🏆'}</div>
+                    <p className="text-[9px] font-bold text-primary truncate">{outcomeTeam || bet.outcome_label}</p>
+                    <p className="text-[8px] text-muted-foreground mt-0.5">{futuresMarket?.country || 'Futures'}</p>
                   </div>
-                }
-              </div>
+                </div>
+              ) : (
+                /* Match betting display */
+                <div className="flex items-center justify-between gap-1">
+                  {/* Your Team */}
+                  <div className="flex-1 text-center">
+                    <div className="text-2xl mb-0.5">{outcomeFlag || '🏆'}</div>
+                    <p className="text-[9px] font-bold text-primary truncate">{outcomeTeam || bet.outcome_label}</p>
+                  </div>
+
+                  {/* VS Badge */}
+                  <div className="flex flex-col items-center px-1 flex-shrink-0">
+                    <span className="text-[7px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">VS</span>
+                  </div>
+
+                  {/* Opposing Team */}
+                  {opposingFlag &&
+                  <div className="flex-1 text-center">
+                      <div className="text-2xl mb-0.5">{opposingFlag}</div>
+                      <p className="text-[9px] font-medium text-muted-foreground truncate">{opposingTeam}</p>
+                    </div>
+                  }
+                </div>
+              )}
 
               {/* Stats Grid */}
               <div className="grid grid-cols-3 gap-2">
