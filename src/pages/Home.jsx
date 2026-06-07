@@ -159,9 +159,9 @@ export default function Home() {
             </p>
             <button
               onClick={() => navigator.clipboard.writeText('111111111111111111111111111')}
-              className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm border border-white/10 px-3 py-1.5 rounded-full hover:border-primary/30 transition-all group mt-3"
-              title="Copy contract address"
-            >
+              className="flex items-center gap-1.5 backdrop-blur-sm border border-white/10 px-3 py-1.5 rounded-full hover:border-primary/30 transition-all group mt-3"
+              title="Copy contract address">
+              
               <span className="text-[10px] sm:text-[11px] font-bold text-white/60 tracking-wide">Contract: 111111111111111111111111111</span>
               <svg className="w-3 h-3 text-white/60 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -372,13 +372,13 @@ export default function Home() {
               item.color === 'accent' ? 'text-accent' :
               'text-yellow-400'}`
               } />
-                {item.wcLogo && (
-                  <img
-                    src="https://media.base44.com/images/public/6a1da108eb293de119e4e930/676f19c8c_Pngtree2026fifaworldcuplogo_21016269.png"
-                    alt="FIFA World Cup 2026"
-                    className="h-14 w-auto object-contain"
-                  />
-                )}
+                {item.wcLogo &&
+              <img
+                src="https://media.base44.com/images/public/6a1da108eb293de119e4e930/676f19c8c_Pngtree2026fifaworldcuplogo_21016269.png"
+                alt="FIFA World Cup 2026"
+                className="h-14 w-auto object-contain" />
+
+              }
               </div>
               <h3 className={`font-heading font-bold text-base mb-2 ${
             item.color === 'primary' ? 'text-primary' :
@@ -517,14 +517,14 @@ export default function Home() {
             <div className="flex flex-wrap items-center gap-3">
               {/* Hyped Solana badge */}
               <div className="relative flex items-center gap-2 px-3 py-2 rounded-xl overflow-hidden"
-                style={{ background: 'linear-gradient(135deg, #9945FF 0%, #14F195 100%)', boxShadow: '0 0 24px rgba(153,69,255,0.5), 0 0 48px rgba(20,241,149,0.2)' }}>
+              style={{ background: 'linear-gradient(135deg, #9945FF 0%, #14F195 100%)', boxShadow: '0 0 24px rgba(153,69,255,0.5), 0 0 48px rgba(20,241,149,0.2)' }}>
                 {/* Shine overlay */}
                 <div className="absolute inset-0 opacity-20" style={{ background: 'linear-gradient(105deg, rgba(255,255,255,0.4) 0%, transparent 50%)' }} />
                 {/* Solana diamond logo */}
                 <svg className="relative z-10 w-4 h-4 flex-shrink-0" viewBox="0 0 397 311" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z" fill="white"/>
-                  <path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z" fill="white"/>
-                  <path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z" fill="white"/>
+                  <path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z" fill="white" />
+                  <path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z" fill="white" />
+                  <path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z" fill="white" />
                 </svg>
                 <div className="relative z-10 flex flex-col leading-none">
                   <span className="text-[8px] font-bold text-white/70 tracking-[0.15em] uppercase">Powered by</span>
@@ -560,7 +560,7 @@ export default function Home() {
               {/* Telegram */}
               <a href="https://t.me" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-blue-500/20 hover:border-blue-500/30 transition-all group">
                 <svg className="w-3.5 h-3.5 text-white/70 group-hover:text-blue-400 transition-colors" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
                 </svg>
               </a>
             </div>
