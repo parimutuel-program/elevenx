@@ -234,12 +234,12 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {upcomingMatches.slice(0, 8).map((match, i) => {
-            const bet = betByMatch[match.id];
+              {FEATURED_MATCHES.map((fm, i) => {
+            const bet = betByMatch[fm.matchId];
             return (
-              <Link to={`/match/${match.id}`} className="group block">
+              <Link to="/matches" className="group block">
                 <motion.div
-                  key={match.id}
+                  key={i}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   whileHover={{ y: -4 }}
@@ -249,7 +249,7 @@ export default function Home() {
                   {/* Match Image Header */}
                   <div className="relative h-40 -mx-4 -mt-4 mb-3 overflow-hidden rounded-t-2xl">
                     <img
-                      src={WC_PHOTOS[(i + 1) % WC_PHOTOS.length]}
+                      src={fm.img || WC_PHOTOS[(i + 1) % WC_PHOTOS.length]}
                       alt="match"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       style={{ objectPosition: 'center 15%' }} />
@@ -258,7 +258,7 @@ export default function Home() {
                   {/* Header */}
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-[10px] text-muted-foreground font-semibold truncate">
-                      {match.group_stage || 'World Cup 2026'}
+                      {fm.group}
                     </span>
                     <Badge className="text-[9px] font-semibold uppercase tracking-wider bg-secondary text-secondary-foreground flex-shrink-0">
                       UPCOMING
@@ -269,20 +269,20 @@ export default function Home() {
                   <div className="flex items-center justify-between gap-2 mb-3">
                     {/* Team A */}
                     <div className="flex-1 text-center">
-                      <div className="text-2xl mb-1">{getTeamFlag(match.team_a, match.team_a_flag)}</div>
-                      <p className="text-[10px] text-foreground truncate font-medium">{match.team_a}</p>
+                      <div className="text-2xl mb-1">{getTeamFlag(fm.team_a)}</div>
+                      <p className="text-[10px] text-foreground truncate font-medium">{fm.team_a}</p>
                     </div>
 
                     {/* VS */}
                     <div className="flex flex-col items-center gap-1 px-2 flex-shrink-0">
                       <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">VS</span>
-                      <span className="text-[10px] text-muted-foreground font-medium">{format(new Date(match.match_time), 'MMM d')}</span>
+                      <span className="text-[10px] text-muted-foreground font-medium">{fm.date}</span>
                     </div>
 
                     {/* Team B */}
                     <div className="flex-1 text-center">
-                      <div className="text-2xl mb-1">{getTeamFlag(match.team_b, match.team_b_flag)}</div>
-                      <p className="text-[10px] text-foreground truncate font-medium">{match.team_b}</p>
+                      <div className="text-2xl mb-1">{getTeamFlag(fm.team_b)}</div>
+                      <p className="text-[10px] text-foreground truncate font-medium">{fm.team_b}</p>
                     </div>
                   </div>
 
@@ -290,21 +290,21 @@ export default function Home() {
                   <div className="pt-2.5 border-t border-border/50">
                     <div className="grid grid-cols-3 gap-1.5 mb-2">
                       <div className="rounded-lg px-1.5 py-1 text-center text-xs border bg-primary/5 border-primary/10">
-                        <p className="text-[9px] text-muted-foreground truncate">{match.team_a.split(' ').pop()}</p>
+                        <p className="text-[9px] text-muted-foreground truncate">{fm.team_a.split(' ').pop()}</p>
                         <p className="font-bold text-primary text-xs">
-                          {bet?.odds_a ? bet.odds_a.toFixed(2) : '—'}x
+                          {fm.odds_a || bet?.odds_a ? (fm.odds_a || bet.odds_a).toFixed(2) : '—'}x
                         </p>
                       </div>
                       <div className="rounded-lg px-1.5 py-1 text-center text-xs border bg-yellow-500/5 border-yellow-500/10">
                         <p className="text-[9px] text-muted-foreground">Draw</p>
                         <p className="font-bold text-yellow-400 text-xs">
-                          {bet?.odds_draw ? bet.odds_draw.toFixed(2) : '—'}x
+                          {fm.odds_draw || bet?.odds_draw ? (fm.odds_draw || bet.odds_draw).toFixed(2) : '—'}x
                         </p>
                       </div>
                       <div className="rounded-lg px-1.5 py-1 text-center text-xs border bg-accent/5 border-accent/10">
-                        <p className="text-[9px] text-muted-foreground truncate">{match.team_b.split(' ').pop()}</p>
+                        <p className="text-[9px] text-muted-foreground truncate">{fm.team_b.split(' ').pop()}</p>
                         <p className="font-bold text-accent text-xs">
-                          {bet?.odds_b ? bet.odds_b.toFixed(2) : '—'}x
+                          {fm.odds_b || bet?.odds_b ? (fm.odds_b || bet.odds_b).toFixed(2) : '—'}x
                         </p>
                       </div>
                     </div>
