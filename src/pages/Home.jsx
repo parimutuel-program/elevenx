@@ -113,16 +113,16 @@ export default function Home() {
               <span className="text-xs font-bold text-primary tracking-widest uppercase">WORLD CUP 2026</span>
             </div>
             <h2 className="font-heading font-black text-2xl sm:text-3xl md:text-4xl text-white leading-tight mb-2 sm:mb-3">
-              <span className="text-transparent bg-clip-text" style={{ backgroundImage: 'linear-gradient(135deg, #a69cf2, #14f195)' }}>First Hybrid</span><br />
-              <span className="text-white">Betting Protocol</span>
+              The First Hybrid<br />
+              <span className="text-primary">Betting Protocol</span>
             </h2>
             <p className="text-white/60 text-xs sm:text-sm mb-4 sm:mb-5">
-              <span className="text-white font-bold">Dynamic odds.</span> Zero house edge. LP fee sharing. The revolutionary P2P model where everyone can be the house. Built on Solana.
+              Revolutionary parimutuel model meets fixed odds. No house edge. LPs earn fees. Everyone can be the house. Built on Solana.
             </p>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] font-black text-primary tracking-wider bg-primary/10 px-2 py-1 rounded border border-primary/20">⚡ DYNAMIC ODDS</span>
-              <span className="text-[10px] font-black text-accent tracking-wider bg-accent/10 px-2 py-1 rounded border border-accent/20">💎 LP FEE SHARING</span>
-              <span className="text-[10px] font-black text-yellow-400 tracking-wider bg-yellow-500/10 px-2 py-1 rounded border border-yellow-500/20">👑 BE THE HOUSE</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-primary tracking-wide">0% HOUSE EDGE</span>
+              <span className="text-[10px] font-bold text-accent tracking-wide">LP FEE SHARING</span>
+              <span className="text-[10px] font-bold text-yellow-400 tracking-wide">P2P MARKETS</span>
             </div>
             
             {/* World Cup branding flags */}
