@@ -110,8 +110,12 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Fee vault not found on-chain' }, { status: 400 });
     }
 
-    // Build emergency_settle instruction
+    // Build emergency_settle instruction - Anchor uses "global:<name>" format
     const discriminator = Buffer.from(sha256('global:emergency_settle')).slice(0, 8);
+    console.log('[settleFuturesMarketOnChain] Discriminator:', {
+      input: 'global:emergency_settle',
+      hex: discriminator.toString('hex'),
+    });
     
     const data = Buffer.alloc(9);
     discriminator.copy(data, 0);
