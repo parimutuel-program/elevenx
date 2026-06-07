@@ -581,11 +581,11 @@ export default function MyBets() {
             )}
             
             {/* Futures History */}
-            {groupedFuturesBetsArray.filter(b => ['lost', 'claimed', 'refunded', 'void'].includes(b.status)).length > 0 && (
+            {groupedFuturesBetsArray.filter(b => ['lost', 'won', 'claimed', 'refunded', 'void'].includes(b.status)).length > 0 && (
               <div>
                 <h3 className="font-heading font-bold text-sm mb-3 text-accent">Futures Bets</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
-                  {groupedFuturesBetsArray.filter(b => ['lost', 'claimed', 'refunded', 'void'].includes(b.status)).map((bet, i) => (
+                  {groupedFuturesBetsArray.filter(b => ['lost', 'won', 'claimed', 'refunded', 'void'].includes(b.status)).map((bet, i) => (
                     <BetCard
                       key={bet.betIds[0]}
                       bet={bet}
