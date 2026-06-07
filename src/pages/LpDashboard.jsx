@@ -26,7 +26,7 @@ const SuccessDialog = ({ open, onClose, data, isWithdraw }) => {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-card border-border/50 max-w-md">
+      <DialogContent className="bg-card border-border/50 max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-heading flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-accent" />
@@ -56,29 +56,31 @@ const SuccessDialog = ({ open, onClose, data, isWithdraw }) => {
           </div>
           
           <div className="bg-secondary/40 rounded-xl p-3 space-y-2">
-            <p className="text-xs text-muted-foreground">Transaction Signature:</p>
-            <p className="text-xs font-mono text-primary break-all">{data?.signature}</p>
+            <p className="text-xs text-muted-foreground font-semibold">Transaction Signature:</p>
+            <p className="text-xs font-mono text-primary break-all leading-relaxed">{data?.signature}</p>
           </div>
           
-          <Button
-            onClick={() => {
-              window.open(solscanUrl, '_blank');
-              onClose();
-            }}
-            className="w-full h-11 font-heading font-bold rounded-xl"
-            style={{ background: 'linear-gradient(135deg, #a69cf2, #8b84e8)' }}>
+          <div className="space-y-2">
+            <Button
+              onClick={() => {
+                window.open(solscanUrl, '_blank');
+                onClose();
+              }}
+              className="w-full h-11 font-heading font-bold rounded-xl"
+              style={{ background: 'linear-gradient(135deg, #a69cf2, #8b84e8)' }}>
+              
+              <ExternalLink className="w-4 h-4 mr-2" />
+              View on Solscan
+            </Button>
             
-            <ExternalLink className="w-4 h-4 mr-2" />
-            View on Solscan
-          </Button>
-          
-          <Button
-            variant="outline"
-            onClick={onClose}
-            className="w-full h-10 text-sm rounded-xl border-border/50">
-            
-            Close
-          </Button>
+            <Button
+              variant="outline"
+              onClick={onClose}
+              className="w-full h-10 text-sm rounded-xl border-border/50">
+              
+              Close
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>);
