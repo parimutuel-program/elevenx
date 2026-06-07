@@ -6,7 +6,7 @@ pub mod errors;
 
 use instructions::*;
 
-declare_id!("GtqYmsWv3EXdhnkahekABVnoqDhbmjrp7jQLqYxoepyR"); // Update with your deployed program ID
+declare_id!("GtqYmsWv3EXdhnkahekABVnoqDhbmjrp7jQLqYxoepyR"); // REPLACE WITH YOUR NEW DEPLOYED PROGRAM ID
 
 #[program]
 pub mod elevenx_betting {

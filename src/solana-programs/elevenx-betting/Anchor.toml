@@ -6,6 +6,7 @@ resolution = true
 skip_lint = false
 
 [programs.devnet]
+# UPDATE THIS WITH YOUR NEW DEPLOYED PROGRAM ID
 elevenx_betting = "GtqYmsWv3EXdhnkahekABVnoqDhbmjrp7jQLqYxoepyR"
 
 [registry]
