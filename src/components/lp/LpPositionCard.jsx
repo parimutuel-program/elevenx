@@ -26,12 +26,16 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
   
   // CRITICAL: Check UserBet status FIRST (settlement info), then BetOffer status (matching info)
   // userBet.status = settlement state (won/lost/claimed)
-  // offer.status = matching state (open/partially_matched/fully_matched)
+  // offer.status = matching state (open/partially_matched/fully_matched/withdrawn)
   const dbStatus = position.userBet?.status || position.status || offer.status || 'active';
   const isLpWon = dbStatus === 'won';
   const isLpLost = dbStatus === 'lost';
   const isSettled = dbStatus === 'won' || dbStatus === 'lost';
   const isClaimed = dbStatus === 'claimed';
+  // Withdrawn = unmatched liquidity already withdrawn (no bets were matched, so nothing left)
+  const isWithdrawn = dbStatus === 'withdrawn' || offer.status === 'withdrawn' || 
+    (dbStatus === 'refunded') ||
+    (liquidityUnmatched === 0 && liquidityDeposited > 0 && liquidityMatched === 0 && (dbStatus === 'active' || dbStatus === 'pending') && offer.status === 'withdrawn');
   
   console.log('[LpPositionCard] Win/Loss Check:', {
     position_id: position.id,
@@ -396,11 +400,23 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
                     className="w-full h-8 text-[10px] sm:text-xs border-accent/20 text-accent/50 bg-accent/5 rounded-xl font-heading font-bold"
                   >
                     <CheckCircle2 className="w-3 h-3 mr-1" />
-                    Claimed
+                    Claimed ◎{claimedAmount.toFixed(4)}
                   </Button>
-                  <p className="text-[9px] text-center text-accent font-bold">
-                    ◎{claimedAmount.toFixed(4)}
-                  </p>
+                </div>
+              );
+            }
+            
+            if (isWithdrawn) {
+              return (
+                <div className="flex-1 flex flex-col gap-1">
+                  <Button
+                    disabled
+                    variant="outline"
+                    className="w-full h-8 text-[10px] sm:text-xs border-white/10 text-white/40 bg-white/5 rounded-xl font-heading font-bold"
+                  >
+                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                    Withdrawn ◎{liquidityDeposited.toFixed(4)}
+                  </Button>
                 </div>
               );
             }

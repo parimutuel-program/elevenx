@@ -29,8 +29,13 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Not an LP bet' }, { status: 400 });
     }
     // Allow finalization for won/settled LP positions (winnings claim) or pending/active (unmatched withdrawal)
-    if (!['pending', 'active', 'won', 'settled'].includes(userBet.status)) {
+    // Also allow if already refunded/claimed (idempotent - don't error on double-call)
+    if (!['pending', 'active', 'won', 'settled', 'refunded', 'claimed'].includes(userBet.status)) {
       return Response.json({ error: 'Bet status does not allow withdrawal' }, { status: 400 });
+    }
+    // Idempotent: already finalized
+    if (['refunded', 'claimed'].includes(userBet.status)) {
+      return Response.json({ success: true, userBetId, message: 'Already finalized', alreadyDone: true });
     }
 
     // For traditional LP (with offer_id), fetch and update BetOffer

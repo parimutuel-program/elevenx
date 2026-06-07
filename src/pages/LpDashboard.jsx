@@ -441,12 +441,12 @@ export default function LpDashboard() {
   const handleWithdrawSuccess = async (txResult) => {
     const signature = txResult.signature;
 
-    if (pendingTx?.userBetId && pendingTx?.offerId) {
+    if (pendingTx?.userBetId) {
       try {
         const commitRes = await base44.functions.invoke('finalizeWithdrawal', {
           signature,
           userBetId: pendingTx.userBetId,
-          offerId: pendingTx.offerId
+          offerId: pendingTx.offerId || null
         });
         if (commitRes.data.error) {
           console.error('[LpDashboard] finalizeWithdrawal error:', commitRes.data.error);
