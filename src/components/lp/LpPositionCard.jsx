@@ -23,10 +23,10 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
   const liquidityMatched = offer.liquidity_matched || offer.amount_matched || 0;
   const liquidityUnmatched = offer.liquidity_unmatched || offer.amount_unmatched || 0;
   
-  // CRITICAL: Use position.status (from UserBet) as primary source for won/lost
-  // position.status comes from UserBet which tracks settlement (won/lost/claimed)
-  // offer.status is from BetOffer which only tracks matching (open/partially_matched/fully_matched)
-  const dbStatus = position.status || position.userBet?.status || offer.status || 'active';
+  // CRITICAL: Check UserBet status FIRST (settlement info), then BetOffer status (matching info)
+  // userBet.status = settlement state (won/lost/claimed)
+  // offer.status = matching state (open/partially_matched/fully_matched)
+  const dbStatus = position.userBet?.status || position.status || offer.status || 'active';
   const isLpWon = dbStatus === 'won';
   const isLpLost = dbStatus === 'lost';
   const isSettled = dbStatus === 'won' || dbStatus === 'lost';
