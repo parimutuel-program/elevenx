@@ -5,12 +5,12 @@ import { useAuth } from '@/lib/AuthContext';
 import { useWallet } from '@/lib/WalletContext';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Wallet, TrendingUp, DollarSign, ArrowRight, Plus, Clock, CheckCircle2, AlertCircle, ExternalLink, Trophy, ChevronDown, ChevronUp, Target, Coins, Lock, Zap, Bug } from 'lucide-react';
+import { Wallet, TrendingUp, DollarSign, Clock, CheckCircle2, AlertCircle, Trophy, ChevronDown, ChevronUp, Target, Coins, Lock, Bug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
@@ -20,72 +20,7 @@ import LiquidityDetailModal from '@/components/lp/LiquidityDetailModal';
 import LpPositionCard from '@/components/lp/LpPositionCard';
 import { getWalletFromAuth } from '@/utils/auth';
 
-const SuccessDialog = ({ open, onClose, data, isWithdraw }) => {
-  const solscanUrl = `https://solscan.io/tx/${data?.signature}?cluster=devnet`;
-  const hasLpBonus = data?.lpFeeBonus && data.lpFeeBonus > 0;
 
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-card border-border/50 max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="font-heading flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-accent" />
-            {isWithdraw ? hasLpBonus ? 'LP Winnings + Fee Bonus!' : 'Liquidity Withdrawn!' : 'Liquidity Provided!'}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className={`${isWithdraw ? hasLpBonus ? 'bg-accent/10 border-accent/30' : 'bg-yellow-500/10 border-yellow-500/30' : 'bg-accent/10 border-accent/30'} border rounded-xl p-4 text-center`}>
-            <p className="text-sm text-muted-foreground">{isWithdraw ? 'Total Withdrawal' : 'You committed'}</p>
-            <p className={`font-heading font-bold text-2xl ${isWithdraw ? hasLpBonus ? 'text-accent' : 'text-yellow-400' : 'text-accent'}`}>
-              ◎{hasLpBonus ? data?.totalWithdraw?.toFixed(4) : data?.amount?.toFixed(4)} SOL
-            </p>
-            {hasLpBonus &&
-            <div className="mt-3 pt-3 border-t border-accent/20">
-                <p className="text-[10px] text-muted-foreground">Base winnings</p>
-                <p className="font-heading font-bold text-yellow-400">◎{data?.amount?.toFixed(4)}</p>
-                <p className="text-[10px] text-muted-foreground mt-2">+ LP fee bonus (50% of platform fees)</p>
-                <p className="font-heading font-bold text-accent">◎{data?.lpFeeBonus?.toFixed(4)}</p>
-              </div>
-            }
-            {!isWithdraw &&
-            <>
-                <p className="text-xs text-muted-foreground mt-2">for <span className="text-foreground font-bold">{data?.team}</span></p>
-                <p className="text-[10px] text-muted-foreground">{data?.match}</p>
-              </>
-            }
-          </div>
-          
-          <div className="bg-secondary/40 rounded-xl p-3 space-y-2">
-            <p className="text-xs text-muted-foreground font-semibold">Transaction Signature:</p>
-            <p className="text-xs font-mono text-primary break-all leading-relaxed">{data?.signature}</p>
-          </div>
-          
-          <div className="space-y-2">
-            <Button
-              onClick={() => {
-                window.open(solscanUrl, '_blank');
-                onClose();
-              }}
-              className="w-full h-11 font-heading font-bold rounded-xl"
-              style={{ background: 'linear-gradient(135deg, #a69cf2, #8b84e8)' }}>
-              
-              <ExternalLink className="w-4 h-4 mr-2" />
-              View on Solscan
-            </Button>
-            
-            <Button
-              variant="outline"
-              onClick={onClose}
-              className="w-full h-10 text-sm rounded-xl border-border/50">
-              
-              Close
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>);
-
-};
 
 export default function LpDashboard() {
   const { user } = useAuth();
@@ -106,8 +41,7 @@ export default function LpDashboard() {
   const [selectedOutcome, setSelectedOutcome] = useState('a');
   const [amount, setAmount] = useState('');
   const [pendingTx, setPendingTx] = useState(null);
-  const [successDialog, setSuccessDialog] = useState(null);
-  const [withdrawSuccessDialog, setWithdrawSuccessDialog] = useState(null);
+
   const [error, setError] = useState(null);
   const [activeGroup, setActiveGroup] = useState('all');
   const [matchViewMode, setMatchViewMode] = useState('all');
@@ -381,56 +315,34 @@ export default function LpDashboard() {
 
   const handleTxSuccess = async (txResult) => {
     const signature = txResult.signature;
-    const committedAmount = pendingTx?.amount || 0;
-
-    console.log('[LpDashboard] handleTxSuccess called with signature:', signature.slice(0, 20) + '...');
-    console.log('[LpDashboard] pendingCommitData:', pendingCommitData ? 'exists' : 'null');
 
     if (pendingCommitData) {
       try {
-        console.log('[LpDashboard] Calling commitLiquidity...');
         const commitRes = await base44.functions.invoke('commitLiquidity', {
           signature,
           commit_data: pendingCommitData
         });
-        console.log('[LpDashboard] commitLiquidity response:', commitRes.data);
         if (commitRes.data.error) {
-          console.error('[LpDashboard] commitLiquidity error:', commitRes.data.error);
           setError('Commit failed: ' + commitRes.data.error);
-        } else {
-          console.log('[LpDashboard] ✓ Liquidity committed successfully, offerId:', commitRes.data.offerId, 'userBetId:', commitRes.data.userBetId);
         }
       } catch (err) {
-        console.error('[LpDashboard] commitLiquidity threw:', err);
         setError('Commit failed: ' + err.message);
       }
       setPendingCommitData(null);
-    } else {
-      console.error('[LpDashboard] No pendingCommitData available!');
     }
 
-    // Use the outcome from pendingCommitData (which has the actual selected outcome)
-    const outcomeLabel = pendingCommitData?.outcome_label || selectedBet?.outcome_a || 'Unknown';
-    const matchTitle = pendingCommitData?.match_title || selectedBet ? `${selectedBet.outcome_a} vs ${selectedBet.outcome_b}` : 'Market';
-
-    setSuccessDialog({
-      signature,
-      amount: committedAmount,
-      team: outcomeLabel,
-      match: matchTitle
-    });
-
-    setPendingTx(null);
-    setAmount('');
-    setSelectedBet(null);
-    setModalTransactionMode(false);
-    setDetailModalOpen(false);
-    setError(null);
-    queryClient.invalidateQueries({ queryKey: ['myOffers', walletAddress] });
-    queryClient.invalidateQueries({ queryKey: ['openBets'] });
-    queryClient.invalidateQueries({ queryKey: ['allOffers', pendingCommitData?.bet_id] });
-    queryClient.invalidateQueries({ queryKey: ['allOffers'] });
-    console.log('[LpDashboard] Invalidated queries for bet_id:', pendingCommitData?.bet_id);
+    // Small delay so SolanaTransactionSigner can show its success state, then close
+    setTimeout(() => {
+      setPendingTx(null);
+      setAmount('');
+      setSelectedBet(null);
+      setModalTransactionMode(false);
+      setDetailModalOpen(false);
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: ['myOffers', walletAddress] });
+      queryClient.invalidateQueries({ queryKey: ['openBets'] });
+      queryClient.invalidateQueries({ queryKey: ['allOffers'] });
+    }, 2500);
   };
 
   const handleTxError = (err) => {
@@ -440,37 +352,28 @@ export default function LpDashboard() {
 
   const handleWithdrawSuccess = async (txResult) => {
     const signature = txResult.signature;
+    const userBetId = pendingTx?.userBetId;
+    const offerId = pendingTx?.offerId;
 
-    if (pendingTx?.userBetId) {
+    if (userBetId) {
       try {
-        const commitRes = await base44.functions.invoke('finalizeWithdrawal', {
+        await base44.functions.invoke('finalizeWithdrawal', {
           signature,
-          userBetId: pendingTx.userBetId,
-          offerId: pendingTx.offerId || null
+          userBetId,
+          offerId: offerId || null
         });
-        if (commitRes.data.error) {
-          console.error('[LpDashboard] finalizeWithdrawal error:', commitRes.data.error);
-        }
       } catch (err) {
         console.error('[LpDashboard] finalizeWithdrawal threw:', err);
       }
     }
 
-    setWithdrawSuccessDialog({
-      signature,
-      amount: pendingTx?.amount || 0,
-      lpFeeBonus: pendingTx?.lpFeeBonus || 0,
-      totalWithdraw: (pendingTx?.amount || 0) + (pendingTx?.lpFeeBonus || 0)
-    });
-
-    setPendingTx(null);
-    setError(null);
-    // Invalidate AND refetch queries immediately to update UI
-    await queryClient.invalidateQueries({ queryKey: ['myOffers', walletAddress], refetchType: 'all' });
-    await queryClient.invalidateQueries({ queryKey: ['allUserBets', walletAddress], refetchType: 'all' });
-    await queryClient.invalidateQueries({ queryKey: ['offersWithUserBet', walletAddress], refetchType: 'all' });
-    // Also refetch the offers query directly
-    await refetchOffers();
+    // Small delay so SolanaTransactionSigner can show its success state, then close
+    setTimeout(async () => {
+      setPendingTx(null);
+      setError(null);
+      await queryClient.invalidateQueries({ queryKey: ['myOffers', walletAddress], refetchType: 'all' });
+      await refetchOffers();
+    }, 2500);
   };
 
   // Stats - calculate from UserBet data (works for both traditional LP and parimutuel)
@@ -569,16 +472,11 @@ export default function LpDashboard() {
       setPendingFuturesCommit(null);
     }
 
-    setSuccessDialog({
-      signature,
-      amount: pendingFuturesTx?.amount || 0,
-      team: pendingFuturesCommit?.outcome_label || 'Futures',
-      match: 'Tournament Market'
-    });
-
-    setPendingFuturesTx(null);
-    queryClient.invalidateQueries({ queryKey: ['myOffers', walletAddress] });
-    queryClient.invalidateQueries({ queryKey: ['allOffers', pendingFuturesCommit?.bet_id] });
+    // Small delay so SolanaTransactionSigner can show its success state, then close
+    setTimeout(() => {
+      setPendingFuturesTx(null);
+      queryClient.invalidateQueries({ queryKey: ['myOffers', walletAddress] });
+    }, 2500);
   };
 
   const handleDetailModalCommit = ({ bet, outcome, amount, potentialLiability }) => {
@@ -605,8 +503,7 @@ export default function LpDashboard() {
 
   return (
     <div className="space-y-6">
-      <SuccessDialog open={!!successDialog} data={successDialog} onClose={() => setSuccessDialog(null)} />
-      <SuccessDialog open={!!withdrawSuccessDialog} data={withdrawSuccessDialog} onClose={() => setWithdrawSuccessDialog(null)} isWithdraw={true} />
+
       
       {/* Hero Section - Full Width like Matches/Futures */}
       <motion.div
