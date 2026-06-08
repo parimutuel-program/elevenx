@@ -82,23 +82,15 @@ Deno.serve(async (req) => {
     });
 
     // Build initialize_platform instruction
-    // Try BOTH discriminator formats - the deployed program might use either
-    // Format 1: Anchor default "global:<name>"
-    const discGlobal = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:initialize_platform'));
-    const discriminatorGlobal = Buffer.from(new Uint8Array(discGlobal).slice(0, 8));
+    // Use Anchor 0.30.1 "global:" namespace format
+    const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:initialize_platform'));
+    const discriminator = Buffer.from(new Uint8Array(discBuffer).slice(0, 8));
     
-    // Format 2: Just the function name (older Anchor versions)
-    const discSimple = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('initialize_platform'));
-    const discriminator = Buffer.from(new Uint8Array(discSimple).slice(0, 8));
-    
-    console.log('Discriminator formats:', {
-        global_format: discriminatorGlobal.toString('hex'),
-        simple_format: discriminator.toString('hex'),
-    });
+    console.log('Using discriminator (global:initialize_platform):', discriminator.toString('hex'));
     
     const initData = Buffer.alloc(10);
     discriminator.copy(initData, 0);
-    initData.writeUInt16LE(0, 8); // fee_percent = 0% (set to 0 for now)
+    initData.writeUInt16LE(0, 8); // fee_percent = 0%
 
     console.log('Init data (hex):', initData.toString('hex'));
     console.log('Init data length:', initData.length);
