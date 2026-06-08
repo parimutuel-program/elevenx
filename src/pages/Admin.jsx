@@ -67,50 +67,26 @@ export default function Admin() {
       });
 
       if (res.data.error) {
-        // Check if it's a timestamp error (6005)
-        if (res.data.code === 6005 || res.data.error === 'TooEarlyToSettle') {
-          // Offer to fix timestamps first
-          const secondsUntil = res.data.seconds_until_settle || 0;
-          // Show toast for timestamp fix needed
-          toast.error(
-            `⏰ Market settle time is ${secondsUntil}s in the future.\n\nAttempting to fix timestamps...`,
-            { duration: 2000 }
-          );
-          
-          {
-            // Call updateMarketTimestampsOnChain to fix timestamps
-            const fixRes = await base44.functions.invoke('updateMarketTimestampsOnChain', {
-              bet_id: bet.id,
-              admin_wallet: walletAddress,
-            });
-            
-            if (fixRes.data.error) {
-              toast.error('Failed to fix timestamps: ' + fixRes.data.error);
-              return;
-            }
-            
-            // Show timestamp fix dialog
-            setFixTimestampDialog({
-              instruction: fixRes.data.solana_instruction,
-              pendingSettle: { bet, outcome },
-            });
-            return;
-          }
-        } else {
-          toast.error('Error: ' + res.data.error);
-        }
+        toast.error('Error: ' + res.data.error);
         return;
       }
 
-      setSettleDialog({
-        instruction: res.data.solana_instruction,
-        bet,
-        outcome,
-      });
+      // Always do 2-step: fix timestamps first, then settle
+      if (res.data.timestamp_instruction) {
+        setFixTimestampDialog({
+          instruction: res.data.timestamp_instruction,
+          pendingSettle: { bet, outcome, settleInstruction: res.data.solana_instruction },
+        });
+      } else {
+        setSettleDialog({
+          instruction: res.data.solana_instruction,
+          bet,
+          outcome,
+        });
+      }
     } catch (err) {
       console.error('[Admin] handleSettle error:', err);
-      const errorMsg = err.message || 'Unknown error';
-      toast.error('Failed to prepare settlement: ' + errorMsg);
+      toast.error('Failed to prepare settlement: ' + (err.message || 'Unknown error'));
     }
   };
 
@@ -159,7 +135,16 @@ export default function Admin() {
     const pending = fixTimestampDialog?.pendingSettle;
     setFixTimestampDialog(null);
     if (pending) {
-      await _doSettle(pending.bet, pending.outcome);
+      // Use the already-fetched settle instruction (no second API call)
+      if (pending.settleInstruction) {
+        setSettleDialog({
+          instruction: pending.settleInstruction,
+          bet: pending.bet,
+          outcome: pending.outcome,
+        });
+      } else {
+        await _doSettle(pending.bet, pending.outcome);
+      }
     }
   };
 

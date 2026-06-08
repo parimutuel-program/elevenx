@@ -193,6 +193,27 @@ Deno.serve(async (req) => {
     
     console.log('[settleMarketOnChain] All PDA validations passed - proceeding with settlement');
 
+    // Always update market timestamps before settling (ensures settle_after is in the past)
+    // This is a mandatory pre-step for admin settlement to bypass TooEarlyToSettle
+    const now = Math.floor(Date.now() / 1000);
+    const timestampDiscriminator = Buffer.from(sha256('global:update_market_timestamps')).slice(0, 8);
+    const timestampData = Buffer.alloc(24);
+    timestampDiscriminator.copy(timestampData, 0);
+    timestampData.writeBigInt64LE(BigInt(now - 3600), 8);  // open_until = 1hr ago
+    timestampData.writeBigInt64LE(BigInt(now - 1), 16);     // settle_after = 1 sec ago
+    
+    const timestampInstruction = {
+      instruction_type: 'update_market_timestamps',
+      programId: SOLANA_PROGRAM_ID,
+      keys: [
+        { pubkey: marketPda.toBase58(), isSigner: false, isWritable: true },
+        { pubkey: platformPda.toBase58(), isSigner: false, isWritable: false },
+        { pubkey: admin_wallet, isSigner: true, isWritable: false },
+        { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false },
+      ],
+      instruction_data: timestampData.toString('base64'),
+    };
+
     // Handle void outcome separately
     if (winning_outcome === 'void') {
       console.log('[settleMarketOnChain] Voiding market - using DB-only settlement');
@@ -226,23 +247,27 @@ Deno.serve(async (req) => {
       voteTallyPda: voteTallyPda.toBase58(),
     });
     
+    const settleInstruction = {
+      instruction_type: 'settle_market',
+      programId: SOLANA_PROGRAM_ID,
+      keys: [
+        { pubkey: marketPda.toBase58(), isSigner: false, isWritable: true },       // market (mut)
+        { pubkey: oracleVotePda.toBase58(), isSigner: false, isWritable: true },   // oracle_vote (init_if_needed, mut)
+        { pubkey: voteTallyPda.toBase58(), isSigner: false, isWritable: true },    // vote_tally (mut)
+        { pubkey: platformPda.toBase58(), isSigner: false, isWritable: false },    // platform_config (NOT mut)
+        { pubkey: feeVaultPda.toBase58(), isSigner: false, isWritable: true },     // fee_vault (mut)
+        { pubkey: admin_wallet, isSigner: true, isWritable: true },                // oracle/admin signer
+        { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false },
+      ],
+      instruction_data: data.toString('base64'),
+    };
+
     return Response.json({
       success: true,
       message: `Sign to settle market: ${outcomeLabel}`,
-      solana_instruction: {
-        instruction_type: 'settle_market',
-        programId: SOLANA_PROGRAM_ID,
-        keys: [
-          { pubkey: marketPda.toBase58(), isSigner: false, isWritable: true },  // market (mut)
-          { pubkey: oracleVotePda.toBase58(), isSigner: false, isWritable: true }, // oracle_vote (init_if_needed, mut)
-          { pubkey: voteTallyPda.toBase58(), isSigner: false, isWritable: true }, // vote_tally (mut)
-          { pubkey: platformPda.toBase58(), isSigner: false, isWritable: false }, // platform_config (NOT mut in Rust)
-          { pubkey: feeVaultPda.toBase58(), isSigner: false, isWritable: true },  // fee_vault (mut)
-          { pubkey: admin_wallet, isSigner: true, isWritable: true }, // oracle/admin (signer, mut - pays for oracle_vote init)
-          { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false }, // system_program
-        ],
-        instruction_data: data.toString('base64'),
-      },
+      // Two-step: sign timestamps first, then settle
+      timestamp_instruction: timestampInstruction,
+      solana_instruction: settleInstruction,
       bet_id: bet_id,
       winning_outcome: winning_outcome,
     });
