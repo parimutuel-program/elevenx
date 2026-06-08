@@ -17,6 +17,9 @@ export default function LpPositionCard({ position, match, bet, walletAddress, on
 
   // Get match from position data if not passed - ALWAYS use matchData, never match directly
   const matchData = match || position.match || { team_a: 'Team A', team_b: 'Team B', team_a_flag: '', team_b_flag: '', group_stage: '', match_end_time: null, winner: '' };
+  
+  // Get winning outcome from Bet entity (match.winner is often empty)
+  const winningOutcome = offer.bet_winning_outcome || matchData.winner || '';
 
   // Handle both BetOffer and UserBet structures - use amount as fallback for parimutuel LP
   // CRITICAL: For futures, prefer amount_offered/amount_matched over liquidity_* fields
@@ -190,9 +193,6 @@ export default function LpPositionCard({ position, match, bet, walletAddress, on
   // LP WINS when backed outcome != winning outcome (LP backed a loser)
   // LP LOSES when backed outcome == winning outcome (LP backed the winner)
   let displayStatus = offer.status;
-  
-  // Get winning outcome from Bet entity (match.winner is often empty)
-  const winningOutcome = offer.bet_winning_outcome || '';
   
   console.log('[STATUS CALC] isSettled:', isSettled);
   console.log('[STATUS CALC] winningOutcome:', winningOutcome, '(from bet.winning_outcome or match.winner)');
