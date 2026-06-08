@@ -8,7 +8,7 @@ import { Loader2, CheckCircle, AlertTriangle, Key, ExternalLink, Copy, RefreshCw
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
 
 export default function InitPlatform() {
-  const { isConnected, connect } = useWallet();
+  const { isConnected, isConnecting, connect } = useWallet();
   const [instruction, setInstruction] = useState(null);
   const [error, setError] = useState(null);
   const [showSecretDialog, setShowSecretDialog] = useState(false);
@@ -216,7 +216,27 @@ export default function InitPlatform() {
           </div>
         )}
 
-        {instruction ? (
+        {!isConnected ? (
+          <Card className="bg-primary/10 border-primary/30">
+            <CardContent className="p-6 text-center space-y-4">
+              <p className="text-muted-foreground">Connect your Phantom wallet to initialize the platform</p>
+              <Button
+                onClick={connect}
+                className="h-12 px-8"
+                disabled={isConnecting}
+              >
+                {isConnecting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>🦊 Connect Phantom Wallet</>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        ) : instruction ? (
           <SolanaTransactionSigner
             instruction={instruction}
             amount="0"
@@ -228,26 +248,16 @@ export default function InitPlatform() {
           <div className="space-y-3">
             <Button
               onClick={handleRegisterAdmin}
-              disabled={!isConnected}
               className="w-full h-12"
               variant="outline"
             >
-              {!isConnected ? (
-                <>Connect Wallet First</>
-              ) : (
-                <>🔑 Register This Wallet as Admin</>
-              )}
+              🔑 Register This Wallet as Admin
             </Button>
             <Button
               onClick={handleInit}
-              disabled={!isConnected}
               className="w-full h-12"
             >
-              {!isConnected ? (
-                <>Connect Wallet First</>
-              ) : (
-                <>🚀 Initialize Platform V3 (Fresh Start)</>
-              )}
+              🚀 Initialize Platform V3 (Fresh Start)
             </Button>
           </div>
         )}
