@@ -40,13 +40,15 @@ export default function LpPositionCard({ position, match, bet, walletAddress, on
   const dbStatus = position.userBetStatus || position.userBet?.status || position.status || offer.status || 'active';
   const isVoided = dbStatus === 'void' || dbStatus === 'voided' || offer.status === 'void' || (matchData?.status === 'voided') || winningOutcome === 'void';
   
-  console.log('[LpPositionCard] Status check:', {
-    position_userBetStatus: position.userBetStatus,
-    position_userBet_status: position.userBet?.status,
-    position_status: position.status,
-    offer_status: offer.status,
-    final_dbStatus: dbStatus
-  });
+  console.log('===== [LpPositionCard] INPUT DATA =====');
+  console.log('position.id:', position.id);
+  console.log('position.userBetStatus:', position.userBetStatus);
+  console.log('position.userBet?.status:', position.userBet?.status);
+  console.log('offer.status:', offer.status);
+  console.log('bet_winning_outcome:', position.bet_winning_outcome);
+  console.log('match.winner:', matchData?.winner);
+  console.log('liquidityMatched:', liquidityMatched);
+  console.log('========================================');
   
   // Determine settlement from DB status OR from market result
   const isSettled = dbStatus === 'won' || dbStatus === 'lost' || dbStatus === 'settled' || 
