@@ -133,10 +133,11 @@ export default function LpDashboard() {
           offer._isFutures = true;
         }
 
-        return { ...offer, userBetId: ub.id, userBet: ub };
+        return { ...offer, userBetId: ub.id, userBet: ub, userBetStatus: ub.status };
       }));
 
       const result = offersWithDetails.filter((o) => o !== null);
+      console.log('[LpDashboard] Final offers with userBetStatus:', result.map(o => ({ id: o.id, userBetId: o.userBetId, status: o.status, userBetStatus: o.userBetStatus })));
 
       // Step 3: GROUP multiple transactions for the same position (same match_id + outcome for matches, same market_id + outcome for futures)
       console.log('Step 3: Grouping multiple transactions for same positions...');
@@ -157,6 +158,7 @@ export default function LpDashboard() {
             total_liquidity_deposited: offer.userBet?.liquidity_deposited || offer.amount_offered || 0,
             total_liquidity_matched: offer.amount_matched || 0,
             total_liquidity_unmatched: offer.amount_unmatched || 0,
+            userBetStatus: offer.userBetStatus || offer.userBet?.status,
           });
         } else {
           // Group this transaction with existing position
@@ -169,6 +171,12 @@ export default function LpDashboard() {
           // Use the earliest created_date for the group
           if (offer.userBet?.created_date < existing.userBet?.created_date) {
             existing.userBet = offer.userBet;
+            existing.userBetStatus = offer.userBetStatus || offer.userBet?.status;
+          }
+          
+          // If this transaction has a claimed status, prioritize it
+          if (offer.userBetStatus === 'claimed') {
+            existing.userBetStatus = 'claimed';
           }
         }
       });

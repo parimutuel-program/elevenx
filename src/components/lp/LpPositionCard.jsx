@@ -34,7 +34,15 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
   // CRITICAL: Check UserBet status FIRST (settlement info), then BetOffer status (matching info)
   // userBet.status = settlement state (won/lost/claimed)
   // offer.status = matching state (open/partially_matched/fully_matched/withdrawn)
-  const dbStatus = position.userBet?.status || position.status || offer.status || 'active';
+  const dbStatus = position.userBetStatus || position.userBet?.status || position.status || offer.status || 'active';
+  
+  console.log('[LpPositionCard] Status check:', {
+    position_userBetStatus: position.userBetStatus,
+    position_userBet_status: position.userBet?.status,
+    position_status: position.status,
+    offer_status: offer.status,
+    final_dbStatus: dbStatus
+  });
   
   // Determine settlement from DB status OR from market result
   const isSettled = dbStatus === 'won' || dbStatus === 'lost' || dbStatus === 'settled' || 
