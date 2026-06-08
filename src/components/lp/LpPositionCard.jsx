@@ -370,10 +370,8 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
         {/* Actions */}
         <div className="flex gap-2 pt-2 border-t border-white/10">
           {(() => {
-            // CRITICAL: Check multiple indicators that position was already claimed
-            const alreadyClaimed = isClaimed || 
-              (position.userBet?.actual_payout && position.userBet.actual_payout > 0) ||
-              (position.userBet?.status === 'claimed');
+            // Only consider claimed if status is explicitly 'claimed' or 'refunded'
+            const alreadyClaimed = isClaimed || position.userBet?.status === 'claimed';
             
             if (alreadyClaimed) {
               const claimedAmount = liquidityDeposited + potentialEarnings;
