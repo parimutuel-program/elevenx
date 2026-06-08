@@ -17,6 +17,13 @@ fn execute_settlement(market: &mut BetMarket, winning_outcome: u8, fee_vault: &m
         // Add entire pool to fee vault for admin withdrawal
         fee_vault.total_fees = fee_vault.total_fees.saturating_add(total_losers);
         market.accrued_fees = total_losers;
+        
+        // Transfer actual SOL from market to fee vault
+        let market_lamports = **market.to_account_info().try_borrow_mut_lamports()?;
+        let transfer_amount = market_lamports.min(total_losers);
+        **market.to_account_info().try_borrow_mut_lamports()? -= transfer_amount;
+        **fee_vault.to_account_info().try_borrow_mut_lamports()? += transfer_amount;
+        
         return Ok(());
     }
 
