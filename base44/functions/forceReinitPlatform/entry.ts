@@ -86,8 +86,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Build initialization instruction - try simple_snake format (some Anchor deployments use this)
-    const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('initialize_platform'));
+    // Build initialization instruction - use global:snake format (Anchor standard)
+    const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:initialize_platform'));
     const discriminator = Buffer.from(new Uint8Array(discBuffer).slice(0, 8));
     console.log('Using discriminator (simple_snake):', discriminator.toString('hex'));
     console.log('Alternative (global_snake):', Buffer.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:initialize_platform'))).slice(0, 8)).toString('hex'));
