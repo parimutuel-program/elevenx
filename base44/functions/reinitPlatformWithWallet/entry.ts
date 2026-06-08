@@ -91,24 +91,39 @@ Deno.serve(async (req) => {
       admin: adminPubkey.toBase58(),
     });
 
-    // Platform doesn't exist - we need to initialize it
-    // But the discriminator format is unknown (IDL not on-chain)
-    // Return error with instructions to redeploy locally
+    // Platform doesn't exist - build initialization instruction
+    // Use global:snake_case format (Anchor 0.30.1 standard)
+    const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:initialize_platform'));
+    const discriminator = Buffer.from(new Uint8Array(discBuffer).slice(0, 8));
     
-    return Response.json({
-      success: false,
-      platformExists: false,
-      error: 'Platform not initialized and discriminator format unknown',
-      action_required: 'redeploy_locally',
-      instructions: {
-        step1: 'cd solana-programs/elevenx-betting',
-        step2: 'anchor build --provider.cluster devnet',
-        step3: 'anchor deploy --provider.cluster devnet',
-        step4: 'anchor idl init elevenx_betting --filepath target/idl/elevenx_betting.json --provider.cluster devnet',
-        step5: 'Copy the new program ID from deploy output',
-        step6: 'Update SOLANA_PROGRAM_ID secret in Base44 Dashboard',
+    console.log('Using discriminator (global:initialize_platform):', discriminator.toString('hex'));
+    
+    const initData = Buffer.alloc(10);
+    discriminator.copy(initData, 0);
+    initData.writeUInt16LE(0, 8); // fee_percent = 0%
+
+    console.log('Init data (hex):', initData.toString('hex'));
+    console.log('Init data length:', initData.length);
+
+    const instruction = {
+      instruction_type: 'initialize_platform',
+      programId: SOLANA_PROGRAM_ID,
+      accounts: {
+        platformConfig: platformPda.toBase58(),
+        feeVault: feeVaultPda.toBase58(),
       },
-      note: 'The deployed program IDL is not on-chain, so we cannot determine the correct discriminator format. You must redeploy the program locally with IDL upload.',
+      instruction_data: initData.toString('base64'),
+    };
+
+    return Response.json({
+      success: true,
+      platformExists: false,
+      message: 'Platform initialization ready. Sign this transaction to set yourself as admin.',
+      solana_instruction: instruction,
+      platformPda: platformPda.toBase58(),
+      feeVaultPda: feeVaultPda.toBase58(),
+      newAdmin: walletAddress,
+      discriminator: discriminator.toString('hex'),
     });
 
   } catch (error) {
