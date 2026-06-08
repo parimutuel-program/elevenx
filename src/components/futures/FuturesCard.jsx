@@ -39,6 +39,10 @@ const positionColors = {
 export default function FuturesCard({ market, index, onSelect }) {
   const totalPool = market.outcomes.reduce((sum, o) => sum + (o.pool || 0), 0);
   const totalLpOffers = market.outcomes.reduce((sum, o) => sum + (o.lp_offers || 0), 0);
+  
+  // Calculate filled % based on matched liquidity vs total pool (actual bets vs LP deposits)
+  // If no deposits yet, show 0%
+  const filledPercentage = totalPool > 0 ? Math.round((totalPool / totalPool) * 100) : 0;
 
   return (
     <motion.div
@@ -119,12 +123,12 @@ export default function FuturesCard({ market, index, onSelect }) {
             <div className="mb-2.5">
               <div className="flex items-center justify-between text-[9px] mb-1">
                 <span className="text-accent font-bold uppercase tracking-wider">Liquidity Active</span>
-                <span className="text-muted-foreground">{totalLpOffers > 0 ? `${Math.min(100, totalLpOffers * 15)}% filled` : 'Waiting for LPs'}</span>
+                <span className="text-muted-foreground">{totalPool > 0 ? `${filledPercentage}% matched` : 'Awaiting bets'}</span>
               </div>
               <div className="h-2 bg-secondary rounded-full overflow-hidden border border-border/50">
                 <div 
                   className="h-full bg-gradient-to-r from-accent/60 to-accent rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min(100, totalLpOffers * 15)}%` }}
+                  style={{ width: `${filledPercentage}%` }}
                 />
               </div>
             </div>
