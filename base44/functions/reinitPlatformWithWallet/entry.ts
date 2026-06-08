@@ -82,24 +82,26 @@ Deno.serve(async (req) => {
     });
 
     // Build initialize_platform instruction
+    // Anchor layout: discriminator (8 bytes) + fee_percent (u16 = 2 bytes) = 10 bytes total
+    // Admin is passed as an account, NOT in instruction data
     const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:initialize_platform'));
     const discriminator = Buffer.from(new Uint8Array(discBuffer).slice(0, 8));
     
-    // Layout: discriminator (8) + admin (32) + fee_percent (2) = 42 bytes
-    const initData = Buffer.alloc(42);
+    const initData = Buffer.alloc(10);
     discriminator.copy(initData, 0);
-    Buffer.from(adminPubkey.toBytes()).copy(initData, 8);
-    initData.writeUInt16LE(200, 40); // fee_percent = 2%
+    initData.writeUInt16LE(200, 8); // fee_percent = 2% (200 basis points)
 
     console.log('Init data (hex):', initData.toString('hex'));
 
     const instruction = {
       instruction_type: 'initialize_platform',
       programId: SOLANA_PROGRAM_ID,
-      accounts: {
-        platformConfig: platformPda.toBase58(),
-        feeVault: feeVaultPda.toBase58(),
-      },
+      keys: [
+        { pubkey: platformPda.toBase58(), isSigner: false, isWritable: true }, // platform_config
+        { pubkey: feeVaultPda.toBase58(), isSigner: false, isWritable: true }, // fee_vault
+        { pubkey: walletAddress, isSigner: true, isWritable: true }, // admin (signer)
+        { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false }, // system_program
+      ],
       instruction_data: initData.toString('base64'),
     };
 
