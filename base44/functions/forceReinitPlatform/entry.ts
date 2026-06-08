@@ -32,14 +32,14 @@ Deno.serve(async (req) => {
     const adminPubkey = new PublicKey(walletAddress);
     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
 
-    // Use V3 seeds to guarantee fresh start
+    // Use correct seeds matching deployed contract
     const [platformPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('platform_v3')],
+      [Buffer.from('platform')],
       programId
     );
 
     const [feeVaultPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('fee_vault_v3')],
+      [Buffer.from('fee_vault')],
       programId
     );
 
