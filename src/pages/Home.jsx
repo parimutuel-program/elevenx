@@ -3,13 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trophy, ArrowRight, Flame, TrendingUp, Zap, Globe, Star, ChevronRight, Clock, Users, DollarSign, Earth, Ban, Coins, Crown, Shield } from 'lucide-react';
+import { Trophy, ArrowRight, Flame, TrendingUp, Zap, Globe, Star, ChevronRight, Clock, Users, DollarSign, Earth, Ban, Coins, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import MatchCard from '@/components/betting/MatchCard';
 import HottestBetCard from '@/components/betting/HottestBetCard';
-import ProtocolVault from '@/components/treasury/ProtocolVault';
 import { getTeamFlag } from '@/utils/flags';
 
 const WC_PHOTOS = [
@@ -63,18 +62,6 @@ export default function Home() {
 
   const totalVolume = bets.reduce((s, b) => s + (b.total_pool || 0), 0);
   const activeBettors = new Set(userBets.map((ub) => ub.created_by_id)).size;
-
-  // Protocol Vault calculations
-  const unresolvedStakes = bets
-    .filter((b) => b.status === 'open' || b.status === 'closed')
-    .reduce((acc, b) => acc + (b.total_pool || 0), 0);
-  
-  const unclaimedWinnings = userBets
-    .filter((ub) => ub.status === 'won' || ub.status === 'refunded')
-    .reduce((acc, ub) => acc + (ub.amount || 0), 0);
-  
-  const daoBalance = 0.0042; // Mock value - will be populated from checkFeeVault
-  const feeVaultPda = 'FeeVaultPDA...'; // Will be populated from checkFeeVault
 
   return (
     <div className="space-y-6 -mt-2">
@@ -165,66 +152,23 @@ export default function Home() {
                 <span className="text-[10px] sm:text-[11px] font-bold text-accent tracking-widest">HYBRID MODEL</span>
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
-              <div className="flex-1 min-w-0 w-full sm:w-auto">
-                <h1 className="font-heading font-black text-xl sm:text-2xl md:text-3xl leading-tight mb-2 sm:mb-3 text-white">
-                  Be The House.<br />
-                  <span className="text-emerald-400" style={{ textShadow: '0 0 25px rgba(16,185,129,0.4)' }}>Earn 2% Fees.</span>
-                </h1>
-                <p className="text-white/60 text-xs sm:text-sm leading-relaxed max-w-xs">
-                  Deposit SOL, provide liquidity, and earn fees on EVERY bet. Dynamic odds. Instant matching. Pure on-chain P2P betting.
-                </p>
-                <button
-                  onClick={() => navigator.clipboard.writeText('111111111111111111111111111')}
-                  className="flex items-center gap-1.5 backdrop-blur-sm border border-white/10 px-3 py-1.5 rounded-full hover:border-primary/30 transition-all group mt-3"
-                  title="Copy contract address">
-                  
-                  <span className="text-[10px] sm:text-[11px] font-bold text-white/60 tracking-wide">Contract: 111111111111111111111111111</span>
-                  <svg className="w-3 h-3 text-white/60 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                </button>
-              </div>
+            <h1 className="font-heading font-black text-2xl sm:text-3xl md:text-4xl leading-tight mb-2 sm:mb-3 text-white">
+              Be The House.<br />
+              <span className="text-emerald-400" style={{ textShadow: '0 0 25px rgba(16,185,129,0.4)' }}>Earn 2% Fees.</span>
+            </h1>
+            <p className="text-white/60 text-xs sm:text-sm leading-relaxed max-w-xs">
+              Deposit SOL, provide liquidity, and earn fees on EVERY bet. Dynamic odds. Instant matching. Pure on-chain P2P betting.
+            </p>
+            <button
+              onClick={() => navigator.clipboard.writeText('111111111111111111111111111')}
+              className="flex items-center gap-1.5 backdrop-blur-sm border border-white/10 px-3 py-1.5 rounded-full hover:border-primary/30 transition-all group mt-3"
+              title="Copy contract address">
               
-              {/* Protocol Vault - Live Treasury Stats */}
-              <div className="w-full sm:w-auto sm:flex-shrink-0">
-                <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 backdrop-blur-sm rounded-xl p-3 sm:p-0 sm:border-0 sm:bg-transparent">
-                  <div className="flex items-center gap-1.5 mb-2 pb-2 border-b border-emerald-500/20 sm:border-0 sm:pb-0 sm:mb-1.5">
-                    <Shield className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-[9px] sm:text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Protocol Vault</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 sm:space-y-1">
-                    <div className="flex flex-col">
-                      <span className="text-[8px] sm:text-[9px] text-white/50">Fees</span>
-                      <span className="text-xs sm:text-sm font-bold text-emerald-400">◎{daoBalance.toFixed(4)}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[8px] sm:text-[9px] text-white/50">Locked</span>
-                      <span className="text-xs sm:text-sm font-bold text-yellow-400">◎{unresolvedStakes.toFixed(4)}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[8px] sm:text-[9px] text-white/50">Unclaimed</span>
-                      <span className="text-xs sm:text-sm font-bold text-purple-400">◎{unclaimedWinnings.toFixed(4)}</span>
-                    </div>
-                  </div>
-                  {feeVaultPda && (
-                    <div className="mt-2 pt-2 border-t border-emerald-500/20 sm:border-0 sm:mt-1 sm:pt-0 flex items-center justify-between sm:justify-end sm:gap-2">
-                      <a
-                        href={`https://solscan.io/account/${feeVaultPda}?cluster=devnet`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[8px] text-emerald-400/60 hover:text-emerald-400 transition-colors truncate max-w-[100px] font-mono">
-                        {feeVaultPda.slice(0, 4)}...{feeVaultPda.slice(-4)}
-                      </a>
-                      <div className="flex items-center gap-1 text-[8px] text-emerald-400 font-bold">
-                        <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
-                        Live
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+              <span className="text-[10px] sm:text-[11px] font-bold text-white/60 tracking-wide">Contract: 111111111111111111111111111</span>
+              <svg className="w-3 h-3 text-white/60 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </button>
           </div>
 
           <div className="relative z-10 mt-5 sm:mt-6">
