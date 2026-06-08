@@ -73,6 +73,7 @@ pub fn refund(ctx: Context<Refund>) -> Result<()> {
 pub fn withdraw_lp_winnings(ctx: Context<WithdrawLpWinnings>, amount: u64) -> Result<()> {
     let market = &ctx.accounts.market;
     let lp_offer = &ctx.accounts.lp_offer;
+    let fee_vault = &mut ctx.accounts.fee_vault;
 
     require!(market.settled && !market.voided, BettingError::AlreadySettled);
 
@@ -113,7 +114,6 @@ pub fn withdraw_lp_winnings(ctx: Context<WithdrawLpWinnings>, amount: u64) -> Re
     lp_offer_mut.fully_withdrawn = lp_offer_mut.withdrawn_amount >= lp_offer_mut.amount_matched;
 
     if fee > 0 {
-        let fee_vault = &mut ctx.accounts.fee_vault;
         **ctx.accounts.market.to_account_info().try_borrow_mut_lamports()? -= fee;
         **fee_vault.to_account_info().try_borrow_mut_lamports()? += fee;
     }

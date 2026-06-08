@@ -4,16 +4,19 @@ use crate::errors::BettingError;
 
 // ── Internal settlement logic (shared by vote + emergency paths) ──────────────
 
-fn execute_settlement(market: &mut BetMarket, winning_outcome: u8) -> Result<()> {
+fn execute_settlement(market: &mut BetMarket, winning_outcome: u8, fee_vault: &mut crate::state::FeeVault) -> Result<()> {
     market.settled = true;
     market.winning_outcome = winning_outcome;
     market.settlement_finalized = true;
 
     let winners_pool = market.total_matched[winning_outcome as usize];
 
-    // If no one bet on the winning side, void the market and enable full refunds.
+    // If no one bet on the winning side, route ALL funds to the fee vault (admin withdrawable pool).
     if winners_pool == 0 {
-        market.voided = true;
+        let total_losers: u64 = market.total_matched.iter().sum();
+        // Add entire pool to fee vault for admin withdrawal
+        fee_vault.total_fees = fee_vault.total_fees.saturating_add(total_losers);
+        market.accrued_fees = total_losers;
         return Ok(());
     }
 
@@ -59,7 +62,8 @@ pub fn submit_oracle_vote(ctx: Context<SubmitOracleVote>, winning_outcome: u8) -
     if vote_count >= platform.consensus_threshold && !tally.settled {
         tally.settled = true;
         let market_mut = &mut ctx.accounts.market;
-        execute_settlement(market_mut, winning_outcome)?;
+        let fee_vault = &mut ctx.accounts.fee_vault;
+        execute_settlement(market_mut, winning_outcome, fee_vault)?;
     }
 
     Ok(())
