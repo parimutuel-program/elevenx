@@ -82,11 +82,11 @@ Deno.serve(async (req) => {
     });
 
     // Build initialize_platform instruction
-    // Try simple snake_case format (no namespace prefix)
-    const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('initialize_platform'));
+    // Anchor 0.30.1 uses "global:" prefix + exact Rust function name (snake_case)
+    const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:initialize_platform'));
     const discriminator = Buffer.from(new Uint8Array(discBuffer).slice(0, 8));
     
-    console.log('Using discriminator (initialize_platform simple):', discriminator.toString('hex'));
+    console.log('Using discriminator (global:initialize_platform):', discriminator.toString('hex'));
     
     const initData = Buffer.alloc(10);
     discriminator.copy(initData, 0);
