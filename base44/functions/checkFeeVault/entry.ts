@@ -40,8 +40,8 @@ Deno.serve(async (req) => {
     }
 
     // Parse fee vault data
-    // FeeVault layout: discriminator(8) + total_fees(8) + bump(1) = 17 bytes
-    const totalFeesLamports = feeVaultInfo.data.readBigUInt64LE(8);
+    // FeeVault layout: discriminator(8) + admin(32) + total_fees(8) + bump(1) = 49 bytes
+    const totalFeesLamports = feeVaultInfo.data.readBigUInt64LE(40);
     const totalFeesSOL = Number(totalFeesLamports) / 1e9;
 
     // Also get platform config to show admin wallet
