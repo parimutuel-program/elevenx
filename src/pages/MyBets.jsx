@@ -135,31 +135,35 @@ export default function MyBets() {
   const { data: myBets = [], isLoading, refetch } = useQuery({
     queryKey: ['myBets', authWallet, phantomWallet, user?.id],
     queryFn: async () => {
-      console.log('[MyBets] Query executing, wallets:', { authWallet, phantomWallet, allMyWallets });
+      console.log('[MyBets] Query executing, wallets:', { authWallet, phantomWallet, allMyWallets, userId: user?.id });
       const all = await base44.entities.UserBet.list('-created_date', 100);
       console.log('[MyBets] Total bets in DB:', all.length);
-      console.log('[MyBets] All bets:', all.map(b => ({ id: b.id, wallet: b.wallet_address?.slice(0, 8), amount: b.amount, status: b.status, role: b.role })));
+      console.log('[MyBets] All bets:', all.map(b => ({ id: b.id, wallet: b.wallet_address?.slice(0, 8), amount: b.amount, status: b.status, role: b.role, created_by: b.created_by_id })));
       
-      // Filter by wallet address OR by created_by_id (fallback)
-      let filtered = [];
-      if (allMyWallets.length > 0) {
-        filtered = all.filter((ub) => {
-          const match = allMyWallets.some(w => ub.wallet_address?.trim() === w?.trim());
-          console.log('[MyBets] Bet wallet match:', { bet_id: ub.id, bet_wallet: ub.wallet_address?.slice(0, 8), matches: match });
-          return match;
+      // CRITICAL FIX: Filter by wallet address OR by created_by_id (user account)
+      // This ensures bets from ALL your wallets show up, not just currently connected ones
+      const filtered = all.filter((ub) => {
+        // Match by any wallet address
+        const walletMatch = allMyWallets.length > 0 && allMyWallets.some(w => ub.wallet_address?.trim() === w?.trim());
+        // Match by user account (for bets from other wallets you've used)
+        const userMatch = user?.id && ub.created_by_id === user.id;
+        
+        const matches = walletMatch || userMatch;
+        console.log('[MyBets] Bet filter check:', { 
+          bet_id: ub.id, 
+          bet_wallet: ub.wallet_address?.slice(0, 8), 
+          bet_created_by: ub.created_by_id,
+          walletMatch, 
+          userMatch,
+          matches 
         });
-      } else if (user?.id) {
-        filtered = all.filter((ub) => {
-          const match = ub.created_by_id === user.id;
-          console.log('[MyBets] Bet created_by match:', { bet_id: ub.id, created_by: ub.created_by_id, matches: match });
-          return match;
-        });
-      }
+        return matches;
+      });
       
-      console.log('[MyBets] Filtered bets:', filtered.length, filtered.map(b => ({ id: b.id, role: b.role, status: b.status })));
+      console.log('[MyBets] Filtered bets:', filtered.length, filtered.map(b => ({ id: b.id, role: b.role, status: b.status, wallet: b.wallet_address?.slice(0, 8) })));
       return filtered;
     },
-    enabled: allMyWallets.length > 0 || !!user,
+    enabled: !!user || allMyWallets.length > 0,
     refetchOnWindowFocus: true,
     refetchOnMount: true,
     refetchOnReconnect: true
@@ -357,6 +361,25 @@ export default function MyBets() {
     console.log('[MyBets] Cache cleared and refetched');
   };
 
+  // Debug: Log all bets and their wallet addresses
+  console.log('[MyBets DEBUG] ===== BET FILTERING DEBUG =====');
+  console.log('[MyBets DEBUG] All wallets to match:', allMyWallets);
+  console.log('[MyBets DEBUG] Total bets in myBets:', myBets.length);
+  myBets.forEach((bet, idx) => {
+    console.log(`[MyBets DEBUG] Bet #${idx + 1}:`, {
+      id: bet.id,
+      wallet: bet.wallet_address,
+      role: bet.role,
+      status: bet.status,
+      amount: bet.amount,
+      match_title: bet.match_title,
+      futures_market_id: bet.futures_market_id,
+      matches_wallet: allMyWallets.some(w => bet.wallet_address?.trim() === w?.trim()),
+      created_by: bet.created_by_id
+    });
+  });
+  console.log('[MyBets DEBUG] ========================================');
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <RefundDialog
@@ -373,8 +396,31 @@ export default function MyBets() {
             Track your World Cup betting performance
             {walletAddress && <span className="ml-2 text-[10px] font-mono opacity-50">({walletAddress.slice(0, 6)}...{walletAddress.slice(-4)})</span>}
           </p>
+          {/* Debug: Show all wallets being checked */}
+          {allMyWallets.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2 text-[9px] font-mono">
+              <span className="text-muted-foreground">Checking wallets:</span>
+              {allMyWallets.map(w => (
+                <span key={w} className="px-2 py-0.5 bg-secondary/50 rounded text-primary">
+                  {w?.slice(0, 6)}...{w?.slice(-4)}
+                </span>
+              ))}
+              {user?.id && (
+                <span className="px-2 py-0.5 bg-accent/20 rounded text-accent">
+                  User: {user.id.slice(0, 8)}
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={refetch}
+            className="gap-2 rounded-xl h-10 px-4 text-xs sm:text-sm"
+          >
+            🔄 Refresh
+          </Button>
           <Button 
             variant={showAllBets ? "default" : "outline"}
             onClick={() => setShowAllBets(!showAllBets)}
@@ -605,6 +651,38 @@ export default function MyBets() {
           </Link>
         </div>
       }
+      
+      {/* DEBUG PANEL - Shows all bets and filtering */}
+      <div className="mt-8 p-4 border border-border/30 rounded-xl bg-secondary/10">
+        <h3 className="font-heading font-bold text-sm mb-2 text-muted-foreground">🔍 Debug: All Bets for Your Wallets</h3>
+        <div className="text-[10px] font-mono space-y-1 max-h-96 overflow-auto">
+          <div className="text-muted-foreground mb-2">
+            Checking {allMyWallets.length} wallet(s): {allMyWallets.map(w => w?.slice(0, 8)).join(', ')}
+          </div>
+          {myBets.length === 0 ? (
+            <div className="text-yellow-400">⚠️ No bets found for your wallets! Check if you placed bets with a different wallet.</div>
+          ) : (
+            myBets.map((bet, idx) => (
+              <div key={bet.id} className="p-2 bg-card rounded border border-border/20">
+                <div className="flex gap-2 flex-wrap">
+                  <span className="text-primary">Bet #{idx + 1}</span>
+                  <span className={allMyWallets.some(w => bet.wallet_address?.trim() === w?.trim()) ? 'text-accent' : 'text-destructive'}>
+                    {allMyWallets.some(w => bet.wallet_address?.trim() === w?.trim()) ? '✓ Match' : '✗ No Match'}
+                  </span>
+                  <span className="text-muted-foreground">ID: {bet.id.slice(0, 12)}</span>
+                </div>
+                <div className="mt-1 text-muted-foreground">
+                  Wallet: {bet.wallet_address?.slice(0, 10)}... | 
+                  Role: {bet.role} | 
+                  Status: {bet.status} | 
+                  Amount: ◎{bet.amount} |
+                  {bet.futures_market_id ? '🏆 Futures' : '⚽ Match'}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </div>);
 
 }
