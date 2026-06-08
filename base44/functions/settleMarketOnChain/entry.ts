@@ -164,8 +164,10 @@ Deno.serve(async (req) => {
     const outcomeLabel = winning_outcome === 'a' ? bet.outcome_a : winning_outcome === 'b' ? bet.outcome_b : 'Draw';
     
     // Derive oracle_vote and vote_tally PDAs (required by SubmitOracleVote instruction)
+    // Seeds: [b"oracle_vote", market.key().as_ref(), oracle.key().as_ref()]
+    const adminPubkey = new PublicKey(admin_wallet);
     const [oracleVotePda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('oracle_vote'), marketPda.toBuffer()],
+      [Buffer.from('oracle_vote'), marketPda.toBuffer(), adminPubkey.toBuffer()],
       programId
     );
     
