@@ -10,7 +10,7 @@ pub fn initialize_platform(ctx: Context<InitializePlatform>, fee_percent: u16) -
     let config = &mut ctx.accounts.platform_config;
     config.admin = ctx.accounts.admin.key();
     config.fee_percent = fee_percent;
-    config.consensus_threshold = 2; // default: 2-of-N oracle signers
+    config.consensus_threshold = 1; // default: 1 admin oracle (single-signer settlement)
     config.total_fees_lamports = 0;
     config.bump = ctx.bumps.platform_config;
 
