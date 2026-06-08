@@ -52,6 +52,16 @@ export default function InitPlatform() {
       const res = await base44.functions.invoke('forceReinitPlatform', { walletAddress });
       console.log('[InitPlatform] forceReinitPlatform response:', res.data);
       if (res.data.error) throw new Error(res.data.error);
+      
+      // If already initialized, just refresh the status
+      if (res.data.alreadyInitialized) {
+        await refetch();
+        setInstruction(null);
+        setError(null);
+        alert('Platform is already initialized with your wallet!');
+        return;
+      }
+      
       setInstruction(res.data.solana_instruction);
       setError(null);
     } catch (err) {

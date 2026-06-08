@@ -65,7 +65,25 @@ Deno.serve(async (req) => {
         console.log('Platform V3 admin:', currentAdmin);
         
         if (currentAdmin.toLowerCase() === walletAddress.toLowerCase()) {
-          // Already initialized with THIS admin - success
+          // Already initialized with THIS admin - success, return instruction to refresh UI
+          const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:initialize_platform'));
+          const discriminator = Buffer.from(new Uint8Array(discBuffer).slice(0, 8));
+          
+          const initData = Buffer.alloc(10);
+          discriminator.copy(initData, 0);
+          initData.writeUInt16LE(0, 8);
+
+          const instruction = {
+            instruction_type: 'initialize_platform',
+            programId: SOLANA_PROGRAM_ID,
+            accounts: {
+              platformConfig: platformPda.toBase58(),
+              feeVault: feeVaultPda.toBase58(),
+            },
+            instruction_data: initData.toString('base64'),
+            version: 'v3',
+          };
+          
           return Response.json({
             success: true,
             alreadyInitialized: true,
@@ -73,6 +91,7 @@ Deno.serve(async (req) => {
             platformPda: platformPda.toBase58(),
             feeVaultPda: feeVaultPda.toBase58(),
             message: 'Platform already initialized with your wallet',
+            solana_instruction: instruction,
           });
         } else {
           // Initialized with DIFFERENT admin - need to close and recreate

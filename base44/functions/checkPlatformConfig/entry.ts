@@ -22,6 +22,7 @@ Deno.serve(async (req) => {
       programId
     );
     
+    console.log('[checkPlatformConfig] Checking PDA:', platformConfigPda.toBase58());
     const accountInfo = await connection.getAccountInfo(platformConfigPda);
     
     if (!accountInfo) {
