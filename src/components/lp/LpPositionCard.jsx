@@ -60,6 +60,12 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
   let isLpWon = dbStatus === 'won';
   let isLpLost = dbStatus === 'lost';
   
+  // Voided market = LP loses (no payout)
+  if (isVoided && liquidityMatched > 0) {
+    isLpLost = true;
+    isLpWon = false;
+  }
+  
   // If DB doesn't have won/lost status but market is settled, calculate from outcome
   // ON-CHAIN LOGIC: LP wins when lp_offer.outcome != market.winning_outcome
   if (!isLpWon && !isLpLost && isSettled && matchData?.winner) {
@@ -91,7 +97,7 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
   
   const isClaimed = dbStatus === 'claimed';
   const isRefunded = dbStatus === 'refunded';
-  const isVoided = dbStatus === 'void' || offer.status === 'void' || (matchData?.status === 'voided');
+  const isVoided = dbStatus === 'void' || offer.status === 'void' || (matchData?.status === 'voided') || matchData?.winner === 'void';
   
   // If market was voided, LP position is lost (no payouts, keep nothing)
   if (isVoided && liquidityMatched > 0) {
@@ -418,14 +424,7 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
 
         {/* LP Result Indicator */}
         {isSettled && (
-          isVoided ? (
-            <div className="px-3 py-2 rounded-lg border bg-destructive/10 border-destructive/30 text-destructive">
-              <div className="flex items-center justify-between text-[9px]">
-                <span className="font-bold uppercase tracking-wider">⚠️ Market Voided</span>
-                <span className="text-white/40">No payout (void outcome)</span>
-              </div>
-            </div>
-          ) : liquidityMatched === 0 ? (
+          liquidityMatched === 0 ? (
             <div className="px-3 py-2 rounded-lg border bg-secondary/10 border-secondary/30 text-muted-foreground">
               <div className="flex items-center justify-between text-[9px]">
                 <span className="font-bold uppercase tracking-wider">ℹ️ Unmatched (No Action)</span>
