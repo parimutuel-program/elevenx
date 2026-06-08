@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import MatchCard from '@/components/betting/MatchCard';
 import HottestBetCard from '@/components/betting/HottestBetCard';
-import ProtocolVault from '@/components/treasury/ProtocolVault';
 import { getTeamFlag } from '@/utils/flags';
 
 const WC_PHOTOS = [
@@ -205,45 +204,47 @@ export default function Home() {
         </motion.div>
       </div>
 
-      {/* ── LIVE STATS BAR ── */}
+      {/* ── PROTOCOL VAULT BANNER ── */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
-        className="grid md:grid-cols-4 gap-3">
+        className="relative overflow-hidden rounded-2xl p-4 sm:p-5 mb-3"
+        style={{ background: 'linear-gradient(135deg, rgba(153,69,255,0.08) 0%, rgba(20,241,149,0.05) 100%)', border: '1px solid rgba(153,69,255,0.15)' }}>
         
-        {/* Protocol Vault Card - Spans 2 columns on desktop */}
-        <div className="md:col-span-2">
-          <ProtocolVault
-            daoBalance={daoBalance}
-            unresolvedStakes={unresolvedStakes}
-            unclaimedWinnings={unclaimedWinnings}
-            feeVaultPda={feeVaultPda} />
-        </div>
-        
-        {/* Stats - 3 cards */}
-        <div className="grid grid-cols-2 md:grid-cols-1 gap-3">
-        {[
-        { icon: DollarSign, label: 'Total Volume', value: `◎${totalVolume.toLocaleString()}`, color: 'text-primary', bg: 'bg-primary/10' },
-        { icon: Users, label: 'Active Bettors', value: activeBettors.toString(), color: '', bg: '', style: { color: '#21c45d', background: 'rgba(33,196,93,0.1)' } },
-        { icon: Flame, label: 'Open Bets', value: openBets.length.toString(), color: 'text-orange-400', bg: 'bg-orange-400/10' }].
-        map((stat, i) =>
-        <motion.div
-          key={stat.label}
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 + i * 0.05 }}
-          className="bg-card border border-border/50 rounded-2xl p-4 flex items-center gap-3">
-          
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${stat.bg}`} style={stat.style ? { background: stat.style.background } : {}}>
-              <stat.icon className={`w-4 h-4 ${stat.color}`} style={stat.style ? { color: stat.style.color } : {}} />
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 relative z-10">
+          {/* Protocol Vault Label */}
+          <div className="col-span-2 md:col-span-1 flex flex-col justify-center">
+            <div className="flex items-center gap-1.5 mb-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">Protocol Vault</span>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground">{stat.label}</p>
-              <p className={`font-heading font-bold text-lg leading-tight ${stat.color}`} style={stat.style ? { color: stat.style.color } : {}}>{stat.value}</p>
-            </div>
-          </motion.div>
-        )}
+            <p className="text-[10px] text-white/40">On-chain treasury</p>
+          </div>
+
+          {/* Treasury Balance */}
+          <div className="flex flex-col justify-center border-l border-white/5 pl-4">
+            <p className="text-[9px] text-white/40 uppercase tracking-wider mb-0.5">Fees</p>
+            <p className="text-sm font-heading font-bold text-emerald-400">◎0.0000</p>
+          </div>
+
+          {/* Unresolved Stakes */}
+          <div className="flex flex-col justify-center border-l border-white/5 pl-4">
+            <p className="text-[9px] text-white/40 uppercase tracking-wider mb-0.5">In Pools</p>
+            <p className="text-sm font-heading font-bold text-yellow-400">◎{totalVolume.toFixed(4)}</p>
+          </div>
+
+          {/* Total Volume */}
+          <div className="flex flex-col justify-center border-l border-white/5 pl-4">
+            <p className="text-[9px] text-white/40 uppercase tracking-wider mb-0.5">Volume</p>
+            <p className="text-sm font-heading font-bold text-primary">◎{totalVolume.toLocaleString()}</p>
+          </div>
+
+          {/* Active Bettors */}
+          <div className="flex flex-col justify-center border-l border-white/5 pl-4">
+            <p className="text-[9px] text-white/40 uppercase tracking-wider mb-0.5">Bettors</p>
+            <p className="text-sm font-heading font-bold" style={{ color: '#21c45d' }}>{activeBettors}</p>
+          </div>
         </div>
       </motion.div>
 
