@@ -81,7 +81,8 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
     });
   }
   
-  const isClaimed = dbStatus === 'claimed' || dbStatus === 'refunded';
+  const isClaimed = dbStatus === 'claimed';
+  const isRefunded = dbStatus === 'refunded';
   
   console.log('[LpPositionCard] LP Win/Loss Debug:', {
     dbStatus,
@@ -400,36 +401,37 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
         </div>
 
         {/* LP Result Indicator */}
-        {isSettled &&
-        <div className={`px-3 py-2 rounded-lg border ${
-        isLpWon ?
-        liquidityMatched > 0 ? 'bg-accent/10 border-accent/30 text-accent' : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400' :
-        'bg-destructive/10 border-destructive/30 text-destructive'}`
-        }>
-            <div className="flex items-center justify-between text-[9px]">
-              <span className="font-bold uppercase tracking-wider">
-                {isLpWon ?
-              liquidityMatched > 0 ? '🎉 LP Position Won' : '⚠️ LP Won (No Winnings)' :
-              '💸 LP Position Lost'
-              }
-              </span>
-              <span className="text-white/40">
-                {isLpWon ?
-              liquidityMatched > 0 ? 'Backed loser ✓' : 'No matched bets' :
-              'Backed winner ✗'
-              }
-              </span>
+        {isSettled && (
+          liquidityMatched === 0 ? (
+            <div className="px-3 py-2 rounded-lg border bg-secondary/10 border-secondary/30 text-muted-foreground">
+              <div className="flex items-center justify-between text-[9px]">
+                <span className="font-bold uppercase tracking-wider">ℹ️ Unmatched (No Action)</span>
+                <span className="text-white/40">No bets were matched</span>
+              </div>
             </div>
-          </div>
-        }
+          ) : (
+            <div className={`px-3 py-2 rounded-lg border ${
+            isLpWon ? 'bg-accent/10 border-accent/30 text-accent' : 'bg-destructive/10 border-destructive/30 text-destructive'}`
+            }>
+              <div className="flex items-center justify-between text-[9px]">
+                <span className="font-bold uppercase tracking-wider">
+                  {isLpWon ? '🎉 LP Position Won' : '💸 LP Position Lost'}
+                </span>
+                <span className="text-white/40">
+                  {isLpWon ? 'Backed loser ✓' : 'Backed winner ✗'}
+                </span>
+              </div>
+            </div>
+          )
+        )}
 
         {/* Actions */}
         <div className="flex gap-2 pt-2 border-t border-white/10">
           {(() => {
-            // Only consider claimed if status is explicitly 'claimed' or 'refunded'
+            // Only consider claimed if status is explicitly 'claimed' (not refunded)
             const userBetStatus = position.userBet?.status || position.status;
             const offerStatus = offer.status;
-            const alreadyClaimed = userBetStatus === 'claimed' || userBetStatus === 'refunded' || offerStatus === 'settled';
+            const alreadyClaimed = userBetStatus === 'claimed';
             
             console.log('[LpPositionCard] Claim check:', {
               userBetStatus,
@@ -439,8 +441,9 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
               alreadyClaimed
             });
             
-            if (alreadyClaimed) {
-              const claimedAmount = liquidityDeposited + potentialEarnings;
+            // Priority 0: Already claimed (matched positions that were claimed)
+            if (alreadyClaimed && liquidityMatched > 0) {
+              const claimedAmount = liquidityMatched + potentialEarnings;
               return (
                 <div className="flex-1 flex flex-col gap-1">
                   <div className="flex-1 flex items-center justify-between bg-accent/15 border border-accent/40 rounded-xl px-3 h-9">
@@ -454,7 +457,8 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
 
             }
 
-            if (isWithdrawn) {
+            // Priority 0b: Refunded/Withdrawn (unmatched positions)
+            if (isRefunded || isWithdrawn || userBetStatus === 'refunded') {
               return (
                 <div className="flex-1 flex flex-col gap-1">
                   <Button
@@ -469,8 +473,8 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
 
             }
 
-            // Priority 1: LP LOST - no funds to claim (show immediately, don't allow withdrawal)
-            if (isLpLost) {
+            // Priority 1: LP LOST with matched liquidity - no funds to claim
+            if (isLpLost && liquidityMatched > 0) {
               return (
                 <div className="flex-1 flex items-center justify-between bg-destructive/15 border border-destructive/40 rounded-xl px-3 h-9">
                   <div className="flex items-center gap-1.5">
@@ -483,7 +487,6 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
             }
 
             // Priority 2: LP WON with matched liquidity - claim winnings (matched stake + fees)
-            // CRITICAL: Only show if NOT already claimed
             if (isLpWon && liquidityMatched > 0 && !alreadyClaimed && onWithdrawRequest) {
               const claimAmount = liquidityMatched + liquidityMatched * 0.02; // stake + 2% fees
               return (
@@ -498,7 +501,7 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
 
             }
 
-            // Priority 3: Has unmatched liquidity - withdraw unmatched (only if not won/lost)
+            // Priority 3: Has unmatched liquidity - withdraw unmatched
             if ((hasUnmatched || liquidityUnmatched > 0) && onWithdrawRequest) {
               return (
                 <Button
@@ -512,7 +515,7 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
             }
 
             // Position not yet settled
-            if (!isLpWon && !isLpLost) {
+            if (!isSettled) {
               return (
                 <Button
                   disabled
@@ -525,6 +528,7 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
 
             }
 
+            // Fallback: settled but no action needed
             return (
               <Button
                 disabled
@@ -532,7 +536,7 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
                 className="flex-1 h-8 sm:h-9 text-[10px] sm:text-xs border-accent/30 text-accent bg-accent/10 rounded-xl font-heading font-bold">
                 
                 <CheckCircle className="w-3 h-3 mr-1" />
-                Fully Locked
+                Settled
               </Button>);
 
           })()}
