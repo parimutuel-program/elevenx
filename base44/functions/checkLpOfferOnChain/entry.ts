@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
       const derivedOutcomeIndex = userBet.outcome === 'a' ? 0 : userBet.outcome === 'b' ? 1 : 2;
       
       console.log('[checkLpOfferOnChain] On-chain state:', {
-        withdrawn: withdrawnFlag === 1,
+        withdrawn: fullyWithdrawnFlag === 1,
         amountMatchedOnChain: Number(amountMatchedOnChain) / 1e9,
         lpOfferPda: lpOfferPda.toBase58(),
         stored_pda: offer.solana_position_pda,
