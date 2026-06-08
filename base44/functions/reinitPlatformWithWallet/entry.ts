@@ -82,10 +82,19 @@ Deno.serve(async (req) => {
     });
 
     // Build initialize_platform instruction
-    // Anchor layout: discriminator (8 bytes) + fee_percent (u16 = 2 bytes) = 10 bytes total
-    // Admin is passed as an account, NOT in instruction data
-    const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:initialize_platform'));
-    const discriminator = Buffer.from(new Uint8Array(discBuffer).slice(0, 8));
+    // Try BOTH discriminator formats - the deployed program might use either
+    // Format 1: Anchor default "global:<name>"
+    const discGlobal = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:initialize_platform'));
+    const discriminatorGlobal = Buffer.from(new Uint8Array(discGlobal).slice(0, 8));
+    
+    // Format 2: Just the function name (older Anchor versions)
+    const discSimple = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('initialize_platform'));
+    const discriminator = Buffer.from(new Uint8Array(discSimple).slice(0, 8));
+    
+    console.log('Discriminator formats:', {
+        global_format: discriminatorGlobal.toString('hex'),
+        simple_format: discriminator.toString('hex'),
+    });
     
     const initData = Buffer.alloc(10);
     discriminator.copy(initData, 0);
@@ -93,7 +102,7 @@ Deno.serve(async (req) => {
 
     console.log('Init data (hex):', initData.toString('hex'));
     console.log('Init data length:', initData.length);
-    console.log('Discriminator (hex):', discriminator.toString('hex'));
+    console.log('Using SIMPLE discriminator (no "global:" prefix):', discriminator.toString('hex'));
 
     const instruction = {
       instruction_type: 'initialize_platform',
