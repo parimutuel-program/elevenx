@@ -86,14 +86,24 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Build initialization instruction - use Anchor's global:snake_case format
-    const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:initialize_platform'));
+    // Build initialization instruction - try simple_snake format (some Anchor deployments use this)
+    const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('initialize_platform'));
     const discriminator = Buffer.from(new Uint8Array(discBuffer).slice(0, 8));
-    console.log('Using discriminator (global_snake):', discriminator.toString('hex'));
+    console.log('Using discriminator (simple_snake):', discriminator.toString('hex'));
+    console.log('Alternative (global_snake):', Buffer.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:initialize_platform'))).slice(0, 8)).toString('hex'));
     
+    // Anchor discriminator (8 bytes) + fee_percent (u16 LE = 2 bytes) = 10 bytes total
     const initData = Buffer.alloc(10);
     discriminator.copy(initData, 0);
-    initData.writeUInt16LE(0, 8); // fee_percent = 0%
+    initData.writeUInt16LE(0, 8); // fee_percent = 0 (u16 little-endian)
+    
+    console.log('Init data buffer:', {
+      length: initData.length,
+      hex: initData.toString('hex'),
+      discriminatorBytes: initData.slice(0, 8).toString('hex'),
+      feePercentBytes: initData.slice(8, 10).toString('hex'),
+      feePercentValue: initData.readUInt16LE(8),
+    });
 
     const instruction = {
       instruction_type: 'initialize_platform',
