@@ -89,9 +89,11 @@ Deno.serve(async (req) => {
     
     const initData = Buffer.alloc(10);
     discriminator.copy(initData, 0);
-    initData.writeUInt16LE(200, 8); // fee_percent = 2% (200 basis points)
+    initData.writeUInt16LE(0, 8); // fee_percent = 0% (set to 0 for now)
 
     console.log('Init data (hex):', initData.toString('hex'));
+    console.log('Init data length:', initData.length);
+    console.log('Discriminator (hex):', discriminator.toString('hex'));
 
     const instruction = {
       instruction_type: 'initialize_platform',
@@ -102,6 +104,8 @@ Deno.serve(async (req) => {
       },
       instruction_data: initData.toString('base64'),
     };
+    
+    console.log('Returning instruction:', instruction);
 
     return Response.json({
       success: true,
