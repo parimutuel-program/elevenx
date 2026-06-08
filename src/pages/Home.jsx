@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trophy, ArrowRight, Flame, TrendingUp, Zap, Globe, Star, ChevronRight, Clock, Users, DollarSign, Earth, Ban, Coins, Crown } from 'lucide-react';
+import { Trophy, ArrowRight, Flame, TrendingUp, Zap, Globe, Star, ChevronRight, Clock, Users, DollarSign, Earth, Ban, Coins, Crown, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -73,7 +73,7 @@ export default function Home() {
     .filter((ub) => ub.status === 'won' || ub.status === 'refunded')
     .reduce((acc, ub) => acc + (ub.amount || 0), 0);
   
-  // Fee vault PDA (static for now - can be fetched from on-chain later)
+  const daoBalance = 0.0042; // Mock value - will be populated from checkFeeVault
   const feeVaultPda = 'FeeVaultPDA...'; // Will be populated from checkFeeVault
 
   return (
@@ -186,13 +186,43 @@ export default function Home() {
                 </button>
               </div>
               
-              {/* Protocol Vault - Live Treasury Stats */}
-              <div className="flex-shrink-0 w-[220px] sm:w-[260px] -mt-2">
-                <ProtocolVault
-                  daoBalance={0.0042}
-                  unresolvedStakes={unresolvedStakes}
-                  unclaimedWinnings={unclaimedWinnings}
-                  feeVaultPda={feeVaultPda} />
+              {/* Protocol Vault - Live Treasury Stats (integrated into same container) */}
+              <div className="flex-shrink-0 w-[200px] sm:w-[240px] -mt-1">
+                <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 backdrop-blur-sm rounded-xl p-3 border border-emerald-500/20">
+                  <div className="flex items-center gap-1.5 mb-2 pb-2 border-b border-emerald-500/20">
+                    <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">Protocol Vault</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[9px] text-white/50">Fees</span>
+                      <span className="text-xs font-bold text-emerald-400">◎{daoBalance.toFixed(4)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[9px] text-white/50">Locked</span>
+                      <span className="text-xs font-bold text-yellow-400">◎{unresolvedStakes.toFixed(4)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[9px] text-white/50">Unclaimed</span>
+                      <span className="text-xs font-bold text-purple-400">◎{unclaimedWinnings.toFixed(4)}</span>
+                    </div>
+                  </div>
+                  {feeVaultPda && (
+                    <div className="mt-2 pt-2 border-t border-emerald-500/20 flex items-center justify-between">
+                      <a
+                        href={`https://solscan.io/account/${feeVaultPda}?cluster=devnet`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[8px] text-emerald-400/60 hover:text-emerald-400 transition-colors truncate max-w-[100px] font-mono">
+                        {feeVaultPda.slice(0, 4)}...{feeVaultPda.slice(-4)}
+                      </a>
+                      <div className="flex items-center gap-1 text-[8px] text-emerald-400 font-bold">
+                        <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+                        Live
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
