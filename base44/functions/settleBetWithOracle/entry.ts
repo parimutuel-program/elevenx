@@ -50,11 +50,22 @@ Deno.serve(async (req) => {
         if (ub.status !== 'active') continue;
 
         if (!hasWinners) {
-          // No winners - void the market and refund everyone
-          await base44.entities.UserBet.update(ub.id, {
-            status: 'refunded',
-            actual_payout: ub.amount,
-          });
+          // No winners on the winning outcome (e.g., Draw won but no one bet on Draw)
+          // CRITICAL: LPs LOSE their matched liquidity (it goes to DAO fee vault)
+          // Only regular bettors get refunded
+          if (ub.role === 'lp') {
+            // LP loses - matched liquidity goes to DAO
+            await base44.entities.UserBet.update(ub.id, {
+              status: 'lost',
+              actual_payout: 0,
+            });
+          } else {
+            // Regular bettor gets refunded
+            await base44.entities.UserBet.update(ub.id, {
+              status: 'refunded',
+              actual_payout: ub.amount,
+            });
+          }
         } else if (ub.role === 'lp') {
           // LP LOGIC: LP WINS when they backed a LOSER (outcome != winningOutcome)
           // LP LOSES when they backed the WINNER (outcome === winningOutcome)
