@@ -3,13 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trophy, ArrowRight, Flame, TrendingUp, Zap, Globe, Star, ChevronRight, Clock, Users, DollarSign, Earth, Ban, Coins, Crown, Shield, Lock } from 'lucide-react';
+import { Trophy, ArrowRight, Flame, TrendingUp, Zap, Globe, Star, ChevronRight, Clock, Users, DollarSign, Earth, Ban, Coins, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import MatchCard from '@/components/betting/MatchCard';
 import HottestBetCard from '@/components/betting/HottestBetCard';
-import ProtocolVault from '@/components/treasury/ProtocolVault';
 import { getTeamFlag } from '@/utils/flags';
 
 const WC_PHOTOS = [
@@ -53,19 +52,6 @@ export default function Home() {
     queryFn: () => base44.entities.FuturesMarket.list()
   });
 
-  // Protocol Vault metrics
-  const unresolvedStakes = bets.filter(b => b.status === 'open' || b.status === 'closed').reduce((s, b) => s + (b.total_pool || 0), 0);
-  const unclaimedWinnings = userBets.filter(ub => ub.status === 'won' || ub.status === 'refunded').reduce((s, ub) => s + (ub.amount || 0), 0);
-  
-  const { data: vaultData, isLoading: isLoadingVault } = useQuery({
-    queryKey: ['feeVault'],
-    queryFn: () => base44.functions.invoke('checkFeeVault', {}),
-    retry: false,
-    staleTime: 30000
-  });
-  const daoBalance = vaultData?.data?.totalFeesSOL || 0;
-  const feeVaultPda = vaultData?.data?.feeVaultPda || null;
-
   const openBets = bets.filter((b) => b.status === 'open');
   const liveMatches = matches.filter((m) => m.status === 'live');
   const upcomingMatches = matches.filter((m) => m.status === 'upcoming').
@@ -81,13 +67,13 @@ export default function Home() {
     <div className="space-y-6 -mt-2">
 
       {/* ── HERO CARDS ── */}
-      <div className="grid md:grid-cols-3 gap-4">
-        {/* Card 1 — World's First Decentralized - Shows first on mobile & left on desktop */}
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* Card 1 — World Cup Hype (Football Image) - Shows first on mobile */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="relative overflow-hidden rounded-3xl min-h-[300px] sm:min-h-[320px] flex flex-col justify-between order-1">
+          className="relative overflow-hidden rounded-3xl min-h-[300px] sm:min-h-[320px] flex flex-col justify-between order-1 md:order-1">
           
           <img
             src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=800&q=80"
@@ -145,20 +131,12 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* Card 2 — Treasury Ledger - Shows second on mobile & middle on desktop */}
-        <ProtocolVault
-          daoBalance={daoBalance}
-          unresolvedStakes={unresolvedStakes}
-          unclaimedWinnings={unclaimedWinnings}
-          feeVaultPda={feeVaultPda}
-        />
-
-        {/* Card 3 — Main CTA (Be The House) - Shows third on mobile & right on desktop */}
+        {/* Card 2 — Main CTA (BetP2P) - Shows second on mobile */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="relative overflow-hidden rounded-3xl min-h-[300px] sm:min-h-[320px] flex flex-col justify-between p-5 sm:p-7 order-3"
+          transition={{ duration: 0.5 }}
+          className="relative overflow-hidden rounded-3xl min-h-[300px] sm:min-h-[320px] flex flex-col justify-between p-5 sm:p-7 order-2 md:order-2"
           style={{ background: '#121212' }}>
           
           {/* Glow orbs */}
@@ -211,7 +189,6 @@ export default function Home() {
 
 
         </motion.div>
-
       </div>
 
       {/* ── LIVE STATS BAR ── */}
