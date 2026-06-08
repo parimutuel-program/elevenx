@@ -35,10 +35,54 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
   // userBet.status = settlement state (won/lost/claimed)
   // offer.status = matching state (open/partially_matched/fully_matched/withdrawn)
   const dbStatus = position.userBet?.status || position.status || offer.status || 'active';
-  const isLpWon = dbStatus === 'won';
-  const isLpLost = dbStatus === 'lost';
-  const isSettled = dbStatus === 'won' || dbStatus === 'lost';
-  const isClaimed = dbStatus === 'claimed';
+  
+  // Determine settlement from DB status OR from market result
+  const isSettled = dbStatus === 'won' || dbStatus === 'lost' || dbStatus === 'settled' || 
+                    (matchData?.winner && matchData.winner !== '');
+  
+  // For LP positions: won = backed the loser (bettors lost), lost = backed the winner (bettors won)
+  // Calculate win/loss by comparing LP's backed outcome vs market winner
+  let isLpWon = dbStatus === 'won';
+  let isLpLost = dbStatus === 'lost';
+  
+  // If DB doesn't have won/lost status but market is settled, calculate from outcome
+  if (!isLpWon && !isLpLost && isSettled && matchData?.winner) {
+    const backedOutcome = offer.outcome; // 'a', 'b', or 'draw'
+    const winningOutcome = matchData.winner; // 'team_a', 'team_b', or 'draw'
+    
+    // LP wins when their backed outcome LOSES
+    if (backedOutcome === 'a' && winningOutcome !== 'team_a') {
+      isLpWon = true;
+    } else if (backedOutcome === 'b' && winningOutcome !== 'team_b') {
+      isLpWon = true;
+    } else if (backedOutcome === 'draw' && winningOutcome !== 'draw') {
+      isLpWon = true;
+    } else {
+      isLpLost = true; // LP backed the winner
+    }
+    
+    console.log('[LpPositionCard] Calculated LP win/loss from market:', {
+      backedOutcome,
+      winningOutcome,
+      isLpWon,
+      isLpLost
+    });
+  }
+  
+  const isClaimed = dbStatus === 'claimed' || dbStatus === 'refunded';
+  
+  console.log('[LpPositionCard] LP Win/Loss Debug:', {
+    dbStatus,
+    position_userBet_status: position.userBet?.status,
+    position_status: position.status,
+    offer_status: offer.status,
+    isLpWon,
+    isLpLost,
+    isSettled,
+    isClaimed,
+    backed_outcome: offer.outcome,
+    match_winner: matchData?.winner
+  });
   // Withdrawn = unmatched liquidity already withdrawn (no bets were matched, so nothing left)
   const isWithdrawn = dbStatus === 'withdrawn' || offer.status === 'withdrawn' ||
   dbStatus === 'refunded' ||
