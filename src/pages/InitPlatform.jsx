@@ -14,9 +14,10 @@ export default function InitPlatform() {
   const [showSecretDialog, setShowSecretDialog] = useState(false);
   const { walletAddress } = useWallet();
 
-  const { data: platformStatus } = useQuery({
+  const { data: platformStatus, refetch } = useQuery({
     queryKey: ['platformStatus'],
     queryFn: () => base44.functions.invoke('checkPlatformConfig', {}),
+    refetchOnWindowFocus: false,
   });
 
   const { data: programIdData } = useQuery({
@@ -43,17 +44,20 @@ export default function InitPlatform() {
       if (!walletAddress) {
         throw new Error('Wallet not connected');
       }
-      const res = await base44.functions.invoke('reinitPlatformWithWallet', { walletAddress });
+      const res = await base44.functions.invoke('forceReinitPlatform', { walletAddress });
       if (res.data.error) throw new Error(res.data.error);
       setInstruction(res.data.solana_instruction);
+      setError(null);
     } catch (err) {
       setError(err.message);
     }
   };
 
-  const handleSuccess = () => {
+  const handleSuccess = async () => {
     setInstruction(null);
     setError(null);
+    await refetch();
+    alert('Platform initialized successfully! You can now create markets.');
   };
 
   const copyToClipboard = (text) => {
@@ -241,10 +245,8 @@ export default function InitPlatform() {
             >
               {!isConnected ? (
                 <>Connect Wallet First</>
-              ) : platformStatus?.data?.initialized ? (
-                <>Reinitialize Platform (Fix Admin)</>
               ) : (
-                <>Initialize Platform</>
+                <>🚀 Initialize Platform V3 (Fresh Start)</>
               )}
             </Button>
           </div>
