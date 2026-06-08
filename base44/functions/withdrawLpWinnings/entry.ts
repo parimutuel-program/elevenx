@@ -339,7 +339,8 @@ Deno.serve(async (req) => {
       // Offsets: 0-7=disc, 8-39=market, 40-71=lp, 72=outcome, 73-80=odds_bps, 81-88=amount_committed, 89-96=amount_matched, 97=closed, 98-105=matched_stake, 106=withdrawn, 107=bump
       const accountData = lpOfferAccountInfo.data;
       const storedOutcomeValue = accountData[72]; // CRITICAL: Read the actual stored outcome from the account!
-      const withdrawnFlag = accountData[106]; // withdrawn is a bool at offset 106
+      const fullyWithdrawnFlag = accountData[114]; // fully_withdrawn bool at offset 114 (NEW LAYOUT)
+      const withdrawnAmountOnChain = accountData.readBigUInt64LE(106); // withdrawn_amount u64 at offset 106 (NEW LAYOUT)
       const amountMatchedOnChain = accountData.readBigUInt64LE(89); // amount_matched at offset 89
       
       // CRITICAL: Read the stored LP address from the account (offset 40-71, 32 bytes)
@@ -362,9 +363,9 @@ Deno.serve(async (req) => {
         walletsMatch: storedLpPubkey.toBase58() === userPubkey.toBase58(),
       });
 
-      if (withdrawnFlag === 1) {
-        console.error('[withdrawLpWinnings] LP already withdrew (on-chain):', offer.id);
-        return Response.json({ error: 'This LP position has already been withdrawn on-chain' }, { status: 400 });
+      if (fullyWithdrawnFlag === 1) {
+        console.error('[withdrawLpWinnings] LP already fully withdrew (on-chain):', offer.id);
+        return Response.json({ error: 'This LP position has already been fully withdrawn on-chain' }, { status: 400 });
       }
 
       if (Number(amountMatchedOnChain) <= 0) {

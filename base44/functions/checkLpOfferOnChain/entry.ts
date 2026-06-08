@@ -84,7 +84,8 @@ Deno.serve(async (req) => {
       // Offsets: 0-7=disc, 8-39=market, 40-71=lp, 72=outcome, 73-80=odds_bps, 81-88=amount_committed, 89-96=amount_matched, 97=closed, 98-105=matched_stake, 106=withdrawn, 107=bump
       const accountData = lpOfferAccountInfo.data;
       const storedOutcome = accountData[72]; // outcome is stored at offset 72
-      const withdrawnFlag = accountData[106]; // withdrawn is a bool at offset 106
+      const fullyWithdrawnFlag = accountData[114]; // fully_withdrawn bool at offset 114 (NEW LAYOUT)
+      const withdrawnAmountOnChain = accountData.readBigUInt64LE(106); // withdrawn_amount u64 at offset 106 (NEW LAYOUT)
       const amountMatchedOnChain = accountData.readBigUInt64LE(89); // amount_matched at offset 89
 
       const derivedOutcomeIndex = userBet.outcome === 'a' ? 0 : userBet.outcome === 'b' ? 1 : 2;
@@ -101,13 +102,14 @@ Deno.serve(async (req) => {
         userBet_outcome: userBet.outcome,
       });
 
-      if (withdrawnFlag === 1) {
+      if (fullyWithdrawnFlag === 1) {
         return Response.json({ 
-          error: 'LP position already withdrawn on-chain',
+          error: 'LP position already fully withdrawn on-chain',
           canClaim: false,
           reason: 'already_withdrawn',
           onChainState: {
-            withdrawn: true,
+            fullyWithdrawn: true,
+            withdrawnAmount: Number(withdrawnAmountOnChain) / 1e9,
             amountMatched: Number(amountMatchedOnChain) / 1e9,
           }
         }, { status: 200 });
