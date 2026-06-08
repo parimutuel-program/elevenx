@@ -56,21 +56,24 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
     offer_status: offer.status
   });
   
-  // For LP positions: won = backed the loser (bettors lost), lost = backed the winner (bettors won)
-  // Calculate win/loss by comparing LP's backed outcome vs market winner
-  let isLpWon = dbStatus === 'won';
-  let isLpLost = dbStatus === 'lost';
+  // CRITICAL: VOIDED markets = LP LOSES (no payout, regardless of backend DB status)
+  // This check MUST happen FIRST before any other win/loss logic
+  let isLpWon = false;
+  let isLpLost = false;
   
-  // Voided market = LP loses (no payout)
   if (isVoided && liquidityMatched > 0) {
     isLpLost = true;
     isLpWon = false;
-  }
-  
-  // If DB doesn't have won/lost status but market is settled, calculate from outcome
-  // ON-CHAIN LOGIC: LP wins when lp_offer.outcome != market.winning_outcome
-  // CRITICAL: Only calculate if match has a VALID winner (not empty, not 'void')
-  if (!isLpWon && !isLpLost && isSettled && matchData?.winner && matchData.winner !== '' && matchData.winner !== 'void') {
+    console.log('[LpPositionCard] VOIDED MARKET - LP LOST (overriding backend status)');
+  } else {
+    // For non-voided markets: use DB status or calculate from outcome
+    isLpWon = dbStatus === 'won';
+    isLpLost = dbStatus === 'lost';
+    
+    // If DB doesn't have won/lost status but market is settled, calculate from outcome
+    // ON-CHAIN LOGIC: LP wins when lp_offer.outcome != market.winning_outcome
+    // CRITICAL: Only calculate if match has a VALID winner (not empty, not 'void')
+    if (!isLpWon && !isLpLost && isSettled && matchData?.winner && matchData.winner !== '' && matchData.winner !== 'void') {
     const backedOutcome = offer.outcome; // 'a', 'b', or 'draw'
     const winningOutcome = matchData.winner; // 'team_a', 'team_b', or 'draw'
     
@@ -95,6 +98,7 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
       isLpWon,
       isLpLost
     });
+    }
   }
   
   const isClaimed = dbStatus === 'claimed';
