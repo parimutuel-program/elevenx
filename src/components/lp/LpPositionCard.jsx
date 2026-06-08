@@ -116,19 +116,16 @@ export default function LpPositionCard({ position, match, walletAddress, onWithd
   const isClaimed = dbStatus === 'claimed';
   const isRefunded = dbStatus === 'refunded';
   
-  console.log('[LpPositionCard] ===== LP POSITION DEBUG =====');
-  console.log('[LpPositionCard] Position ID:', position.id);
-  console.log('[LpPositionCard] DB Status:', dbStatus);
-  console.log('[LpPositionCard] UserBet Status:', position.userBet?.status);
-  console.log('[LpPositionCard] Position Status:', position.status);
-  console.log('[LpPositionCard] Offer Status:', offer.status);
-  console.log('[LpPositionCard] Backed Outcome:', offer.outcome, '(', offer.outcome_label, ')');
-  console.log('[LpPositionCard] Match Winner:', matchData?.winner);
-  console.log('[LpPositionCard] Match Data:', { team_a: matchData.team_a, team_b: matchData.team_b, winner: matchData.winner });
-  console.log('[LpPositionCard] Calculated isLpWon:', isLpWon);
-  console.log('[LpPositionCard] Calculated isLpLost:', isLpLost);
-  console.log('[LpPositionCard] Liquidity Matched:', liquidityMatched);
-  console.log('[LpPositionCard] =========================================');
+  console.log('===== LP POSITION CARD DEBUG =====');
+  console.log('Position ID:', position.id);
+  console.log('liquidityMatched VALUE:', liquidityMatched, 'type:', typeof liquidityMatched);
+  console.log('liquidityMatched === 0:', liquidityMatched === 0);
+  console.log('liquidityMatched == 0:', liquidityMatched == 0);
+  console.log('!liquidityMatched:', !liquidityMatched);
+  console.log('RAW offer object:', JSON.stringify(offer, null, 2));
+  console.log('RAW position object:', JSON.stringify(position, null, 2));
+  console.log('displayStatusLabel:', displayStatusLabel);
+  console.log('==================================');
   // Withdrawn = unmatched liquidity already withdrawn (no bets were matched, so nothing left)
   const isWithdrawn = dbStatus === 'withdrawn' || offer.status === 'withdrawn' ||
   dbStatus === 'refunded' ||
