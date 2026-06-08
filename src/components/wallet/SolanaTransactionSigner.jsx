@@ -105,9 +105,15 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
           const keys = [
             { pubkey: platformPda, isSigner: false, isWritable: true }, // platform_config
             { pubkey: feeVaultPda, isSigner: false, isWritable: true }, // fee_vault
-            { pubkey: provider.publicKey, isSigner: true, isWritable: true }, // admin (payer)
-            { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+            { pubkey: provider.publicKey, isSigner: true, isWritable: true }, // admin (payer/signer)
+            { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }, // system_program
           ];
+          
+          console.log('Instruction accounts (4 total):', keys.map(k => ({
+            pubkey: k.pubkey.toBase58(),
+            isWritable: k.isWritable,
+            isSigner: k.isSigner,
+          })));
           
           const initData = Buffer.from(instruction.instruction_data, 'base64');
           console.log('Init data (hex):', initData.toString('hex'));

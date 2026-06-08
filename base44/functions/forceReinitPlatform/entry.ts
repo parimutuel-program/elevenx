@@ -101,7 +101,8 @@ Deno.serve(async (req) => {
       accounts: {
         platformConfig: platformPda.toBase58(),
         feeVault: feeVaultPda.toBase58(),
-        admin: adminPubkey.toBase58(), // Explicitly include admin
+        admin: adminPubkey.toBase58(),
+        systemProgram: '11111111111111111111111111111111',
       },
       instruction_data: initData.toString('base64'),
       version: 'v3',
