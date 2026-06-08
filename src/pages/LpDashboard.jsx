@@ -419,14 +419,14 @@ export default function LpDashboard() {
       console.log('[LpDashboard] Invalidating queries to refresh claimed status...');
       setPendingTx(null);
       setError(null);
-      // Invalidate ALL relevant queries to refresh claimed status
-      await queryClient.invalidateQueries({ queryKey: ['myOffers', walletAddress], refetchType: 'all' });
-      await queryClient.invalidateQueries({ queryKey: ['openBets'] });
-      await queryClient.invalidateQueries({ queryKey: ['allOffers'] });
-      await queryClient.invalidateQueries({ queryKey: ['userBets'], refetchType: 'all' });
+      // CRITICAL: Force refetch by using refetch instead of just invalidate
       await refetchOffers();
-      console.log('[LpDashboard] Queries invalidated');
-    }, 2500);
+      // Also invalidate to ensure cache is cleared
+      await queryClient.invalidateQueries({ queryKey: ['myOffers', walletAddress], refetchType: 'active' });
+      await queryClient.invalidateQueries({ queryKey: ['openBets'] });
+      await queryClient.invalidateQueries({ queryKey: ['userBets'], refetchType: 'active' });
+      console.log('[LpDashboard] Queries invalidated and refetched');
+    }, 1500);
   };
 
   // Stats - calculate from UserBet data (works for both traditional LP and parimutuel)
@@ -903,6 +903,15 @@ export default function LpDashboard() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     {matchLpPositions.map((offer, idx) => {
                       const match = matches.find((m) => m.id === offer.match_id);
+                      console.log('[LpDashboard] Rendering Match LP position:', {
+                        offer_id: offer.id,
+                        userBetId: offer.userBetId,
+                        offer_status: offer.status,
+                        userBetStatus: offer.userBetStatus,
+                        userBet_status: offer.userBet?.status,
+                        final_position_status: { ...offer, userBetId: offer.userBetId || offer.id }.status,
+                        final_position_userBetStatus: { ...offer, userBetId: offer.userBetId || offer.id }.userBetStatus
+                      });
                       return (
                         <LpPositionCard
                           key={`match-${offer.id || offer.userBetId}`}
