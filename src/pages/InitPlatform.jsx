@@ -27,28 +27,35 @@ export default function InitPlatform() {
 
   const handleRegisterAdmin = async () => {
     try {
+      console.log('[InitPlatform] handleRegisterAdmin called, walletAddress:', walletAddress);
       if (!walletAddress) {
-        throw new Error('Wallet not connected');
+        throw new Error('Wallet not connected. Please connect your Phantom wallet first.');
       }
       const res = await base44.functions.invoke('registerAdminWallet', { walletAddress });
+      console.log('[InitPlatform] registerAdminWallet response:', res.data);
       if (res.data.error) throw new Error(res.data.error);
       setError(null);
       alert(res.data.message || 'Wallet registered as admin!');
+      await refetch();
     } catch (err) {
+      console.error('[InitPlatform] handleRegisterAdmin error:', err);
       setError(err.message);
     }
   };
 
   const handleInit = async () => {
     try {
+      console.log('[InitPlatform] handleInit called, walletAddress:', walletAddress);
       if (!walletAddress) {
-        throw new Error('Wallet not connected');
+        throw new Error('Wallet not connected. Please connect your Phantom wallet first.');
       }
       const res = await base44.functions.invoke('forceReinitPlatform', { walletAddress });
+      console.log('[InitPlatform] forceReinitPlatform response:', res.data);
       if (res.data.error) throw new Error(res.data.error);
       setInstruction(res.data.solana_instruction);
       setError(null);
     } catch (err) {
+      console.error('[InitPlatform] handleInit error:', err);
       setError(err.message);
     }
   };
