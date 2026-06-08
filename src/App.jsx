@@ -32,6 +32,7 @@ import FixAdmin from '@/pages/FixAdmin';
 import DebugWallet from '@/pages/DebugWallet';
 import DebugClaim from '@/pages/DebugClaim';
 import DebugStorage from '@/pages/DebugStorage';
+import DebugProgramId from '@/pages/DebugProgramId';
 import TestLosingLp from '@/pages/TestLosingLp';
 import UpdateSecret from '@/pages/UpdateSecret';
 import TestDiscriminators from '@/pages/TestDiscriminators';
@@ -85,6 +86,7 @@ const AuthenticatedApp = () => {
         <Route path="/debug-wallet" element={<DebugWallet />} />
         <Route path="/debug-claim" element={<DebugClaim />} />
         <Route path="/debug-storage" element={<DebugStorage />} />
+        <Route path="/debug-program-id" element={<DebugProgramId />} />
         <Route path="/test-losing-lp" element={<TestLosingLp />} />
         <Route path="/update-secret" element={<UpdateSecret />} />
         <Route path="/test-discriminators" element={<TestDiscriminators />} />
