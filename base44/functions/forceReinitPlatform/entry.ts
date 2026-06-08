@@ -48,38 +48,51 @@ Deno.serve(async (req) => {
       feeVaultPda: feeVaultPda.toBase58(),
     });
 
-    // Check if old platform exists
+    // Check if platform exists
     const accountInfo = await connection.getAccountInfo(platformPda);
     
     if (accountInfo) {
-      console.log('Platform V3 exists, checking owner...');
+      console.log('Platform account exists, checking owner...');
       console.log('Owner:', accountInfo.owner.toBase58());
+      console.log('Expected program:', programId.toBase58());
       console.log('Is program owner:', accountInfo.owner.equals(programId));
       
-      if (accountInfo.owner.equals(programId)) {
-        // Account exists and is owned by our program - parse and check if valid
-        const data = Buffer.from(accountInfo.data);
-        const adminBytes = data.slice(8, 40);
-        const currentAdmin = new PublicKey(adminBytes).toBase58();
+      if (!accountInfo.owner.equals(programId)) {
+        // Account exists but owned by OLD program - FRESH deployment with new program ID
+        console.log('⚠️ Account owned by OLD program - this is a fresh deployment');
+        console.log('The old platform account from the previous deployment still exists at this PDA');
+        console.log('You need to either:');
+        console.log('1. Close the old platform account first, OR');
+        console.log('2. Use a different PDA seed (e.g., "platform_v2") in your Rust program');
         
-        console.log('Platform V3 admin:', currentAdmin);
-        
-        if (currentAdmin.toLowerCase() === walletAddress.toLowerCase()) {
-          // Already initialized with THIS admin - no action needed
-          return Response.json({
-            success: true,
-            alreadyInitialized: true,
-            currentAdmin,
+        return Response.json({
+          success: false,
+          error: 'Old platform account exists from previous deployment',
+          details: {
             platformPda: platformPda.toBase58(),
-            feeVaultPda: feeVaultPda.toBase58(),
-            message: 'Platform already initialized with your wallet',
-          });
-        } else {
-          // Initialized with DIFFERENT admin - need to close and recreate
-          console.log('Platform initialized with different admin, closing...');
-          // Can't close accounts from backend - need user to sign close instruction
-          // For now, just return the init instruction and let them reinit
-        }
+            oldOwner: accountInfo.owner.toBase58(),
+            newProgramId: programId.toBase58(),
+            message: 'This PDA is occupied by an account from your old contract deployment. You must either close that account first or redeploy with a different PDA seed.',
+          },
+        });
+      }
+      
+      // Owned by THIS program - check admin
+      const data = Buffer.from(accountInfo.data);
+      const adminBytes = data.slice(8, 40);
+      const currentAdmin = new PublicKey(adminBytes).toBase58();
+      
+      console.log('Platform V3 admin:', currentAdmin);
+      
+      if (currentAdmin.toLowerCase() === walletAddress.toLowerCase()) {
+        return Response.json({
+          success: true,
+          alreadyInitialized: true,
+          currentAdmin,
+          platformPda: platformPda.toBase58(),
+          feeVaultPda: feeVaultPda.toBase58(),
+          message: 'Platform already initialized with your wallet',
+        });
       }
     }
 
