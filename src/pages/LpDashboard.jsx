@@ -391,13 +391,16 @@ export default function LpDashboard() {
     const userBetId = pendingTx?.userBetId;
     const offerId = pendingTx?.offerId;
 
+    console.log('[LpDashboard] handleWithdrawSuccess - finalizing withdrawal:', { userBetId, offerId, signature });
+
     if (userBetId) {
       try {
-        await base44.functions.invoke('finalizeWithdrawal', {
+        const finalizeRes = await base44.functions.invoke('finalizeWithdrawal', {
           signature,
           userBetId,
           offerId: offerId || null
         });
+        console.log('[LpDashboard] finalizeWithdrawal response:', finalizeRes);
       } catch (err) {
         console.error('[LpDashboard] finalizeWithdrawal threw:', err);
       }
@@ -405,15 +408,16 @@ export default function LpDashboard() {
 
     // Small delay so SolanaTransactionSigner can show its success state, then close
     setTimeout(async () => {
+      console.log('[LpDashboard] Invalidating queries to refresh claimed status...');
       setPendingTx(null);
       setError(null);
       // Invalidate ALL relevant queries to refresh claimed status
       await queryClient.invalidateQueries({ queryKey: ['myOffers', walletAddress], refetchType: 'all' });
       await queryClient.invalidateQueries({ queryKey: ['openBets'] });
       await queryClient.invalidateQueries({ queryKey: ['allOffers'] });
-      await refetchOffers();
-      // Force reload of UserBets to get updated status
       await queryClient.invalidateQueries({ queryKey: ['userBets'], refetchType: 'all' });
+      await refetchOffers();
+      console.log('[LpDashboard] Queries invalidated');
     }, 2500);
   };
 
