@@ -43,7 +43,7 @@ export default function InitPlatform() {
       if (!walletAddress) {
         throw new Error('Wallet not connected');
       }
-      const res = await base44.functions.invoke('reinitPlatformWithWallet', { walletAddress });
+      const res = await base44.functions.invoke('initPlatformV2', { walletAddress });
       if (res.data.error) throw new Error(res.data.error);
       setInstruction(res.data.solana_instruction);
     } catch (err) {
