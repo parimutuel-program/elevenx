@@ -366,16 +366,18 @@ export default function LpDashboard() {
     }
 
     // Small delay so SolanaTransactionSigner can show its success state, then close
-    setTimeout(() => {
+    setTimeout(async () => {
       setPendingTx(null);
       setAmount('');
       setSelectedBet(null);
       setModalTransactionMode(false);
       setDetailModalOpen(false);
       setError(null);
-      queryClient.invalidateQueries({ queryKey: ['myOffers', walletAddress] });
-      queryClient.invalidateQueries({ queryKey: ['openBets'] });
-      queryClient.invalidateQueries({ queryKey: ['allOffers'] });
+      // Invalidate ALL relevant queries to refresh claimed status
+      await queryClient.invalidateQueries({ queryKey: ['myOffers', walletAddress], refetchType: 'all' });
+      await queryClient.invalidateQueries({ queryKey: ['openBets'] });
+      await queryClient.invalidateQueries({ queryKey: ['allOffers'] });
+      await queryClient.invalidateQueries({ queryKey: ['userBets'], refetchType: 'all' });
     }, 2500);
   };
 
@@ -405,8 +407,13 @@ export default function LpDashboard() {
     setTimeout(async () => {
       setPendingTx(null);
       setError(null);
+      // Invalidate ALL relevant queries to refresh claimed status
       await queryClient.invalidateQueries({ queryKey: ['myOffers', walletAddress], refetchType: 'all' });
+      await queryClient.invalidateQueries({ queryKey: ['openBets'] });
+      await queryClient.invalidateQueries({ queryKey: ['allOffers'] });
       await refetchOffers();
+      // Force reload of UserBets to get updated status
+      await queryClient.invalidateQueries({ queryKey: ['userBets'], refetchType: 'all' });
     }, 2500);
   };
 
