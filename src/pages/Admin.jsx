@@ -31,8 +31,6 @@ export default function Admin() {
     checkFeeVault: false,
     withdrawFees: false,
   }); // Track which buttons are loading
-  const queryClient = useQueryClient();
-
   useEffect(() => {
     const stored = localStorage.getItem('elevenx_wallet_session');
     if (stored) {
@@ -49,10 +47,12 @@ export default function Admin() {
     queryKey: ['allBets'],
     queryFn: async () => {
       const bets = await base44.entities.Bet.list();
+      console.log('[Admin] Fetched bets:', bets.map(b => b.id));
       return bets;
     },
-    staleTime: 0, // Always refetch on mount
+    staleTime: 0,
     refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   const { data: allMatches = {} } = useQuery({
