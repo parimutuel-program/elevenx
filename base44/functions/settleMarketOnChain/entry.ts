@@ -224,15 +224,15 @@ Deno.serve(async (req) => {
     }
 
     // Always update market timestamps before settling (ensures settle_after is in the past)
-    // Use SIMPLE discriminator format (no "global:" prefix) to match deployed program
+    // Anchor 0.30.1 uses "account:instruction_name" format for discriminators
     const now = Math.floor(Date.now() / 1000);
-    const timestampDiscriminator = Buffer.from(sha256('update_market_timestamps')).slice(0, 8);
+    const timestampDiscriminator = Buffer.from(sha256('account:update_market_timestamps')).slice(0, 8);
     const timestampData = Buffer.alloc(24); // 8 bytes discriminator + 8 bytes open_until + 8 bytes settle_after
     timestampDiscriminator.copy(timestampData, 0);
     timestampData.writeBigInt64LE(BigInt(now - 3600), 8);  // open_until = 1hr ago
     timestampData.writeBigInt64LE(BigInt(now - 1), 16);     // settle_after = 1 sec ago
     
-    console.log('[settleMarketOnChain] Timestamp fix discriminator (SIMPLE format):', timestampDiscriminator.toString('hex'));
+    console.log('[settleMarketOnChain] Timestamp fix discriminator (account: format):', timestampDiscriminator.toString('hex'));
     console.log('[settleMarketOnChain] Timestamp data:', {
       open_until: now - 3600,
       settle_after: now - 1,
@@ -266,26 +266,22 @@ Deno.serve(async (req) => {
     const outcomeIndex = winning_outcome === 'a' ? 0 : winning_outcome === 'b' ? 1 : 2;
     const outcomeLabel = winning_outcome === 'a' ? bet.outcome_a : winning_outcome === 'b' ? bet.outcome_b : 'Draw';
 
-    // CRITICAL FIX: Use SIMPLE discriminator format (no "global:" prefix)
-    // The deployed program uses sha256("instruction_name") not sha256("global:instruction_name")
-    // Tested discriminators:
-    // - submit_oracle_vote (simple): f8f5c6e1cd7c1d90
-    // - force_settle_market (simple): e55951358f6ddb6c
+    // CRITICAL FIX: Use account: discriminator format for Anchor 0.30.1
+    // Anchor 0.30.1 uses sha256("account:instruction_name") for discriminators
     
     let settleInstruction;
     
     if (settlementFinalized || isVoided) {
-      // Use force_settle_market - SIMPLE format
-      const forceDiscriminator = Buffer.from(sha256('force_settle_market')).slice(0, 8);
+      // Use force_settle_market - account: format
+      const forceDiscriminator = Buffer.from(sha256('account:force_settle_market')).slice(0, 8);
       const forceData = Buffer.alloc(9);
       forceDiscriminator.copy(forceData, 0);
       forceData.writeUInt8(outcomeIndex, 8);
       
-      console.log('[settleMarketOnChain] Using force_settle_market (SIMPLE):', {
+      console.log('[settleMarketOnChain] Using force_settle_market (account: format):', {
         outcome: outcomeLabel,
         outcomeIndex,
         discriminator: forceDiscriminator.toString('hex'),
-        expected: 'e55951358f6ddb6c',
       });
       
       settleInstruction = {
@@ -301,17 +297,16 @@ Deno.serve(async (req) => {
         instruction_data: forceData.toString('base64'),
       };
     } else {
-      // Use submit_oracle_vote - SIMPLE format
-      const discriminator = Buffer.from(sha256('submit_oracle_vote')).slice(0, 8);
+      // Use submit_oracle_vote - account: format
+      const discriminator = Buffer.from(sha256('account:submit_oracle_vote')).slice(0, 8);
       const data = Buffer.alloc(9);
       discriminator.copy(data, 0);
       data.writeUInt8(outcomeIndex, 8);
       
-      console.log('[settleMarketOnChain] Using submit_oracle_vote (SIMPLE):', {
+      console.log('[settleMarketOnChain] Using submit_oracle_vote (account: format):', {
         outcome: outcomeLabel,
         outcomeIndex,
         discriminator: discriminator.toString('hex'),
-        expected: 'f8f5c6e1cd7c1d90',
       });
       
       settleInstruction = {
