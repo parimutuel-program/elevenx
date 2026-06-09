@@ -679,42 +679,21 @@ export default function Admin() {
                       toast.error('Connect wallet first!');
                       return;
                     }
-                    // Find settled markets - force settle will route stuck funds to fee vault
-                    const settledBets = allBets.filter(b => b.status === 'settled' && b.solana_market_pda);
-                    if (settledBets.length === 0) {
-                      toast.error('No settled markets found');
-                      return;
-                    }
-                    // Prompt user to select a market
-                    const marketOptions = settledBets.map((b, i) => `${i + 1}. ${b.title || b.id} (PDA: ${b.solana_market_pda})`).join('\n');
-                    const selection = prompt(`Select a settled market to force-settle (routes stuck funds to fee vault):\n\n${marketOptions}\n\nEnter number (1-${settledBets.length}):`);
-                    if (!selection) return;
-                    const idx = parseInt(selection) - 1;
-                    if (isNaN(idx) || idx < 0 || idx >= settledBets.length) {
-                      toast.error('Invalid selection');
-                      return;
-                    }
-                    const selectedBet = settledBets[idx];
                     try {
-                      const res = await base44.functions.invoke('settleMarketOnChain', {
-                        bet_id: selectedBet.id,
-                        winning_outcome: 'draw', // Force settle on draw to route to vault
-                        admin_wallet: walletAddress,
-                      });
-                      if (res.data.solana_instruction) {
-                        setSettleDialog({
-                          instruction: res.data.solana_instruction,
-                          bet: selectedBet,
-                          outcome: 'draw',
-                        });
+                      const res = await base44.functions.invoke('checkFeeVault');
+                      if (res.data.error) {
+                        toast.error('Error: ' + res.data.error);
+                      } else {
+                        toast.success(`✓ Fee Vault: ◎${res.data.totalFeesSOL.toFixed(4)} SOL`);
+                        alert(`Fee Vault Balance\n\nTotal Fees: ◎${res.data.totalFeesSOL.toFixed(4)} SOL (${res.data.totalFeesLamports} lamports)\n\nFee Vault PDA: ${res.data.feeVaultPda}\nAdmin Wallet: ${res.data.adminWallet}\n\nView on Solscan: ${res.data.solscanUrl}`);
                       }
                     } catch (err) {
                       toast.error('Error: ' + err.message);
                     }
                   }}
-                  className="h-16 bg-orange-600/20 hover:bg-orange-600/30 border border-orange-600/30 text-white rounded-xl"
+                  className="h-16 bg-yellow-600/20 hover:bg-yellow-600/30 border border-yellow-600/30 text-white rounded-xl"
                 >
-                  🏦 Route Stuck Funds to Vault
+                  💰 Check Fee Vault Balance
                 </Button>
                 <Button
                   onClick={async () => {
