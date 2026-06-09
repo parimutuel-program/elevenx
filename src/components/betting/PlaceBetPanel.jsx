@@ -510,13 +510,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
       }
 
       {lastSignature ?
-      <div className="bg-accent/10 border border-accent/30 rounded-xl p-4 relative">
-          <button
-          onClick={handleCloseSuccess}
-          className="absolute top-2 right-2 text-muted-foreground hover:text-foreground transition-colors">
-          
-            <X className="w-4 h-4" />
-          </button>
+      <div className="bg-accent/10 border border-accent/30 rounded-xl p-4 space-y-3">
           <div className="text-center">
             <CheckCircle className="w-8 h-8 text-accent mx-auto mb-2" />
             <p className="font-heading font-bold text-sm text-accent">✓ Bet placed successfully!</p>
@@ -539,6 +533,11 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
               </a>
             </div>
           </div>
+          <button
+            onClick={handleCloseSuccess}
+            className="w-full h-10 rounded-xl border border-accent/30 text-xs font-bold text-accent hover:bg-accent/10 transition-colors">
+            Close
+          </button>
         </div> :
       instruction ?
       <SolanaTransactionSigner

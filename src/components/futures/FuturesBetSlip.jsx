@@ -251,42 +251,33 @@ export default function FuturesBetSlip({ market, outcome, onClose, onConfirm }) 
             </Button>
           </div>
         ) : (
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              className="flex-1 h-11 rounded-xl font-bold"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handlePrepareBet}
-              disabled={!amount || numericAmount <= 0 || isPreparing || !isConnected || !hasLiquidity}
-              className="flex-1 h-11 rounded-xl font-bold bg-primary hover:bg-primary/90 disabled:bg-muted/50 disabled:text-muted-foreground"
-            >
-              {isPreparing ? (
-                <>
-                  <Loader className="w-4 h-4 mr-2 animate-spin" />
-                  Preparing...
-                </>
-              ) : !isConnected ? (
-                <>
-                  <Wallet className="w-4 h-4 mr-2" />
-                  Connect Wallet
-                </>
-              ) : !hasLiquidity ? (
-                <>
-                  <Wallet className="w-4 h-4 mr-2" />
-                  No LP Available
-                </>
-              ) : (
-                <>
-                  <Trophy className="w-4 h-4 mr-2" />
-                  Place Bet
-                </>
-              )}
-            </Button>
-          </div>
+          <Button
+            onClick={handlePrepareBet}
+            disabled={!amount || numericAmount <= 0 || isPreparing || !isConnected || !hasLiquidity}
+            className="w-full h-11 rounded-xl font-bold bg-primary hover:bg-primary/90 disabled:bg-muted/50 disabled:text-muted-foreground"
+          >
+            {isPreparing ? (
+              <>
+                <Loader className="w-4 h-4 mr-2 animate-spin" />
+                Preparing...
+              </>
+            ) : !isConnected ? (
+              <>
+                <Wallet className="w-4 h-4 mr-2" />
+                Connect Wallet
+              </>
+            ) : !hasLiquidity ? (
+              <>
+                <Wallet className="w-4 h-4 mr-2" />
+                No LP Available
+              </>
+            ) : (
+              <>
+                <Trophy className="w-4 h-4 mr-2" />
+                Place Bet
+              </>
+            )}
+          </Button>
         )}
       </motion.div>
     </motion.div>
