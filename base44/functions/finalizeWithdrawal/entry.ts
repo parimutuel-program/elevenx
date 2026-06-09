@@ -58,11 +58,17 @@ Deno.serve(async (req) => {
     // For won/settled LP positions: mark as claimed
     // For pending/active LP positions (unmatched withdrawal): mark as refunded
     const newStatus = ['won', 'settled'].includes(userBet.status) ? 'claimed' : 'refunded';
-    await base44.entities.UserBet.update(userBetId, { status: newStatus });
+    await base44.entities.UserBet.update(userBetId, { 
+      status: newStatus,
+      liquidity_unmatched: 0,
+    });
     
     if (offerId && offer) {
       const offerStatus = ['won', 'settled'].includes(userBet.status) ? 'settled' : 'cancelled';
-      await base44.entities.BetOffer.update(offerId, { status: offerStatus });
+      await base44.entities.BetOffer.update(offerId, { 
+        status: offerStatus,
+        amount_unmatched: 0,
+      });
     }
     
     // Update Bet LP totals
