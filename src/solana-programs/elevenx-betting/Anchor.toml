@@ -6,7 +6,7 @@ resolution = true
 skip_lint = false
 
 [programs.devnet]
-elevenx_betting = "wBhZVzWqxZ13NtbSAXE4nx2RLcBhS3v2nPoN7MXq9f7"
+elevenx_betting = "4qyCfiThJaaRGmNCaJSGbPei5fENytMBtbvquv57Z4v6"
 
 [registry]
 url = "https://api.apr.dev"

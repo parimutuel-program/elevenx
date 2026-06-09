@@ -6,7 +6,7 @@ pub mod errors;
 
 use instructions::*;
 
-declare_id!("wBhZVzWqxZ13NtbSAXE4nx2RLcBhS3v2nPoN7MXq9f7");
+declare_id!("4qyCfiThJaaRGmNCaJSGbPei5fENytMBtbvquv57Z4v6");
 
 #[program]
 pub mod elevenx_betting {
