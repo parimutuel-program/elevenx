@@ -1,6 +1,9 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-// Force secret refresh - updated 2026-06-09
+/**
+ * Returns the current SOLANA_PROGRAM_ID secret value.
+ * Forces a fresh read from environment on each call.
+ */
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -10,11 +13,19 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Admin only' }, { status: 403 });
     }
 
-    const currentProgramId = Deno.env.get('SOLANA_PROGRAM_ID') || '9nwxZGK9nceBL1hPHDgyKeEkvGVjKuHY3Cq6vADXQ7GS'; // Cache refresh trigger
+    // Force fresh read from environment variables (secrets)
+    const currentProgramId = Deno.env.get('SOLANA_PROGRAM_ID');
+
+    if (!currentProgramId) {
+      return Response.json({
+        error: 'SOLANA_PROGRAM_ID secret not set',
+        message: 'Please set the SOLANA_PROGRAM_ID secret in Dashboard → Code → Secrets',
+      }, { status: 400 });
+    }
 
     return Response.json({
       currentProgramId: currentProgramId,
-      message: 'To update the program ID, go to Dashboard → Code → Secrets and update SOLANA_PROGRAM_ID',
+      message: 'Program ID loaded successfully from secrets',
     });
 
   } catch (error) {
