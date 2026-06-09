@@ -274,9 +274,9 @@ Deno.serve(async (req) => {
     if (settlementFinalized || isVoided) {
       // Use global:force_settle_market
       const forceDiscriminator = Buffer.from(sha256('global:force_settle_market')).slice(0, 8);
-      const forceData = Buffer.alloc(9);
+      const forceData = Buffer.alloc(16); // 8 bytes discriminator + 8 bytes outcome (u64 LE)
       forceDiscriminator.copy(forceData, 0);
-      forceData.writeUInt8(outcomeIndex, 8);
+      forceData.writeBigUInt64LE(BigInt(outcomeIndex), 8); // outcome as u64
       
       console.log('[settleMarketOnChain] Using global:force_settle_market:', {
         outcome: outcomeLabel,
@@ -299,9 +299,9 @@ Deno.serve(async (req) => {
     } else {
       // Use global:submit_oracle_vote
       const discriminator = Buffer.from(sha256('global:submit_oracle_vote')).slice(0, 8);
-      const data = Buffer.alloc(9);
+      const data = Buffer.alloc(16); // 8 bytes discriminator + 8 bytes outcome (u64 LE)
       discriminator.copy(data, 0);
-      data.writeUInt8(outcomeIndex, 8);
+      data.writeBigUInt64LE(BigInt(outcomeIndex), 8); // outcome as u64
       
       console.log('[settleMarketOnChain] Using global:submit_oracle_vote:', {
         outcome: outcomeLabel,
