@@ -2,8 +2,6 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { PublicKey, Connection } from 'npm:@solana/web3.js@1.98.4';
 import { Buffer } from 'node:buffer';
 
-const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA_PROGRAM_ID') || '5NNAN6zcTFvjYxTMDKtkKNaG6H2R8GS17Xridr1JEH9X';
-
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -25,18 +23,23 @@ Deno.serve(async (req) => {
       }, { status: 403 });
     }
 
+    const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA_PROGRAM_ID');
+    if (!SOLANA_PROGRAM_ID) {
+      return Response.json({ error: 'SOLANA_PROGRAM_ID secret not configured' }, { status: 500 });
+    }
+
     const programId = new PublicKey(SOLANA_PROGRAM_ID);
     const adminPubkey = new PublicKey(walletAddress);
     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
 
-    // Use V2 seed to avoid conflict with old platform account
+    // Use correct seed to match Solana contract
     const [platformPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('platform_v2')],  // Changed seed to avoid 4100 error
+      [Buffer.from('platform')],
       programId
     );
 
     const [feeVaultPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('fee_vault_v2')],  // Changed seed to avoid conflicts
+      [Buffer.from('fee_vault')],
       programId
     );
 

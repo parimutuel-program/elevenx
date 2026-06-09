@@ -3,8 +3,6 @@ import { PublicKey } from 'npm:@solana/web3.js@1.98.4';
 import { Buffer } from 'node:buffer';
 import bs58 from 'npm:bs58@5.0.0';
 
-const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA__PROGRAM_ID') || '4epUYJPwoPhG9RPoQ6qT9dsAewJCDBSCGUpR1Xj9UxTm';
-
 // Cache platform admin check (5 minute TTL)
 const platformCache = new Map();
 const CACHE_TTL_MS = 300000;
@@ -15,6 +13,11 @@ const CACHE_TTL_MS = 300000;
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    
+    const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA_PROGRAM_ID');
+    if (!SOLANA_PROGRAM_ID) {
+      return Response.json({ error: 'SOLANA_PROGRAM_ID secret not configured' }, { status: 500 });
+    }
     
     // Check cache first
     const cached = platformCache.get('platform_admin');
