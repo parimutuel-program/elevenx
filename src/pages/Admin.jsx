@@ -738,6 +738,56 @@ export default function Admin() {
                   <Wallet className="w-4 h-4 mr-2" />
                   Withdraw Fees
                 </Button>
+                <Button
+                  onClick={async () => {
+                    if (!walletAddress) {
+                      toast.error('Connect wallet first!');
+                      return;
+                    }
+                    try {
+                      // Prompt for market ID (bet_id)
+                      const marketId = prompt('Enter Market ID (bet_id) to sweep funds from:');
+                      if (!marketId) return;
+                      
+                      // Check market on-chain balance
+                      const res = await base44.functions.invoke('debugMarketAccount', { bet_id: marketId });
+                      if (res.data.error) {
+                        toast.error('Error: ' + res.data.error);
+                        return;
+                      }
+                      
+                      if (res.data.balanceLamports <= 0) {
+                        toast.error('Market account is empty!');
+                        return;
+                      }
+                      
+                      const balanceSOL = res.data.balanceLamports / 1e9;
+                      const confirmSweep = confirm(`Sweep Market Funds\n\nMarket: ${marketId}\nBalance: ◎${balanceSOL.toFixed(6)} SOL\n\nThis will transfer ALL funds to your admin wallet.\n\nContinue?`);
+                      if (!confirmSweep) return;
+                      
+                      // Prepare sweep instruction
+                      const sweepRes = await base44.functions.invoke('sweepMarketFunds', { 
+                        bet_id: marketId,
+                        admin_wallet: walletAddress 
+                      });
+                      if (sweepRes.data.error) {
+                        toast.error('Error: ' + sweepRes.data.error);
+                        return;
+                      }
+                      
+                      setSweepDialog({
+                        instruction: sweepRes.data.solana_instruction,
+                        marketPda: res.data.marketPda,
+                        balance: { lamports: res.data.balanceLamports, sol: balanceSOL },
+                      });
+                    } catch (err) {
+                      toast.error('Error: ' + err.message);
+                    }
+                  }}
+                  className="h-16 bg-orange-600/20 hover:bg-orange-600/30 border border-orange-600/30 text-white rounded-xl"
+                >
+                  ⚡ Sweep Market Funds
+                </Button>
               </div>
             </Card>
           </TabsContent>
