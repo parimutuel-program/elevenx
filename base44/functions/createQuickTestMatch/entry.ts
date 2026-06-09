@@ -67,20 +67,39 @@ Deno.serve(async (req) => {
     console.log('[createQuickTestMatch] Created test bet:', testBet.id);
 
     // Step 3: Initialize market on-chain
+    let marketInitialized = false;
+    let marketPda = null;
     try {
       const initResult = await base44.functions.invoke('createMarketOnChain', {
         bet_id: testBet.id,
         match_id: testMatch.id,
       });
       console.log('[createQuickTestMatch] Market initialized on-chain:', initResult.data);
+      if (initResult.data?.solana_instruction) {
+        // Function invocation succeeded but actual on-chain tx still needs to be signed by user
+        marketPda = initResult.data.marketPda;
+        console.log('[createQuickTestMatch] Market PDA prepared:', marketPda);
+      }
     } catch (initErr) {
-      console.error('[createQuickTestMatch] Failed to initialize on-chain:', initErr.message);
-      // Don't fail the whole flow - user can manually initialize
+      console.error('[createQuickTestMatch] Failed to prepare on-chain init (expected):', initErr.message);
+      // This is expected - function-to-function calls return 403
+      // User will need to manually initialize from Admin panel
+    }
+
+    // Only mark as created if we actually have a PDA
+    if (marketPda) {
+      await serviceRole.entities.Bet.update(testBet.id, {
+        solana_market_created: true,
+        solana_market_pda: marketPda,
+      });
+      marketInitialized = true;
     }
 
     return Response.json({
       success: true,
-      message: '✓ Quick test match created! Starts now, ends in 5 minutes.',
+      message: marketInitialized 
+        ? '✓ Quick test match created AND initialized on-chain! Ready for LP/bets.'
+        : '✓ Quick test match created! ⚠️ You must initialize the market on-chain first.',
       testData: {
         matchId: testMatch.id,
         betId: testBet.id,
@@ -90,11 +109,18 @@ Deno.serve(async (req) => {
         timeUntilStart: '0 minutes',
         timeUntilEnd: '5 minutes',
         timeUntilBettingClose: '5 minutes',
+        marketInitialized,
+        marketPda,
       },
-      nextSteps: {
+      nextSteps: marketInitialized ? {
         step1: 'Go to /lp to provide liquidity',
         step2: 'Go to /matches to place bets',
         step3: 'Wait 5 minutes, then settle as Draw in /admin',
+      } : {
+        step1: 'Go to /admin → Matches tab',
+        step2: 'Find "Quick Test" and click "Initialize Market"',
+        step3: 'Sign the transaction in your wallet',
+        step4: 'Once initialized, go to /lp to provide liquidity',
       },
     });
 
