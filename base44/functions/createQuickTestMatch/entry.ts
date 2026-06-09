@@ -17,8 +17,8 @@ Deno.serve(async (req) => {
 
     const now = new Date();
     const startTime = new Date(now.getTime()); // Starts NOW
-    const endTime = new Date(now.getTime() + 10 * 60 * 1000); // Ends in 10 minutes
-    const bettingCloseTime = new Date(now.getTime() + 10 * 60 * 1000); // Betting closes in 10 minutes
+    const endTime = new Date(now.getTime() + 5 * 60 * 1000); // Ends in 5 minutes
+    const bettingCloseTime = new Date(now.getTime() + 5 * 60 * 1000); // Betting closes in 5 minutes
 
     console.log('[createQuickTestMatch] Creating test match with timestamps:', {
       now: now.toISOString(),
@@ -80,21 +80,21 @@ Deno.serve(async (req) => {
 
     return Response.json({
       success: true,
-      message: '✓ Quick test match created! Starts in 10 min, ends in 30 min, betting closes in 30 min.',
+      message: '✓ Quick test match created! Starts now, ends in 5 minutes.',
       testData: {
         matchId: testMatch.id,
         betId: testBet.id,
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
         bettingCloseTime: bettingCloseTime.toISOString(),
-        timeUntilStart: '10 minutes',
-        timeUntilEnd: '30 minutes',
-        timeUntilBettingClose: '30 minutes',
+        timeUntilStart: '0 minutes',
+        timeUntilEnd: '5 minutes',
+        timeUntilBettingClose: '5 minutes',
       },
       nextSteps: {
         step1: 'Go to /lp to provide liquidity',
         step2: 'Go to /matches to place bets',
-        step3: 'Wait for match to finish, then settle in /admin',
+        step3: 'Wait 5 minutes, then settle as Draw in /admin',
       },
     });
 
