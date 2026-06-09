@@ -365,23 +365,26 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
             <div className="space-y-3 flex-1 flex flex-col">
               {/* Header */}
               <div className="flex items-center justify-between">
-                <span className="text-[9px] text-muted-foreground font-semibold truncate">
-                  {bet.match_title || 'Match'}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={() => setShareDialogOpen(true)}
-                    className="h-7 w-7 rounded-lg border-primary/30 hover:bg-primary/20 text-primary hover:text-primary transition-all bg-primary/5"
-                    title="Share this bet"
-                  >
-                    <Share2 className="w-4 h-4" />
-                  </Button>
-                  <Badge className={`text-[8px] font-semibold uppercase tracking-wider flex-shrink-0 ${statusConfig[localBetStatus]?.color || statusConfig.active.color}`}>
-                    {statusConfig[localBetStatus]?.label || 'Active'}
-                  </Badge>
-                </div>
+               <span className="text-[9px] text-muted-foreground font-semibold truncate">
+                 {bet.match_title || 'Match'}
+               </span>
+               <div className="flex items-center gap-1.5">
+                 {/* Share button: Only show for LP holders BEFORE bets close */}
+                 {isLp && (match?.status === 'upcoming' || match?.status === 'live') && (
+                   <Button
+                     size="icon"
+                     variant="outline"
+                     onClick={() => setShareDialogOpen(true)}
+                     className="h-7 w-7 rounded-lg border-primary/30 hover:bg-primary/20 text-primary hover:text-primary transition-all bg-primary/5"
+                     title="Share link to match your bet"
+                   >
+                     <Share2 className="w-4 h-4" />
+                   </Button>
+                 )}
+                 <Badge className={`text-[8px] font-semibold uppercase tracking-wider flex-shrink-0 ${statusConfig[localBetStatus]?.color || statusConfig.active.color}`}>
+                   {statusConfig[localBetStatus]?.label || 'Active'}
+                 </Badge>
+               </div>
               </div>
 
               {/* Outcome - VS Style for matches, Position badge for futures */}
@@ -518,6 +521,34 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
                     {localBetStatus === 'void' && <span>Bet voided</span>}
                   </div>
                 }
+                
+                {/* Share winnings button: Show for claimed/won bets */}
+                {(localBetStatus === 'claimed' || localBetStatus === 'won') && (
+                  <Button
+                    onClick={() => {
+                      const winAmount = (localActualPayout || bet.potential_payout || 0).toFixed(4);
+                      const stake = (bet.totalAmount || bet.amount || 0).toFixed(4);
+                      const profit = ((localActualPayout || bet.potential_payout || 0) - (bet.totalAmount || bet.amount || 0)).toFixed(4);
+                      const profitPercent = (((localActualPayout || bet.potential_payout || 0) / (bet.totalAmount || bet.amount || 1) - 1) * 100).toFixed(1);
+                      const teamName = isFutures ? (bet.outcome_label || 'My Pick') : (bet.outcome === 'a' ? match?.team_a : bet.outcome === 'b' ? match?.team_b : 'Draw');
+                      const teamFlag = isFutures ? '🏆' : (bet.outcome === 'a' ? match?.team_a_flag : bet.outcome === 'b' ? match?.team_b_flag : '🤝');
+                      
+                      const tweetText = `🎉 Just won ◎${winAmount} SOL on @ElevenX_Bet! 
+                      
+ backed ${teamFlag} ${teamName} with ◎${stake}
+ 💰 Profit: ◎${profit} (+${profitPercent}%)
+ 
+ Join the action ⬇️
+ https://elevenx.bet`;
+                      
+                      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+                      window.open(twitterUrl, '_blank');
+                    }}
+                    className="w-full h-8 bg-[#1DA1F2]/10 hover:bg-[#1DA1F2]/20 text-[#1DA1F2] font-bold rounded-lg border border-[#1DA1F2]/20 text-xs mt-2"
+                  >
+                    🐦 Share Winnings on X
+                  </Button>
+                )}
               </div>
             </div>
           </CardContent>
