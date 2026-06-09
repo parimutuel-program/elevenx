@@ -71,35 +71,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check if market is properly initialized on-chain
-    const marketCheck = await base44.functions.invoke('checkMarketStatus', { match_id });
-    console.log('[provideLiquidity] Market status check:', marketCheck.data);
-    if (marketCheck.data.status === 'not_created') {
-      console.error('[provideLiquidity] Market not created on-chain:', {
-        match_id,
-        marketPda: marketCheck.data.marketPda,
-      });
-      return Response.json({ 
-        error: 'Market not created on-chain. Please initialize the market in the Admin panel first.',
-        hint: 'Go to Admin → Matches tab and click "Initialize Market" for this match',
-        marketPda: marketCheck.data.marketPda,
-        match_id,
-      }, { status: 400 });
-    }
-    if (marketCheck.data.status === 'not_initialized') {
-      console.error('[provideLiquidity] Market not initialized:', {
-        match_id,
-        marketPda: marketCheck.data.marketPda,
-        actualSize: marketCheck.data.actualSize,
-      });
-      return Response.json({ 
-        error: 'Market account exists but is not properly initialized. The market creation may have failed.',
-        hint: 'Please contact support. Market PDA: ' + marketCheck.data.marketPda,
-        marketPda: marketCheck.data.marketPda,
-        actualSize: marketCheck.data.actualSize,
-      }, { status: 400 });
-    }
-
     // Fetch match for display title
     const matches = await base44.entities.Match.filter({ id: match_id });
     const match = matches[0];
