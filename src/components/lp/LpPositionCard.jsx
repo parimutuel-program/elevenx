@@ -508,8 +508,9 @@ export default function LpPositionCard({ position, match, bet, walletAddress, on
               alreadyClaimed
             });
             
-            // Priority 0: VOIDED markets - block all claims (LP loses everything)
-            if (isVoided && liquidityMatched > 0) {
+            // Priority 0: VOIDED markets - block ALL withdrawals (matched AND unmatched)
+            // When market is voided, ALL funds go to DAO - LPs cannot withdraw anything
+            if (isVoided) {
               return (
                 <div className="flex-1 flex items-center justify-between bg-destructive/15 border border-destructive/40 rounded-xl px-3 h-9">
                   <div className="flex items-center gap-1.5">
