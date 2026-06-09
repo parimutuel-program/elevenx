@@ -75,10 +75,12 @@ Deno.serve(async (req) => {
     }
 
     // Build sweep_market_funds instruction
-    // Discriminator: SHA256("global:sweep_market_funds").slice(0, 8)
+    // Anchor uses "global:<instruction_name>" format
     const discriminator = Buffer.from(sha256('global:sweep_market_funds')).slice(0, 8);
     const data = Buffer.alloc(8); // Only discriminator, no args
     discriminator.copy(data, 0);
+    
+    console.log('[sweepMarketFunds] Discriminator (global:sweep_market_funds):', discriminator.toString('hex'));
 
     return Response.json({
       success: true,
