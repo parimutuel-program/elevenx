@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { Connection, PublicKey } from 'npm:@solana/web3.js@1.98.4';
-import { Buffer } from 'node:buffer';
+import { Buffer } from 'npm:buffer@6.0.3';
 
 /**
  * Check if platform config is properly initialized on-chain.

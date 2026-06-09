@@ -69,11 +69,30 @@ Deno.serve(async (req) => {
     const alreadyExists = accountInfo.result?.value !== null;
 
     if (alreadyExists) {
+      console.log('[initPlatformConfig] Platform already exists, checking fee vault...');
+      
+      // Also check if fee vault exists
+      const feeVaultInfo = await fetch(`${connection.rpcUrl}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'getAccountInfo',
+          params: [feeVaultPda.toBase58()],
+        }),
+      }).then(r => r.json());
+
+      const feeVaultExists = feeVaultInfo.result?.value !== null;
+
       return Response.json({
         alreadyExists: true,
-        message: 'Platform config already initialized',
+        message: 'Platform already initialized - you can start creating markets',
         platformPda: platformPda.toBase58(),
         feeVaultPda: feeVaultPda.toBase58(),
+        platformExists: alreadyExists,
+        feeVaultExists: feeVaultExists,
+        nextStep: 'Create markets for your matches using the Admin panel',
       });
     }
 

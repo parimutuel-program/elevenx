@@ -25,6 +25,12 @@ export default function InitPlatform() {
     queryFn: () => base44.functions.invoke('solanaConfig', {}),
   });
 
+  const { data: diagnosis } = useQuery({
+    queryKey: ['diagnosis'],
+    queryFn: () => base44.functions.invoke('diagnosePlatform', {}),
+    refetchOnWindowFocus: false,
+  });
+
   const handleRegisterAdmin = async () => {
     try {
       console.log('[InitPlatform] handleRegisterAdmin called, walletAddress:', walletAddress);
@@ -54,11 +60,12 @@ export default function InitPlatform() {
       if (res.data.error) throw new Error(res.data.error);
       
       // If already initialized, just refresh the status
-      if (res.data.alreadyInitialized) {
+      if (res.data.alreadyInitialized || res.data.alreadyExists) {
         await refetch();
         setInstruction(null);
         setError(null);
-        alert('Platform V2 is already initialized! Refreshing status...');
+        const msg = res.data.message || 'Platform is already initialized!';
+        alert(msg + ' You can start creating markets in the Admin panel.');
         return;
       }
       
@@ -89,13 +96,24 @@ export default function InitPlatform() {
         
         {platformStatus?.data?.initialized ? (
           <Card className="bg-accent/10 border-accent/30">
-            <CardContent className="p-6 flex items-center gap-3">
-              <CheckCircle className="w-6 h-6 text-accent" />
-              <div>
-                <p className="font-bold text-accent">Platform is initialized</p>
-                <p className="text-sm text-muted-foreground">
-                  Fee Vault: {platformStatus.data.feeVaultPda?.slice(0, 8)}...
-                </p>
+            <CardContent className="p-6 space-y-3">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-6 h-6 text-accent" />
+                <div>
+                  <p className="font-bold text-accent">✓ Platform is Fully Initialized</p>
+                  <p className="text-sm text-accent-foreground">
+                    Fee Vault: {platformStatus.data.feeVaultPda?.slice(0, 8)}...
+                  </p>
+                </div>
+              </div>
+              <div className="bg-accent/5 border border-accent/20 rounded-lg p-3">
+                <p className="text-xs text-accent-foreground font-bold mb-1">You're all set! Here's what to do next:</p>
+                <ol className="text-xs text-accent-foreground list-decimal list-inside space-y-1">
+                  <li>Go to the <strong>Admin</strong> page</li>
+                  <li>Click the <strong>Matches</strong> tab</li>
+                  <li>Click <strong>"Initialize Market"</strong> for each match you want to offer</li>
+                  <li>Start accepting bets on your markets!</li>
+                </ol>
               </div>
             </CardContent>
           </Card>
@@ -115,8 +133,28 @@ export default function InitPlatform() {
 
         {error && (
           <Card className="bg-destructive/10 border-destructive/30">
-            <CardContent className="p-4">
-              <p className="text-destructive text-sm">{error}</p>
+            <CardContent className="p-4 space-y-2">
+              <p className="text-destructive text-sm font-bold">Error: {error}</p>
+              {(error.includes('2006') || error.includes('AlreadyInitialized') || error.includes('already initialized')) && (
+                <div className="bg-accent/10 border border-accent/30 rounded-lg p-3 mt-2">
+                  <p className="text-xs text-accent font-bold mb-1">✓ Good News - Platform Already Initialized!</p>
+                  <p className="text-xs text-accent-foreground">
+                    Error 2006 means the platform config <strong>already exists</strong> on-chain. This is expected after the first initialization!
+                  </p>
+                  <p className="text-xs text-accent-foreground mt-2 font-bold">
+                    What to do next:
+                  </p>
+                  <ol className="text-xs text-accent-foreground list-decimal list-inside mt-1 space-y-1">
+                    <li>Go to the <strong>Admin</strong> page (use the navigation menu)</li>
+                    <li>Click on the <strong>Matches</strong> tab</li>
+                    <li>Find your match and click <strong>"Initialize Market"</strong> button</li>
+                    <li>Once the market is created on-chain, you can start accepting bets!</li>
+                  </ol>
+                  <p className="text-xs text-accent-foreground mt-3 italic">
+                    Note: Platform initialization is a one-time setup. You're all set to create markets!
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -192,7 +230,7 @@ export default function InitPlatform() {
                   <ol className="list-decimal list-inside text-sm space-y-2 text-muted-foreground">
                     <li>Open Base44 Dashboard in a new tab</li>
                     <li>Go to <strong>Code → Secrets</strong></li>
-                    <li>Find <code className="bg-muted px-1 rounded">SOLANA__PROGRAM_ID</code></li>
+                    <li>Find <code className="bg-muted px-1 rounded">SOLANA_PROGRAM_ID</code></li>
                     <li>Click edit and paste the correct program ID</li>
                     <li>Save and return here to reload</li>
                   </ol>
