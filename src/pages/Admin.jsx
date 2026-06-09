@@ -566,10 +566,11 @@ export default function Admin() {
                       console.log('[Admin] forceReinitPlatform response:', res.data);
                       if (res.data.alreadyInitialized) {
                         toast.success('✓ Platform already initialized!');
+                        alert(`Platform Config Status\n\n✓ Already Initialized\n\nAdmin: ${res.data.currentAdmin}\n\nPlatform PDA: ${res.data.platformPda}\nFee Vault PDA: ${res.data.feeVaultPda}`);
                         queryClient.invalidateQueries({ queryKey: ['platformConfig'] });
-                      } else {
+                    } else {
                         setInitPlatformDialog({ instruction: res.data.solana_instruction });
-                      }
+                    }
                     } catch (err) {
                       console.error('[Admin] forceReinitPlatform error:', err);
                       toast.error('Error: ' + err.message);
