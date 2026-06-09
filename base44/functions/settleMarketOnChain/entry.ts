@@ -224,16 +224,15 @@ Deno.serve(async (req) => {
     }
 
     // Always update market timestamps before settling (ensures settle_after is in the past)
-    // This is a mandatory pre-step for admin settlement to bypass TooEarlyToSettle
+    // Use SIMPLE discriminator format (no "global:" prefix) to match deployed program
     const now = Math.floor(Date.now() / 1000);
-    // Use Anchor discriminator format (with "global:" prefix) - tested and confirmed
-    const timestampDiscriminator = Buffer.from(sha256('global:update_market_timestamps')).slice(0, 8);
+    const timestampDiscriminator = Buffer.from(sha256('update_market_timestamps')).slice(0, 8);
     const timestampData = Buffer.alloc(24); // 8 bytes discriminator + 8 bytes open_until + 8 bytes settle_after
     timestampDiscriminator.copy(timestampData, 0);
     timestampData.writeBigInt64LE(BigInt(now - 3600), 8);  // open_until = 1hr ago
     timestampData.writeBigInt64LE(BigInt(now - 1), 16);     // settle_after = 1 sec ago
     
-    console.log('[settleMarketOnChain] Timestamp fix discriminator (global: format):', timestampDiscriminator.toString('hex'));
+    console.log('[settleMarketOnChain] Timestamp fix discriminator (SIMPLE format):', timestampDiscriminator.toString('hex'));
     console.log('[settleMarketOnChain] Timestamp data:', {
       open_until: now - 3600,
       settle_after: now - 1,
