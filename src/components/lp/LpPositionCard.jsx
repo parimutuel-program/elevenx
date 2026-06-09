@@ -23,16 +23,16 @@ export default function LpPositionCard({ position, match, bet, walletAddress, on
 
   // Handle both BetOffer and UserBet structures - use amount as fallback for parimutuel LP
   // CRITICAL: For futures, prefer amount_offered/amount_matched over liquidity_* fields
-  // Support grouped transactions - use total_* fields if available, otherwise fall back to individual fields
+  // Support grouped transactions - ALWAYS use total_* fields when available (they're aggregated)
   const liquidityDeposited = isFutures 
-    ? (offer.amount_offered || offer.total_liquidity_deposited || offer.liquidity_deposited || 0) 
-    : (offer.total_liquidity_deposited || offer.liquidity_deposited || offer.amount_offered || offer.amount || 0);
+    ? (offer.total_liquidity_deposited || offer.amount_offered || offer.liquidity_deposited || 0) 
+    : (offer.total_liquidity_deposited || offer.liquidity_deposited || 0);
   const liquidityMatched = isFutures 
-    ? (offer.amount_matched || offer.total_liquidity_matched || offer.liquidity_matched || 0) 
-    : (offer.total_liquidity_matched || offer.liquidity_matched || offer.amount_matched || 0);
+    ? (offer.total_liquidity_matched || offer.amount_matched || offer.liquidity_matched || 0) 
+    : (offer.total_liquidity_matched || offer.liquidity_matched || 0);
   const liquidityUnmatched = isFutures 
-    ? (offer.amount_unmatched || offer.total_liquidity_unmatched || offer.liquidity_unmatched || 0) 
-    : (offer.total_liquidity_unmatched || offer.liquidity_unmatched || offer.amount_unmatched || 0);
+    ? (offer.total_liquidity_unmatched || offer.amount_unmatched || offer.liquidity_unmatched || 0) 
+    : (offer.total_liquidity_unmatched || offer.liquidity_unmatched || 0);
 
   // CRITICAL: Check UserBet status FIRST (settlement info), then BetOffer status (matching info)
   // userBet.status = settlement state (won/lost/claimed)
@@ -216,14 +216,14 @@ export default function LpPositionCard({ position, match, bet, walletAddress, on
         console.log('[LpPositionCard] Withdrawing unmatched liquidity - calling withdrawLiquidity');
         
         // Run on-chain check first
-        const checkResUnmatched = await base44.functions.invoke('checkLpOfferOnChain', { userBetId });
-        console.log('[LpPositionCard] On-chain check result:', checkResUnmatched.data);
+        const checkRes = await base44.functions.invoke('checkLpOfferOnChain', { userBetId });
+        console.log('[LpPositionCard] On-chain check result:', checkRes.data);
         
-        if (!checkResUnmatched.data.canClaim) {
-          let userMessage = checkResUnmatched.data.error || 'Cannot withdraw';
-          if (checkResUnmatched.data.reason === 'already_withdrawn') {
+        if (!checkRes.data.canClaim) {
+          let userMessage = checkRes.data.error || 'Cannot withdraw';
+          if (checkRes.data.reason === 'already_withdrawn') {
             userMessage = 'This LP position has already been withdrawn on-chain.';
-          } else if (checkResUnmatched.data.reason === 'not_found_on_chain') {
+          } else if (checkRes.data.reason === 'not_found_on_chain') {
             userMessage = 'LP position not found on-chain. The market may not be deployed.';
           }
           alert('Cannot withdraw:\n\n' + userMessage);
@@ -234,18 +234,6 @@ export default function LpPositionCard({ position, match, bet, walletAddress, on
           userBetId,
           walletAddress 
         });
-      }
-
-      // Block if on-chain check says can't claim
-      if (!checkRes.data.canClaim) {
-        let userMessage = checkRes.data.error || 'Cannot withdraw';
-        if (checkRes.data.reason === 'already_withdrawn') {
-          userMessage = 'This LP position has already been withdrawn on-chain.';
-        } else if (checkRes.data.reason === 'not_found_on_chain') {
-          userMessage = 'LP position not found on-chain. The market may not be deployed.';
-        }
-        alert('Cannot withdraw:\n\n' + userMessage);
-        return;
       }
 
       // Handle HTTP errors
