@@ -90,15 +90,16 @@ Deno.serve(async (req) => {
     // Format 2: Simple format (just the name)
     const discSimple = Buffer.from(sha256('sweep_market_funds')).slice(0, 8);
     
-    // Use SIMPLE format (older Anchor versions) - try this if global fails
-    const discriminator = discSimple;
+    // Use GLOBAL format (Anchor default)
+    const discriminator = discGlobal;
     const data = Buffer.alloc(8); // Only discriminator, no args
     discriminator.copy(data, 0);
     
     console.log('[sweepMarketFunds] Discriminator formats:', {
         global: discGlobal.toString('hex'),
         simple: discSimple.toString('hex'),
-        using: 'simple',
+        using: 'global',
+        instructionDataHex: data.toString('hex'),
     });
 
     return Response.json({
