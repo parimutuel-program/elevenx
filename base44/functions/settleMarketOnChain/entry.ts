@@ -271,11 +271,13 @@ Deno.serve(async (req) => {
     let settleInstruction;
     
     if (settlementFinalized || isVoided) {
-      // Use force_settle_market - Anchor uses "global:" prefix by default
-      const forceDiscriminator = Buffer.from(sha256('global:force_settle_market')).slice(0, 8);
+      // Use force_settle_market - some Anchor versions use simple format without "global:"
+      const forceDiscriminator = Buffer.from(sha256('force_settle_market')).slice(0, 8);
       const forceData = Buffer.alloc(9);
       forceDiscriminator.copy(forceData, 0);
       forceData.writeUInt8(outcomeIndex, 8);
+      
+      console.log('[settleMarketOnChain] force_settle_market discriminator:', forceDiscriminator.toString('hex'));
       
       console.log('[settleMarketOnChain] Using force_settle_market (market already settled/voided):', {
         outcome: outcomeLabel,
@@ -296,11 +298,13 @@ Deno.serve(async (req) => {
         instruction_data: forceData.toString('base64'),
       };
     } else {
-      // Normal flow: submit_oracle_vote
+      // Normal flow: submit_oracle_vote - simple format without "global:"
       const discriminator = Buffer.from(sha256('submit_oracle_vote')).slice(0, 8);
       const data = Buffer.alloc(9);
       discriminator.copy(data, 0);
       data.writeUInt8(outcomeIndex, 8);
+      
+      console.log('[settleMarketOnChain] submit_oracle_vote discriminator:', discriminator.toString('hex'));
       
       console.log('[settleMarketOnChain] Using submit_oracle_vote (normal flow):', {
         outcome: outcomeLabel,
