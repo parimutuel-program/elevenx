@@ -60,19 +60,31 @@ Deno.serve(async (req) => {
       let isWinner = false;
       let payout = 0;
       
-      // CRITICAL: DRAW outcome = HOUSE WINS EVERYTHING
-      // All LPs who backed A or B LOSE (their backed outcome didn't lose, the match drew)
-      // All bettors who backed A or B LOSE (their backed outcome didn't win)
+      // CRITICAL: DRAW outcome = LP on DRAW wins, LPs on A/B lose
+      // House only wins if NO ONE backed the winning outcome
       if (winning_outcome === 'draw') {
-        // House keeps all funds - everyone loses
-        isWinner = false;
-        payout = 0;
-        console.log('[commitSettlement] DRAW outcome - LP/Bettor loses:', {
-          userBetId: userBet.id,
-          role: userBet.role,
-          backed_outcome: userBet.outcome,
-          reason: 'Draw result - house keeps all'
-        });
+        // LP who backed DRAW wins (collects losing stakes from A and B)
+        // LPs who backed A or B lose (their funds go to LP on DRAW)
+        if (isLp && userBet.outcome === 'draw') {
+          isWinner = true;
+          payout = userBet.liquidity_matched || userBet.amount || 0;
+          console.log('[commitSettlement] DRAW outcome - LP on DRAW wins:', {
+            userBetId: userBet.id,
+            role: userBet.role,
+            backed_outcome: userBet.outcome,
+            reason: 'LP backed the winning draw outcome'
+          });
+        } else {
+          // Everyone else loses (LPs on A/B, bettors on A/B)
+          isWinner = false;
+          payout = 0;
+          console.log('[commitSettlement] DRAW outcome - LP/Bettor loses:', {
+            userBetId: userBet.id,
+            role: userBet.role,
+            backed_outcome: userBet.outcome,
+            reason: 'Did not back the winning draw outcome'
+          });
+        }
       } else if (isLp) {
         // LP wins when backed outcome LOSES (collects losing bettor stakes)
         if (!backedWinner) {
