@@ -1,74 +1,60 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
-import { PublicKey, Connection } from 'npm:@solana/web3.js@1.98.4';
+import { Connection, PublicKey } from 'npm:@solana/web3.js@1.98.4';
 import { Buffer } from 'node:buffer';
+
+const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA_PROGRAM_ID') || 'wBhZVzWqxZ13NtbSAXE4nx2RLcBhS3v2nPoN7MXq9f7';
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    if (!user || user.role !== 'admin') {
-      return Response.json({ error: 'Admin only' }, { status: 403 });
-    }
-
-    const programId = new PublicKey(Deno.env.get('SOLANA_PROGRAM_ID').trim());
     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-
-    // Check program account
-    const programAccount = await connection.getAccountInfo(programId);
+    const programId = new PublicKey(SOLANA_PROGRAM_ID);
     
-    // Check platform PDA
-    const [platformPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('platform')],
+    // Fetch the program's IDL to see the actual instruction names
+    const idlAddress = await PublicKey.findProgramAddressSync(
+      [],
       programId
     );
     
-    const platformAccount = await connection.getAccountInfo(platformPda);
+    console.log('[debugProgramDiscriminator] Program ID:', programId.toBase58());
+    console.log('[debugProgramDiscriminator] IDL address attempt:', idlAddress[0].toBase58());
     
-    console.log('=== PROGRAM DEBUG ===');
-    console.log('Program ID:', programId.toBase58());
-    console.log('Program exists:', !!programAccount);
-    console.log('Program executable:', programAccount?.executable);
-    
-    console.log('\n=== PLATFORM ACCOUNT ===');
-    console.log('Platform PDA:', platformPda.toBase58());
-    console.log('Platform exists:', !!platformAccount);
-    
-    if (platformAccount) {
-      console.log('Platform owner:', platformAccount.owner.toBase58());
-      console.log('Platform data length:', platformAccount.data.length);
-      
-      const data = Buffer.from(platformAccount.data);
-      console.log('First 64 bytes (hex):', data.slice(0, 64).toString('hex'));
-      
-      if (data.length >= 52) {
-        const discriminator = data.slice(0, 8).toString('hex');
-        const admin = new PublicKey(data.slice(8, 40)).toBase58();
-        const feePercent = data.readUInt16LE(40);
+    // Try to fetch IDL account
+    try {
+      const idlAccount = await connection.getAccountInfo(idlAddress[0]);
+      if (idlAccount) {
+        const idlData = idlAccount.data;
+        console.log('[debugProgramDiscriminator] IDL account found!');
+        console.log('[debugProgramDiscriminator] IDL data length:', idlData.length);
         
-        console.log('\nParsed PlatformConfig:');
-        console.log('  Discriminator:', discriminator);
-        console.log('  Admin:', admin);
-        console.log('  Fee %:', feePercent);
+        // Try to decode (IDL is borsh-encoded)
+        // For now, just return the raw data
+        return Response.json({
+          success: true,
+          idlFound: true,
+          idlDataLength: idlData.length,
+          idlDataBase64: idlData.toString('base64'),
+        });
       }
+    } catch (idlError) {
+      console.log('[debugProgramDiscriminator] IDL account not found or error:', idlError.message);
     }
-
+    
+    // Alternative: Check the program account itself
+    const programAccount = await connection.getAccountInfo(programId);
+    console.log('[debugProgramDiscriminator] Program account:', {
+      exists: !!programAccount,
+      owner: programAccount?.owner.toBase58(),
+      lamports: programAccount?.lamports,
+    });
+    
     return Response.json({
       success: true,
-      programId: programId.toBase58(),
-      programExists: !!programAccount,
-      programExecutable: programAccount?.executable,
-      platformPda: platformPda.toBase58(),
-      platformExists: !!platformAccount,
-      platformData: platformAccount ? {
-        discriminator: Buffer.from(platformAccount.data.slice(0, 8)).toString('hex'),
-        admin: new PublicKey(platformAccount.data.slice(8, 40)).toBase58(),
-        feePercent: platformAccount.data.readUInt16LE(40),
-      } : null,
+      programDeployed: !!programAccount,
+      message: 'Check Solscan for the program IDL or use Anchor to fetch it',
     });
 
   } catch (error) {
-    console.error('debugProgramDiscriminator error:', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });

@@ -226,13 +226,14 @@ Deno.serve(async (req) => {
     // Always update market timestamps before settling (ensures settle_after is in the past)
     // This is a mandatory pre-step for admin settlement to bypass TooEarlyToSettle
     const now = Math.floor(Date.now() / 1000);
-    const timestampDiscriminator = Buffer.from(sha256('global:update_market_timestamps')).slice(0, 8);
+    // Use SIMPLE discriminator format (no "global:" prefix)
+    const timestampDiscriminator = Buffer.from(sha256('update_market_timestamps')).slice(0, 8);
     const timestampData = Buffer.alloc(24); // 8 bytes discriminator + 8 bytes open_until + 8 bytes settle_after
     timestampDiscriminator.copy(timestampData, 0);
     timestampData.writeBigInt64LE(BigInt(now - 3600), 8);  // open_until = 1hr ago
     timestampData.writeBigInt64LE(BigInt(now - 1), 16);     // settle_after = 1 sec ago
     
-    console.log('[settleMarketOnChain] Timestamp fix discriminator:', timestampDiscriminator.toString('hex'));
+    console.log('[settleMarketOnChain] Timestamp fix discriminator (SIMPLE format):', timestampDiscriminator.toString('hex'));
     console.log('[settleMarketOnChain] Timestamp data:', {
       open_until: now - 3600,
       settle_after: now - 1,
@@ -271,16 +272,16 @@ Deno.serve(async (req) => {
     let settleInstruction;
     
     if (settlementFinalized || isVoided) {
-      // Use force_settle_market - Anchor uses "global:" prefix by default
-      const forceDiscriminator = Buffer.from(sha256('global:force_settle_market')).slice(0, 8);
+      // Try SIMPLE discriminator format (without "global:" prefix) - older Anchor versions
+      const forceDiscriminator = Buffer.from(sha256('force_settle_market')).slice(0, 8);
       const forceData = Buffer.alloc(9);
       forceDiscriminator.copy(forceData, 0);
       forceData.writeUInt8(outcomeIndex, 8);
       
-      console.log('[settleMarketOnChain] force_settle_market discriminator (global: format):', forceDiscriminator.toString('hex'));
+      console.log('[settleMarketOnChain] force_settle_market discriminator (SIMPLE format - no prefix):', forceDiscriminator.toString('hex'));
       console.log('[settleMarketOnChain] force_settle_market instruction data (hex):', forceData.toString('hex'));
       
-      console.log('[settleMarketOnChain] Using force_settle_market (market already settled/voided):', {
+      console.log('[settleMarketOnChain] Using force_settle_market with SIMPLE discriminator:', {
         outcome: outcomeLabel,
         outcomeIndex: outcomeIndex,
         discriminator: forceDiscriminator.toString('hex'),
@@ -306,15 +307,15 @@ Deno.serve(async (req) => {
         dataBase64: forceData.toString('base64'),
       });
     } else {
-      // Normal flow: submit_oracle_vote - Anchor uses "global:" prefix by default
-      const discriminator = Buffer.from(sha256('global:submit_oracle_vote')).slice(0, 8);
+      // Normal flow: submit_oracle_vote - use SIMPLE discriminator (no "global:" prefix)
+      const discriminator = Buffer.from(sha256('submit_oracle_vote')).slice(0, 8);
       const data = Buffer.alloc(9);
       discriminator.copy(data, 0);
       data.writeUInt8(outcomeIndex, 8);
       
-      console.log('[settleMarketOnChain] submit_oracle_vote discriminator (global: format):', discriminator.toString('hex'));
+      console.log('[settleMarketOnChain] submit_oracle_vote discriminator (SIMPLE format):', discriminator.toString('hex'));
       
-      console.log('[settleMarketOnChain] Using submit_oracle_vote (normal flow):', {
+      console.log('[settleMarketOnChain] Using submit_oracle_vote with SIMPLE discriminator:', {
         outcome: outcomeLabel,
         outcomeIndex: outcomeIndex,
         discriminator: discriminator.toString('hex'),
