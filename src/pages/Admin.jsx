@@ -795,10 +795,9 @@ export default function Admin() {
                       const confirmSweep = confirm(`Sweep Market Funds\n\nMarket: ${bet.title}\nID: ${marketId}\nBalance: ◎${balanceSOL.toFixed(6)} SOL\n\nThis will transfer ALL funds to your admin wallet.\n\nContinue?`);
                       if (!confirmSweep) return;
                       
-                      // Prepare sweep instruction
+                      // Prepare sweep instruction - pass market_pda directly
                       const sweepRes = await base44.functions.invoke('sweepMarketFunds', { 
-                        bet_id: marketId,
-                        match_id: bet.match_id,
+                        market_pda: bet.solana_market_pda,
                         admin_wallet: walletAddress 
                       });
                       if (sweepRes.data.error) {
@@ -808,7 +807,7 @@ export default function Admin() {
                       
                       setSweepDialog({
                         instruction: sweepRes.data.solana_instruction,
-                        marketPda: res.data.marketPda,
+                        marketPda: bet.solana_market_pda,
                         balance: { lamports: res.data.balanceLamports, sol: balanceSOL },
                       });
                     } catch (err) {
