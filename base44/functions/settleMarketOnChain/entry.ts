@@ -211,7 +211,7 @@ Deno.serve(async (req) => {
     // This is a mandatory pre-step for admin settlement to bypass TooEarlyToSettle
     const now = Math.floor(Date.now() / 1000);
     const timestampDiscriminator = Buffer.from(sha256('global:update_market_timestamps')).slice(0, 8);
-    const timestampData = Buffer.alloc(16); // 8 bytes for open_until + 8 bytes for settle_after
+    const timestampData = Buffer.alloc(24); // 8 bytes discriminator + 8 bytes open_until + 8 bytes settle_after
     timestampDiscriminator.copy(timestampData, 0);
     timestampData.writeBigInt64LE(BigInt(now - 3600), 8);  // open_until = 1hr ago
     timestampData.writeBigInt64LE(BigInt(now - 1), 16);     // settle_after = 1 sec ago
