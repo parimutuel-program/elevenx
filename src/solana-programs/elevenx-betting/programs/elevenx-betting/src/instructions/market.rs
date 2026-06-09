@@ -10,7 +10,7 @@ pub struct CreateMarketParams {
     pub outcome_names: [[u8; 32]; 3],
     pub open_until: i64,
     pub settle_after: i64,
-    pub fee_percent_override: u16,
+    pub fee_percent_override: Option<u16>,
     pub outcome_count: u8,
     pub oracle_odds: [u64; 3],
 }
@@ -28,12 +28,12 @@ pub fn create_market(ctx: Context<CreateMarket>, params: CreateMarketParams) -> 
     require!(params.open_until > clock.unix_timestamp, BettingError::BettingClosed);
 
     let platform = &ctx.accounts.platform_config;
-    let fee_percent = if params.fee_percent_override > 0 {
+    let fee_percent = if let Some(override_val) = params.fee_percent_override {
         require!(
-            params.fee_percent_override <= PlatformConfig::MAX_FEE_PERCENT,
+            override_val <= PlatformConfig::MAX_FEE_PERCENT,
             BettingError::FeeTooHigh
         );
-        params.fee_percent_override
+        override_val // Can be Some(0) to remove fees entirely
     } else {
         platform.fee_percent
     };

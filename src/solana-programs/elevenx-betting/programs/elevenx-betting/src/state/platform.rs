@@ -21,7 +21,7 @@ pub struct PlatformConfig {
 }
 
 impl PlatformConfig {
-    pub const MAX_FEE_PERCENT: u16 = 500; // 5%
+    pub const MAX_FEE_PERCENT: u16 = 200; // Max 2% (200 basis points)
     pub const LEN: usize = 8  // discriminator
         + 32  // admin
         + 2   // fee_percent
