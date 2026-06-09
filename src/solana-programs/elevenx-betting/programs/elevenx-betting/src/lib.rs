@@ -81,6 +81,15 @@ pub mod elevenx_betting {
         instructions::oracle::submit_oracle_vote(ctx, winning_outcome)
     }
 
+    /// Admin-only: Force-settle a market that was incorrectly voided.
+    /// Bypasses settled/voided checks to route funds to fee vault.
+    pub fn force_settle_market(
+        ctx: Context<ForceSettleMarket>,
+        winning_outcome: u8,
+    ) -> Result<()> {
+        instructions::oracle::force_settle_market(ctx, winning_outcome)
+    }
+
     // ── Claims & Refunds ────────────────────────────────────────────────────
 
     /// Winner claims their payout after settlement.
