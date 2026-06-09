@@ -60,43 +60,49 @@ Deno.serve(async (req) => {
       let isWinner = false;
       let payout = 0;
       
-      // CRITICAL: DRAW outcome = LP on DRAW wins, LPs on A/B lose
-      // House only wins if NO ONE backed the winning outcome
-      if (winning_outcome === 'draw') {
-        // LP who backed DRAW wins (collects losing stakes from A and B)
-        // LPs who backed A or B lose (their funds go to LP on DRAW)
-        if (isLp && userBet.outcome === 'draw') {
-          isWinner = true;
-          payout = userBet.liquidity_matched || userBet.amount || 0;
-          console.log('[commitSettlement] DRAW outcome - LP on DRAW wins:', {
-            userBetId: userBet.id,
-            role: userBet.role,
-            backed_outcome: userBet.outcome,
-            reason: 'LP backed the winning draw outcome'
-          });
-        } else {
-          // Everyone else loses (LPs on A/B, bettors on A/B)
-          isWinner = false;
-          payout = 0;
-          console.log('[commitSettlement] DRAW outcome - LP/Bettor loses:', {
-            userBetId: userBet.id,
-            role: userBet.role,
-            backed_outcome: userBet.outcome,
-            reason: 'Did not back the winning draw outcome'
-          });
-        }
-      } else if (isLp) {
+      // CRITICAL: LP wins when their backed outcome LOSES (collects losing bettors' stakes)
+      // LP loses when their backed outcome WINS (no losing bettors to collect from)
+      // This applies to ALL outcomes including Draw
+      if (isLp) {
         // LP wins when backed outcome LOSES (collects losing bettor stakes)
         if (!backedWinner) {
           isWinner = true;
           // LP earns matched liquidity (losing bettor stakes) + fees
           payout = userBet.liquidity_matched || userBet.amount || 0;
+          console.log('[commitSettlement] LP WON (backed loser):', {
+            userBetId: userBet.id,
+            role: userBet.role,
+            backed_outcome: userBet.outcome,
+            winning_outcome,
+            reason: 'LP backed the losing outcome, collects from winning bettors'
+          });
+        } else {
+          console.log('[commitSettlement] LP LOST (backed winner):', {
+            userBetId: userBet.id,
+            role: userBet.role,
+            backed_outcome: userBet.outcome,
+            winning_outcome,
+            reason: 'LP backed the winning outcome, no losing bettors to collect from'
+          });
         }
       } else {
         // Regular bettor wins when backed outcome WINS
         if (backedWinner) {
           isWinner = true;
           payout = userBet.potential_payout || 0;
+          console.log('[commitSettlement] Bettor WON:', {
+            userBetId: userBet.id,
+            role: userBet.role,
+            backed_outcome: userBet.outcome,
+            winning_outcome
+          });
+        } else {
+          console.log('[commitSettlement] Bettor LOST:', {
+            userBetId: userBet.id,
+            role: userBet.role,
+            backed_outcome: userBet.outcome,
+            winning_outcome
+          });
         }
       }
       
