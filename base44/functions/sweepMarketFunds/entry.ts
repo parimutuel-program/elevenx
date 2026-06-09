@@ -84,21 +84,22 @@ Deno.serve(async (req) => {
     }
 
     // Build sweep_market_funds instruction
-    // Try BOTH discriminator formats to match deployed program
-    // Format 1: Anchor 0.29+ "global:<name>" format
+    // The deployed program uses Anchor's default "account:<name>" format for instructions
+    // Try multiple formats to find the right one
     const discGlobal = Buffer.from(sha256('global:sweep_market_funds')).slice(0, 8);
-    // Format 2: Simple format (just the name)
+    const discAccount = Buffer.from(sha256('account:sweep_market_funds')).slice(0, 8);
     const discSimple = Buffer.from(sha256('sweep_market_funds')).slice(0, 8);
     
-    // Use GLOBAL format (Anchor default)
-    const discriminator = discGlobal;
+    // Use ACCOUNT format (some Anchor versions)
+    const discriminator = discAccount;
     const data = Buffer.alloc(8); // Only discriminator, no args
     discriminator.copy(data, 0);
     
     console.log('[sweepMarketFunds] Discriminator formats:', {
         global: discGlobal.toString('hex'),
+        account: discAccount.toString('hex'),
         simple: discSimple.toString('hex'),
-        using: 'global',
+        using: 'account',
         instructionDataHex: data.toString('hex'),
     });
 
