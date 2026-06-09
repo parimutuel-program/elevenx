@@ -549,6 +549,7 @@ export default function Admin() {
                       const res = await base44.functions.invoke('initPlatformConfig', { walletAddress });
                       if (res.data.alreadyExists) {
                         toast.success('✓ Platform already initialized');
+                        queryClient.invalidateQueries({ queryKey: ['platformConfig'] });
                       } else {
                         setInitPlatformDialog({ instruction: res.data.solana_instruction });
                       }
@@ -563,8 +564,16 @@ export default function Admin() {
                 <Button
                   onClick={async () => {
                     try {
-                      await base44.functions.invoke('checkPlatformConfig');
-                      toast.success('✓ Config checked!');
+                      const res = await base44.functions.invoke('checkPlatformConfig');
+                      if (res.data.error) {
+                        toast.error('Error: ' + res.data.error);
+                      } else if (res.data.initialized) {
+                        toast.success(`✓ Platform initialized! Admin: ${res.data.admin?.slice(0, 8)}...`);
+                        alert(`Platform Config Status\n\n✓ Initialized\n\nAdmin: ${res.data.admin}\nFee: ${res.data.feePercent}%\nConsensus: ${res.data.consensusThreshold}%\n\nPDA: ${res.data.platformConfigPda}`);
+                      } else {
+                        toast.error('Platform not initialized yet');
+                        alert(`Platform Config Status\n\n✗ Not Initialized\n\n${res.data.message || 'Platform config account does not exist'}\n\nPDA: ${res.data.platformConfigPda}`);
+                      }
                     } catch (err) {
                       toast.error('Error: ' + err.message);
                     }
