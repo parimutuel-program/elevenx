@@ -435,12 +435,23 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         console.log('Creating withdraw_liquidity program instruction:', instruction);
         
         const programId = new PublicKey(instruction.programId);
-        const keys = [
-          { pubkey: new PublicKey(instruction.marketPda), isSigner: false, isWritable: true },
-          { pubkey: new PublicKey(instruction.lpOfferPda), isSigner: false, isWritable: true },
-          { pubkey: provider.publicKey, isSigner: true, isWritable: true },
-          { pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false }, // system_program
-        ];
+        
+        // Build keys from accounts object (includes platformConfig)
+        const keys = [];
+        if (instruction.accounts) {
+          const accounts = instruction.accounts;
+          keys.push({ pubkey: new PublicKey(accounts.market), isSigner: false, isWritable: true });
+          keys.push({ pubkey: new PublicKey(accounts.lpOffer), isSigner: false, isWritable: true });
+          keys.push({ pubkey: provider.publicKey, isSigner: true, isWritable: true }); // lp signer
+          keys.push({ pubkey: new PublicKey(accounts.platformConfig), isSigner: false, isWritable: false });
+          keys.push({ pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false }); // system_program
+        } else {
+          // Fallback for legacy format
+          keys.push({ pubkey: new PublicKey(instruction.marketPda), isSigner: false, isWritable: true });
+          keys.push({ pubkey: new PublicKey(instruction.lpOfferPda), isSigner: false, isWritable: true });
+          keys.push({ pubkey: provider.publicKey, isSigner: true, isWritable: true });
+          keys.push({ pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false });
+        }
         
         const data = await anchorDiscriminator('withdraw_liquidity');
         
