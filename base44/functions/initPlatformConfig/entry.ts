@@ -78,8 +78,8 @@ Deno.serve(async (req) => {
     }
 
     // Build instruction data: 8-byte discriminator + fee_percent (u16) = 10 bytes
-    // Anchor 0.30+ uses struct name (InitializePlatform), not function name (initialize_platform)
-    const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:InitializePlatform'));
+    // Use snake_case to match the on-chain program instruction name
+    const discBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('global:initialize_platform'));
     const discriminator = Buffer.from(new Uint8Array(discBuffer).slice(0, 8));
     
     const data = Buffer.alloc(10);
