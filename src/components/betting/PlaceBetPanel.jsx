@@ -305,13 +305,8 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
       console.error('[PlaceBetPanel] Commit error:', commitErr);
     }
 
-    // Keep showing success message for 5.5 seconds before calling parent callback
-    const timer = setTimeout(() => {
-      setInstruction(null);
-      // Don't call onSuccess immediately - let user see success message
-      // Parent component will handle navigation/refresh
-    }, 5500);
-    return () => clearTimeout(timer);
+    // DON'T auto-close or call onSuccess - let user see success message and close manually
+    // This matches the LP panel behavior
   };
 
   const handleCloseSuccess = () => {
