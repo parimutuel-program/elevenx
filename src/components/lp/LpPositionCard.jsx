@@ -14,13 +14,14 @@ import { Buffer } from 'buffer';
 /**
  * Fetch on-chain lp_offer account and decode amounts + closed flag.
  * LpOffer layout after 8-byte discriminator:
- *   market: Pubkey (32)
- *   lp: Pubkey (32)
- *   outcome: u8 (1)
- *   odds_bps: u64 (8)
- *   amount_committed: u64 (8)
- *   amount_matched: u64 (8)
- *   closed: bool (1)  ← offset 8+32+32+1+8+8+8 = 97
+ *   discriminator: 8 bytes (0-7)
+ *   market: Pubkey (32) → offset 8-39
+ *   lp: Pubkey (32) → offset 40-71
+ *   outcome: u8 (1) → offset 72
+ *   odds_bps: u64 (8) → offset 73-80
+ *   amount_committed: u64 (8) → offset 81-88
+ *   amount_matched: u64 (8) → offset 89-96
+ *   closed: bool (1) → offset 97
  */
 async function fetchLpOfferOnChain(positionPda) {
   try {
@@ -32,8 +33,8 @@ async function fetchLpOfferOnChain(positionPda) {
     const data = accountInfo.data;
     if (data.length < 98) return null;
     const CLOSED_OFFSET = 97;
-    const AMOUNT_COMMITTED_OFFSET = 73;
-    const AMOUNT_MATCHED_OFFSET = 81;
+    const AMOUNT_COMMITTED_OFFSET = 81;  // 8 + 32 + 32 + 1 + 8 = 81
+    const AMOUNT_MATCHED_OFFSET = 89;    // 81 + 8 = 89
     const amountCommittedLamports = Number(data.readBigUInt64LE(AMOUNT_COMMITTED_OFFSET));
     const amountMatchedLamports = Number(data.readBigUInt64LE(AMOUNT_MATCHED_OFFSET));
     const closed = data[CLOSED_OFFSET] === 1;
