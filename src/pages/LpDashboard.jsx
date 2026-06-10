@@ -45,7 +45,7 @@ export default function LpDashboard() {
 
   const [error, setError] = useState(null);
   const [activeGroup, setActiveGroup] = useState('all');
-  const [matchViewMode, setMatchViewMode] = useState('all');
+  const [matchViewMode, setMatchViewMode] = useState('today'); // Default to today
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedBetForDetail, setSelectedBetForDetail] = useState(null);
   const [isInfoExpanded, setIsInfoExpanded] = useState(false);
@@ -212,12 +212,27 @@ export default function LpDashboard() {
 
   const groups = ['all', ...Array.from(groupSet).sort()];
 
-  // Filter open bets by active group
+  // Filter open bets by active group and view mode (today/all)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
   const filteredOpenBets = openBets.filter((bet) => {
+    const match = matches.find((m) => m.id === bet.match_id);
+    if (!match) return false;
+
+    // Filter by group
     if (activeGroup !== 'all') {
-      const match = matches.find((m) => m.id === bet.match_id);
-      if (!match || match.group_stage !== activeGroup) return false;
+      if (!match.group_stage || match.group_stage !== activeGroup) return false;
     }
+
+    // Filter by view mode (today vs all)
+    if (matchViewMode === 'today') {
+      const matchDate = new Date(match.match_time);
+      if (matchDate < today || matchDate >= tomorrow) return false;
+    }
+
     return true;
   });
 
@@ -805,31 +820,55 @@ export default function LpDashboard() {
               <div className="space-y-4">
                 <h2 className="font-heading font-bold text-sm">Provide Liquidity</h2>
                   
+                {/* View Mode Toggle (Today / All) */}
+                <div className="flex gap-2 mb-3">
+                  <button
+                    onClick={() => setMatchViewMode('today')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                      matchViewMode === 'today'
+                        ? 'bg-accent text-accent-foreground'
+                        : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
+                    }`}
+                  >
+                    Today
+                  </button>
+                  <button
+                    onClick={() => setMatchViewMode('all')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                      matchViewMode === 'all'
+                        ? 'bg-accent text-accent-foreground'
+                        : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
+                    }`}
+                  >
+                    All Matches
+                  </button>
+                </div>
+
                 {/* Group Navigation */}
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                   <button
-                  onClick={() => setActiveGroup('all')}
-                  className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all shrink-0 ${
-                  activeGroup === 'all' ?
-                  'bg-primary text-primary-foreground' :
-                  'bg-secondary/50 text-muted-foreground hover:bg-secondary'}`
-                  }>
-                  
+                    onClick={() => setActiveGroup('all')}
+                    className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all shrink-0 ${
+                      activeGroup === 'all'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
+                    }`}
+                  >
                     All Groups
                   </button>
-                  {groups.filter((g) => g !== 'all' && g !== 'World Cup 2026').map((group) =>
-                <button
-                  key={group}
-                  onClick={() => setActiveGroup(group)}
-                  className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all shrink-0 ${
-                  activeGroup === group ?
-                  'bg-primary text-primary-foreground' :
-                  'bg-secondary/50 text-muted-foreground hover:bg-secondary'}`
-                  }>
-                  
+                  {groups.filter((g) => g !== 'all' && g !== 'World Cup 2026').map((group) => (
+                    <button
+                      key={group}
+                      onClick={() => setActiveGroup(group)}
+                      className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all shrink-0 ${
+                        activeGroup === group
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
+                      }`}
+                    >
                       {group}
                     </button>
-                )}
+                  ))}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
