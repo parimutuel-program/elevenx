@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     );
 
     // Build instruction data: discriminator + outcome (u8)
-    const discriminator = Buffer.from([23, 134, 101, 195, 219, 190, 8, 173]); // SHA256("global:refund").slice(0, 8)
+    const discriminator = Buffer.from([2, 96, 183, 251, 63, 208, 46, 46]);
     const instructionData = Buffer.alloc(9);
     discriminator.copy(instructionData, 0);
     instructionData.writeUInt8(outcomeIndex, 8);

@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
     }
 
     // Build instruction data: discriminator only
-    const discriminator = Buffer.from([183, 89, 142, 201, 73, 123, 200, 254]);
+    const discriminator = Buffer.from([173, 60, 2, 235, 56, 23, 75, 182]);
 
     console.log('[refundLp] programId:', programIdStr);
     console.log('[refundLp] Discriminator (hex):', discriminator.toString('hex'));
