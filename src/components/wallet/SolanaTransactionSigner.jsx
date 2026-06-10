@@ -280,6 +280,12 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         
         const programId = new PublicKey(instruction.programId);
         
+        // Guard: ensure keys array exists and has 4 accounts
+        if (!instruction.keys || !Array.isArray(instruction.keys) || instruction.keys.length === 0) {
+          console.error('[SolanaTransactionSigner] provide_liquidity: keys array is missing or empty:', instruction.keys);
+          throw new Error('Invalid instruction: keys array is undefined or empty. Backend must provide 4 accounts (market, lpOffer, lp, systemProgram).');
+        }
+        
         // Build keys: replace signer wallet placeholder, mark lp (index 2) as signer
         const keys = instruction.keys.map((k, i) => ({
           pubkey: new PublicKey(k.pubkey === 'SIGNER_WALLET' ? provider.publicKey.toBase58() : k.pubkey),

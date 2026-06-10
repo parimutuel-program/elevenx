@@ -103,17 +103,30 @@ Deno.serve(async (req) => {
       _isFutures: true,
     });
 
-    // Build valid Solana provide_liquidity instruction
+    // Build valid Solana provide_liquidity instruction with keys array
+    // Accounts: market, lp_offer, lp [signer], system_program
+    const keys = [
+      { pubkey: marketPda.toBase58(), isSigner: false, isWritable: true },
+      { pubkey: lpOfferPda.toBase58(), isSigner: false, isWritable: true },
+      { pubkey: walletAddress, isSigner: true, isWritable: true },
+      { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false },
+    ];
+
+    // Build instruction data: discriminator (8 bytes) + outcome (u8) + amount (u64 LE)
+    const discriminator = Buffer.from([40, 110, 107, 116, 174, 127, 97, 204]);
+    const instructionData = Buffer.alloc(17);
+    discriminator.copy(instructionData, 0);
+    instructionData.writeUInt8(outcomeIndex, 8);
+    instructionData.writeBigUInt64LE(BigInt(amountLamports), 9);
+
+    console.log('[provideFuturesLiquidity] Instruction data (hex):', instructionData.toString('hex'));
+    console.log('[provideFuturesLiquidity] Keys:', keys);
+
     const instruction = {
       instruction_type: 'provide_liquidity',
       programId: SOLANA_PROGRAM_ID,
-      accounts: {
-        market: marketPda.toBase58(),
-        lpOffer: lpOfferPda.toBase58(),
-        platformConfig: platformConfigPda.toBase58(),
-      },
-      outcome: outcomeIndex,
-      amountLamports: amountLamports,
+      keys,
+      instruction_data: instructionData.toString('base64'),
     };
 
     console.log('[provideFuturesLiquidity] Success, returning instruction');
