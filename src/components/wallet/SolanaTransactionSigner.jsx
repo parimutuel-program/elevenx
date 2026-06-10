@@ -268,74 +268,23 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         transaction.add(claimIx);
         
       } else if (instruction.instruction_type === 'provide_liquidity') {
-        // provide_liquidity — call the actual program instruction
+        // provide_liquidity — use instruction_data + keys directly from backend
         console.log('Creating provide_liquidity program instruction:', instruction);
         
         const programId = new PublicKey(instruction.programId);
         
-        // Build keys in the EXACT order required by the Rust ProvideLiquidity struct:
-        // market, lp_offer, lp (signer), system_program
-        const keys = [];
-        if (instruction.accounts) {
-          const accounts = instruction.accounts;
-          keys.push({ pubkey: new PublicKey(accounts.market), isSigner: false, isWritable: true });
-          keys.push({ pubkey: new PublicKey(accounts.lpOffer), isSigner: false, isWritable: true });
-          keys.push({ pubkey: provider.publicKey, isSigner: true, isWritable: true }); // lp signer
-          keys.push({ pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false }); // system_program
-        } else {
-          // Fallback for legacy format
-          keys.push({ pubkey: new PublicKey(instruction.marketPda), isSigner: false, isWritable: true });
-          keys.push({ pubkey: new PublicKey(instruction.lpOfferPda), isSigner: false, isWritable: true });
-          keys.push({ pubkey: provider.publicKey, isSigner: true, isWritable: true });
-          keys.push({ pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false });
-        }
+        // Build keys: replace signer wallet placeholder, mark lp (index 2) as signer
+        const keys = instruction.keys.map((k, i) => ({
+          pubkey: new PublicKey(k.pubkey === 'SIGNER_WALLET' ? provider.publicKey.toBase58() : k.pubkey),
+          isSigner: i === 2 ? true : k.isSigner,
+          isWritable: k.isWritable,
+        }));
         
-        // Anchor discriminator (8 bytes) + outcome (u8) + amount (u64 LE) = 17 bytes
-        const disc = await anchorDiscriminator('provide_liquidity');
-        const data = Buffer.alloc(17);
-        disc.copy(data, 0);
-        data.writeUInt8(instruction.outcome, 8);
-        data.writeBigUInt64LE(BigInt(instruction.amountLamports), 9);
-        console.log('[SolanaTransactionSigner] provide_liquidity discriminator:', disc.toString('hex'));
-        console.log('[SolanaTransactionSigner] full data:', data.toString('hex'));
+        // Use instruction_data from backend (has correct hardcoded discriminator)
+        const data = Buffer.from(instruction.instruction_data, 'base64');
+        console.log('[SolanaTransactionSigner] provide_liquidity data (hex):', data.toString('hex'));
         
-        const provideIx = new TransactionInstruction({
-          keys,
-          programId,
-          data,
-        });
-        
-        transaction.add(provideIx);
-        
-      } else if (instruction.instruction_type === 'provide_liquidity') {
-        // provide_liquidity — LP deposits SOL (parimutuel: bettor IS the LP)
-        console.log('Creating provide_liquidity program instruction:', instruction);
-        
-        const programId = new PublicKey(instruction.programId);
-        
-        // Build keys in the EXACT order required by the Rust ProvideLiquidity struct:
-        // market, lp_offer, lp (signer), system_program
-        const keys = [];
-        keys.push({ pubkey: new PublicKey(instruction.marketPda), isSigner: false, isWritable: true });
-        keys.push({ pubkey: new PublicKey(instruction.lpOfferPda), isSigner: false, isWritable: true });
-        keys.push({ pubkey: provider.publicKey, isSigner: true, isWritable: true }); // lp signer
-        keys.push({ pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false }); // system_program
-        
-        // Anchor discriminator (8 bytes) + outcome (u8) + amount (u64 LE) = 17 bytes
-        const disc = await anchorDiscriminator('provide_liquidity');
-        const data = Buffer.alloc(17);
-        disc.copy(data, 0);
-        data.writeUInt8(instruction.outcome, 8);
-        data.writeBigUInt64LE(BigInt(instruction.amountLamports), 9);
-        console.log('[SolanaTransactionSigner] provide_liquidity discriminator:', disc.toString('hex'));
-        console.log('[SolanaTransactionSigner] full data:', data.toString('hex'));
-        
-        const provideIx = new TransactionInstruction({
-          keys,
-          programId,
-          data,
-        });
-        
+        const provideIx = new TransactionInstruction({ keys, programId, data });
         transaction.add(provideIx);
         
       } else if (instruction.instruction_type === 'place_bet') {
