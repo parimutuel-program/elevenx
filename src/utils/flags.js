@@ -47,7 +47,21 @@ export const getFlagColor = (teamName) => {
   return colors[teamName.toLowerCase().trim()] || '#64748b';
 };
 
-// Get flag for team (returns country code)
+// Get flag emoji for team
 export const getTeamFlag = (teamName, countryCode) => {
-  return getCountryCode(teamName || '');
+  const code = getCountryCode(teamName || '');
+  const emojiFlags = {
+    'MX': '🇲🇽', 'ZA': '🇿🇦', 'KR': '🇰🇷', 'CZ': '🇨🇿', 'CA': '🇨🇦',
+    'BA': '🇧🇦', 'QA': '🇶🇦', 'CH': '🇨🇭', 'US': '🇺🇸', 'PY': '🇵🇾',
+    'AU': '🇦🇺', 'BR': '🇧🇷', 'MA': '🇲🇦', 'HT': '🇭🇹', 'DE': '🇩🇪',
+    'FR': '🇫🇷', 'GB': '🇬🇧', 'EN': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'ES': '🇪🇸', 'PT': '🇵🇹',
+    'NL': '🇳🇱', 'BE': '🇧🇪', 'HR': '🇭🇷', 'DK': '🇩🇰', 'RS': '🇷🇸',
+    'PL': '🇵🇱', 'SE': '🇸🇪', 'WA': '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'IT': '🇮🇹', 'AT': '🇦🇹',
+    'UA': '🇺🇦', 'AR': '🇦🇷', 'UY': '🇺🇾', 'CO': '🇨🇴', 'CL': '🇨🇱',
+    'EC': '🇪🇨', 'PE': '🇵🇪', 'SN': '🇸🇳', 'TN': '🇹🇳', 'EG': '🇪🇬',
+    'NG': '🇳🇬', 'CM': '🇨🇲', 'GH': '🇬🇭', 'DZ': '🇩🇿', 'JP': '🇯🇵',
+    'IR': '🇮🇷', 'SA': '🇸🇦', 'UZ': '🇺🇿', 'JO': '🇯🇴', 'PA': '🇵🇦',
+    'JM': '🇯🇲', 'CR': '🇨🇷',
+  };
+  return emojiFlags[code] || '🏳️';
 };

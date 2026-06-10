@@ -85,7 +85,7 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
           <div className="flex items-center justify-between gap-2 mb-3">
             {/* Team A */}
             <div className="flex-1 text-center">
-              <div className="w-10 h-10 mx-auto mb-1 rounded-md border-2 border-white/20 flex items-center justify-center text-xs font-bold text-white" style={{backgroundColor: getFlagColor(match.team_a)}}>
+              <div className="w-10 h-10 mx-auto mb-1 rounded-md border-2 border-white/20 flex items-center justify-center text-lg" style={{backgroundColor: getFlagColor(match.team_a)}}>
                 {getTeamFlag(match.team_a, match.team_a_flag)}
               </div>
               <p className="text-[10px] text-foreground truncate font-medium">{match.team_a}</p>
@@ -111,7 +111,7 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
 
             {/* Team B */}
             <div className="flex-1 text-center">
-              <div className="w-10 h-10 mx-auto mb-1 rounded-md border-2 border-white/20 flex items-center justify-center text-xs font-bold text-white" style={{backgroundColor: getFlagColor(match.team_b)}}>
+              <div className="w-10 h-10 mx-auto mb-1 rounded-md border-2 border-white/20 flex items-center justify-center text-lg" style={{backgroundColor: getFlagColor(match.team_b)}}>
                 {getTeamFlag(match.team_b, match.team_b_flag)}
               </div>
               <p className="text-[10px] text-foreground truncate font-medium">{match.team_b}</p>
