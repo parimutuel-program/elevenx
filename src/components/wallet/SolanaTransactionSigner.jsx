@@ -195,8 +195,8 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         
         transaction.add(createMarketIx);
         
-      } else if (instruction.instruction_type === 'settle_market' || instruction.instruction_type === 'settle_market_force') {
-        // settle_market / settle_market_force - program instruction to announce winner and settle market
+      } else if (instruction.instruction_type === 'settle_market' || instruction.instruction_type === 'settle_market_force' || instruction.instruction_type === 'test_announce_winner') {
+        // settle_market / settle_market_force / test_announce_winner - program instruction to announce winner and settle market
         console.log('=== SETTLE_MARKET INSTRUCTION ===');
         console.log('instruction_type:', instruction.instruction_type);
         console.log('Full instruction:', instruction);
