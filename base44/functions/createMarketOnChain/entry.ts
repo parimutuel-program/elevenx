@@ -4,8 +4,8 @@ import { Buffer } from 'node:buffer';
 import { sha256 } from 'npm:@noble/hashes@1.4.0/sha256';
 
 function getSolanaConfig() {
-  const rpcUrl = Deno.env.get('SOLANA_RPC_URL');
-  const programIdStr = Deno.env.get('ELEVENX_PROGRAM_ID');
+  const rpcUrl = Deno.env.get('SOLANA_RPC_URL') || '';
+  const programIdStr = Deno.env.get('ELEVENX_PROGRAM_ID') || '';
   if (!rpcUrl) throw new Error('SOLANA_RPC_URL secret not set');
   if (!programIdStr) throw new Error('ELEVENX_PROGRAM_ID secret not set');
   return { rpcUrl, programIdStr, programId: new PublicKey(programIdStr), connection: new Connection(rpcUrl, 'confirmed') };
