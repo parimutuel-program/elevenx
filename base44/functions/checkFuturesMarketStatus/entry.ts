@@ -71,17 +71,32 @@ Deno.serve(async (req) => {
     }
     
     // Parse account data to check status
+    // BetMarket layout: winning_outcome at offset 155, settled at 276, voided at 277
     const data = accountInfo.data;
-    const settledOffset = 244;
-    const isSettled = data[settledOffset] === 1;
-    const isVoided = data[settledOffset + 1] === 1;
-    const isPaused = data[settledOffset + 2] === 1;
+    const WINNING_OUTCOME_OFFSET = 155;
+    const SETTLED_OFFSET = 276;
+    const VOIDED_OFFSET = 277;
+    
+    const isSettled = data.length > SETTLED_OFFSET ? data[SETTLED_OFFSET] === 1 : false;
+    const isVoided = data.length > VOIDED_OFFSET ? data[VOIDED_OFFSET] === 1 : false;
+    const winningOutcome = data.length > WINNING_OUTCOME_OFFSET ? data[WINNING_OUTCOME_OFFSET] : 0; // 0=1st, 1=2nd, 2=3rd
+    const isPaused = false;
+    
+    console.log('[checkFuturesMarketStatus] Parsed:', {
+      isSettled,
+      isVoided,
+      winningOutcome,
+      settled_byte: data[SETTLED_OFFSET],
+      voided_byte: data[VOIDED_OFFSET],
+      winning_outcome_byte: data[WINNING_OUTCOME_OFFSET],
+    });
     
     return Response.json({
-      status: 'initialized',
+      status: isSettled ? 'settled' : 'initialized',
       settled: isSettled,
       voided: isVoided,
       paused: isPaused,
+      winning_outcome: winningOutcome,
       marketPda: marketPda.toBase58(),
       size: actualSize,
       lamports: accountInfo.lamports,

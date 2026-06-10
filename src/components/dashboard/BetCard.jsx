@@ -15,11 +15,11 @@ import ShareBetModal from '@/components/dashboard/ShareBetModal';
 
 const statusConfig = {
   active: { color: 'bg-primary/5 text-primary border-primary/10', icon: Clock, label: 'Active' },
-  pending: { color: 'bg-yellow-500/5 text-yellow-400 border-yellow-500/10', icon: Clock, label: 'Pending' },
-  won: { color: 'bg-accent/5 text-accent border-accent/10', icon: TrendingUp, label: 'Won' },
+  pending: { color: 'bg-yellow-500/5 text-yellow-400 border-yellow-500/10', icon: Clock, label: 'Awaiting Result' },
+  won: { color: 'bg-gradient-to-r from-accent/20 to-emerald-500/20 text-accent border border-accent/30', icon: Trophy, label: 'Won 🎉' },
   lost: { color: 'bg-destructive/5 text-destructive border-destructive/10', icon: TrendingDown, label: 'Lost' },
-  claimed: { color: 'bg-accent/5 text-accent border-accent/10', icon: Trophy, label: 'Claimed' },
-  refunded: { color: 'bg-secondary/50 text-secondary-foreground border-border', icon: Trophy, label: 'Refunded' },
+  claimed: { color: 'bg-gradient-to-r from-accent/20 to-emerald-500/20 text-accent border border-accent/30', icon: CheckCircle, label: 'Claimed ✓' },
+  refunded: { color: 'bg-blue-500/10 text-blue-400 border-blue-500/20', icon: Wallet, label: 'Refundable' },
   void: { color: 'bg-muted/50 text-muted-foreground border-border', icon: Clock, label: 'Void' }
 };
 
@@ -59,37 +59,62 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   // Fetch on-chain market state to override DB status for settled/voided markets
-  // This prevents showing Refund button on Draw markets (which are settled, not voided)
+  // CRITICAL: For futures markets, use checkFuturesMarketStatus; for matches use checkMarketStatus
+  const isFuturesMarket = !!bet.futures_market_id || (bet._isFutures && bet.match_id);
+  const marketIdForQuery = bet.futures_market_id || bet.match_id;
+  
   const { data: onChainState } = useQuery({
-    queryKey: ['onchain-market-state', bet.match_id],
+    queryKey: ['onchain-market-state', marketIdForQuery, isFuturesMarket],
     queryFn: async () => {
       try {
-        const res = await base44.functions.invoke('checkMarketStatus', { match_id: bet.match_id });
+        const res = await base44.functions.invoke(
+          isFuturesMarket ? 'checkFuturesMarketStatus' : 'checkMarketStatus',
+          isFuturesMarket ? 
+            { futures_market_id: marketIdForQuery } : 
+            { match_id: marketIdForQuery, bet_id: bet.id }
+        );
         return res.data;
-      } catch {
+      } catch (err) {
+        console.error('[BetCard] Failed to fetch on-chain market state:', err);
         return null;
       }
     },
-    enabled: !!bet.match_id && ['refunded', 'void', 'lost', 'won', 'active'].includes(bet.status),
-    staleTime: 60000,
+    enabled: !!marketIdForQuery && ['refunded', 'void', 'lost', 'won', 'active', 'pending'].includes(localBetStatus),
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
   });
 
   // Override localBetStatus based on on-chain data
   React.useEffect(() => {
     if (!onChainState || hasClaimedLocally) return;
+    
     const { settled, voided, winning_outcome } = onChainState;
+    console.log('[BetCard] On-chain state update:', { settled, voided, winning_outcome, bet_outcome: bet.outcome });
+    
     if (voided) {
       // Voided market → refundable
       if (localBetStatus !== 'claimed') setLocalBetStatus('refunded');
     } else if (settled) {
+      // Map bet outcome to index: a=0, b=1, draw=2 (for matches) or a=0 (1st), b=1 (2nd), draw=2 (3rd) for futures
       const betOutcomeIndex = bet.outcome === 'a' ? 0 : bet.outcome === 'b' ? 1 : 2;
+      
+      console.log('[BetCard] Market settled. Bet outcome index:', betOutcomeIndex, 'Winning outcome:', winning_outcome);
+      
       if (betOutcomeIndex === winning_outcome) {
-        if (localBetStatus !== 'claimed') setLocalBetStatus('won');
+        // BET WON!
+        if (localBetStatus !== 'claimed' && localBetStatus !== 'won') {
+          setLocalBetStatus('won');
+          console.log('[BetCard] Status changed to WON');
+        }
       } else {
-        setLocalBetStatus('lost');
+        // BET LOST
+        if (localBetStatus !== 'lost' && localBetStatus !== 'claimed') {
+          setLocalBetStatus('lost');
+          console.log('[BetCard] Status changed to LOST');
+        }
       }
     }
-  }, [onChainState, bet.outcome, hasClaimedLocally]);
+  }, [onChainState, bet.outcome, hasClaimedLocally, bet.futures_market_id]);
 
   // Fetch match data OR futures market data
   const { data: match } = useQuery({
@@ -499,12 +524,25 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
               }
 
               {/* Action Button */}
-              <div className="pt-2 border-t border-border/30 mt-auto">
+              <div className="pt-2 border-t border-border/30 mt-auto space-y-2">
+                {/* WON - Show prominent claim button */}
+                {localBetStatus === 'won' && (
+                  <div className="bg-gradient-to-r from-accent/10 to-emerald-500/10 border border-accent/30 rounded-lg p-2 mb-2">
+                    <p className="text-[9px] text-accent font-bold mb-1">🎉 You won!</p>
+                    <p className="text-[8px] text-muted-foreground">
+                      {isFutures ? 
+                        `${outcomeTeam} won ${bet.outcome === 'a' ? '1st' : bet.outcome === 'b' ? '2nd' : '3rd'} place` :
+                        `${outcomeTeam} won the match`
+                      }
+                    </p>
+                  </div>
+                )}
+                
                 {canWithdraw &&
                 <Button
                   onClick={() => withdrawMutation.mutate()}
                   disabled={withdrawMutation.isPending || withdrawDialogOpen}
-                  className="w-full h-8 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 font-bold rounded-lg border border-yellow-500/20 text-xs">
+                  className="w-full h-9 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 font-bold rounded-lg border border-yellow-500/20 text-xs">
                   
                     {withdrawMutation.isPending ?
                   <div className="w-3.5 h-3.5 border-2 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin" /> :
@@ -520,14 +558,14 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
                 <Button
                   onClick={() => claimMutation.mutate()}
                   disabled={claimMutation.isPending || claimDialogOpen}
-                  className="w-full h-8 bg-accent/10 hover:bg-accent/20 text-accent font-bold rounded-lg border border-accent/20 text-xs">
+                  className="w-full h-9 bg-gradient-to-r from-accent to-emerald-500 hover:from-accent/90 hover:to-emerald-500/90 text-white font-bold rounded-lg shadow-lg text-xs">
                   
                     {claimMutation.isPending ?
-                  <div className="w-3.5 h-3.5 border-2 border-accent/30 border-t-accent rounded-full animate-spin" /> :
+                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> :
 
                   <>
                         <Trophy className="w-3.5 h-3.5 mr-1.5" />
-                        Claim ◎{(bet.potential_payout || 0).toFixed(2)}
+                        Claim ◎{(bet.potential_payout || 0).toFixed(4)}
                       </>
                   }
                   </Button>
@@ -536,22 +574,22 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
                 <Button
                   onClick={() => claimRefundMutation.mutate()}
                   disabled={claimRefundMutation.isPending}
-                  className="w-full h-8 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 font-bold rounded-lg border border-yellow-500/20 text-xs">
+                  className="w-full h-9 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 font-bold rounded-lg border border-blue-500/20 text-xs">
                   
                     {claimRefundMutation.isPending ?
-                  <div className="w-3.5 h-3.5 border-2 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin" /> :
+                  <div className="w-3.5 h-3.5 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" /> :
 
                   <>
                         <Wallet className="w-3.5 h-3.5 mr-1.5" />
-                        Claim Refund
+                        Claim Refund ◎{(bet.amount || 0).toFixed(4)}
                       </>
                   }
                   </Button>
                 }
-                {isCompleted &&
+                {isCompleted && localBetStatus !== 'won' &&
                 <div className="text-center text-[9px] text-muted-foreground">
                     {localBetStatus === 'claimed' &&
-                  <span className="text-accent font-bold">◎{(localActualPayout || bet.potential_payout || 0).toFixed(2)} claimed</span>
+                  <span className="text-accent font-bold">◎{(localActualPayout || bet.potential_payout || 0).toFixed(4)} claimed</span>
                   }
                     {localBetStatus === 'lost' && <span className="text-destructive">Bet lost</span>}
                     {localBetStatus === 'void' && <span>Bet voided</span>}
