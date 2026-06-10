@@ -76,18 +76,22 @@ pub fn submit_oracle_vote(ctx: Context<SubmitOracleVote>, winning_outcome: u8) -
     Ok(())
 }
 
-// ── force_settle_market ────────────────────────────────────────────────────────
-// Admin-only instruction to force-settle a market that was incorrectly voided.
-// Bypasses the settled/voided checks to route funds to fee vault.
+// ── force_void_market ────────────────────────────────────────────────────────
+// Admin-only: Emergency recovery to VOID a stuck market (NOT settle).
+// SECURITY FIX: Removed force_settle_market; admin can only void (refund all), not pick winners.
 
-pub fn force_settle_market(ctx: Context<ForceSettleMarket>, winning_outcome: u8) -> Result<()> {
+pub fn force_void_market(ctx: Context<ForceVoidMarket>) -> Result<()> {
     let market = &mut ctx.accounts.market;
-    let fee_vault = &mut ctx.accounts.fee_vault;
+    let clock = Clock::get()?;
     
-    require!(winning_outcome < market.outcome_count, BettingError::InvalidOutcome);
-    
-    // Execute settlement (routes funds to fee vault)
-    execute_settlement(market, winning_outcome, fee_vault)?;
+    require!(!market.settled, BettingError::AlreadySettled);
+    require!(!market.voided, BettingError::MarketVoided);
+    // Only after the match should have resolved — cannot pre-empt live betting.
+    require!(clock.unix_timestamp >= market.settle_after, BettingError::TooEarlyToSettle);
+
+    // Recovery = void (enables refunds to everyone), NOT admin picking a winner.
+    market.voided = true;
+    market.settled = true;
     
     Ok(())
 }
@@ -133,10 +137,10 @@ pub struct SubmitOracleVote<'info> {
     pub system_program: Program<'info, System>,
 }
 
-// ── ForceSettleMarket Accounts ────────────────────────────────────────────────
+// ── ForceVoidMarket Accounts ────────────────────────────────────────────────
 
 #[derive(Accounts)]
-pub struct ForceSettleMarket<'info> {
+pub struct ForceVoidMarket<'info> {
     #[account(
         mut,
         seeds = [b"market", market.match_id.as_ref()],
@@ -144,15 +148,11 @@ pub struct ForceSettleMarket<'info> {
     )]
     pub market: Account<'info, BetMarket>,
 
-    #[account(mut, seeds = [b"fee_vault"], bump = fee_vault.bump)]
-    pub fee_vault: Account<'info, FeeVault>,
-
-    // Only admin can force-settle
-    #[account(mut, constraint = admin.key() == platform_config.admin @ BettingError::Unauthorized)]
-    pub admin: Signer<'info>,
-
     #[account(seeds = [b"platform"], bump = platform_config.bump)]
     pub platform_config: Account<'info, PlatformConfig>,
+
+    #[account(constraint = admin.key() == platform_config.admin @ BettingError::Unauthorized)]
+    pub admin: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 }

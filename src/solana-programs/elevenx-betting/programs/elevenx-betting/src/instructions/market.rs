@@ -99,12 +99,22 @@ pub fn update_market_timestamps(
 }
 
 // ── sweep_market_funds ────────────────────────────────────────────────────────
-/// Admin-only: Sweep all remaining SOL from a market account to admin wallet (for stuck funds after settlement)
+/// Admin-only: Sweep residual SOL from a settled/voided market.
+/// SECURITY FIX: 30-day grace period prevents sweeping unclaimed winnings.
 pub fn sweep_market_funds(ctx: Context<SweepMarketFunds>) -> Result<()> {
     let market = &mut ctx.accounts.market;
+    let clock = Clock::get()?;
     
     // Only allow sweeping from settled or voided markets
     require!(market.settled || market.voided, BettingError::TooEarlyToSettle);
+    
+    // ── FIX: 30-day grace period after settlement ──────────────────────────────
+    // Winners/LPs must have had time to claim before admin can sweep residuals.
+    const SWEEP_GRACE_SECONDS: i64 = 60 * 60 * 24 * 30; // 30 days
+    require!(
+        clock.unix_timestamp >= market.settle_after.saturating_add(SWEEP_GRACE_SECONDS),
+        BettingError::TooEarlyToSettle
+    );
     
     // Get remaining balance in market account
     let market_balance = **market.to_account_info().try_borrow_lamports()?;

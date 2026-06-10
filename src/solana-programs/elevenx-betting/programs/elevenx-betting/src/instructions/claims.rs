@@ -129,6 +129,50 @@ pub fn withdraw_lp_winnings(ctx: Context<WithdrawLpWinnings>, amount: u64) -> Re
 
 
 
+// ── refund_lp ────────────────────────────────────────────────────────────────
+/// LP refund on voided market — returns matched liability + unmatched liquidity.
+/// SECURITY FIX: Prevents LP funds from being stranded on void.
+pub fn refund_lp(ctx: Context<RefundLp>) -> Result<()> {
+    let market = &ctx.accounts.market;
+    let offer = &ctx.accounts.lp_offer;
+
+    require!(market.voided, BettingError::NotVoided);
+    require!(!offer.fully_withdrawn, BettingError::NothingToRefund);
+
+    // Unmatched liquidity available for withdrawal
+    let unmatched = offer.available();
+    
+    // If unmatched was already withdrawn via withdraw_liquidity, `closed` is true
+    let unmatched_owed = if offer.closed { 0 } else { unmatched };
+
+    // Total refund = matched liability + unmatched (minus already withdrawn)
+    let total_refund = unmatched_owed
+        .checked_add(offer.amount_matched)
+        .ok_or(BettingError::Overflow)?
+        .checked_sub(offer.withdrawn_amount)
+        .ok_or(BettingError::Overflow)?;
+
+    require!(total_refund > 0, BettingError::NothingToRefund);
+    require!(
+        **ctx.accounts.market.to_account_info().try_borrow_lamports()? >= total_refund,
+        BettingError::NothingToRefund
+    );
+
+    let offer_mut = &mut ctx.accounts.lp_offer;
+    offer_mut.withdrawn_amount = offer_mut
+        .withdrawn_amount
+        .checked_add(total_refund)
+        .ok_or(BettingError::Overflow)?;
+    offer_mut.fully_withdrawn = true;
+    offer_mut.closed = true;
+
+    **ctx.accounts.market.to_account_info().try_borrow_mut_lamports()? -= total_refund;
+    **ctx.accounts.lp_wallet.try_borrow_mut_lamports()? += total_refund;
+
+    Ok(())
+}
+
+
 // ── Accounts ──────────────────────────────────────────────────────────────────
 
 #[derive(Accounts)]
@@ -200,6 +244,31 @@ pub struct WithdrawLpWinnings<'info> {
 
     #[account(mut, seeds = [b"fee_vault"], bump = fee_vault.bump)]
     pub fee_vault: Account<'info, FeeVault>,
+
+    /// CHECK: Lamport transfer to LP; address verified against lp_offer.lp.
+    #[account(mut, constraint = lp_wallet.key() == lp_offer.lp @ BettingError::Unauthorized)]
+    pub lp_wallet: UncheckedAccount<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+// ── RefundLp Accounts ────────────────────────────────────────────────────────
+
+#[derive(Accounts)]
+pub struct RefundLp<'info> {
+    #[account(
+        mut,
+        seeds = [b"market", market.match_id.as_ref()],
+        bump = market.bump,
+    )]
+    pub market: Account<'info, BetMarket>,
+
+    #[account(
+        mut,
+        seeds = [b"lp_offer", market.key().as_ref(), lp_offer.lp.as_ref(), &[lp_offer.outcome]],
+        bump = lp_offer.bump,
+    )]
+    pub lp_offer: Account<'info, LpOffer>,
 
     /// CHECK: Lamport transfer to LP; address verified against lp_offer.lp.
     #[account(mut, constraint = lp_wallet.key() == lp_offer.lp @ BettingError::Unauthorized)]

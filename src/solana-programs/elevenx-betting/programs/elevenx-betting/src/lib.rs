@@ -81,13 +81,12 @@ pub mod elevenx_betting {
         instructions::oracle::submit_oracle_vote(ctx, winning_outcome)
     }
 
-    /// Admin-only: Force-settle a market that was incorrectly voided.
-    /// Bypasses settled/voided checks to route funds to fee vault.
-    pub fn force_settle_market(
-        ctx: Context<ForceSettleMarket>,
-        winning_outcome: u8,
+    /// Admin-only: Force-void a stuck market (emergency recovery).
+    /// Enables refunds to all bettors and LPs — admin cannot pick winners.
+    pub fn force_void_market(
+        ctx: Context<ForceVoidMarket>,
     ) -> Result<()> {
-        instructions::oracle::force_settle_market(ctx, winning_outcome)
+        instructions::oracle::force_void_market(ctx)
     }
 
     /// Admin-only: Sweep residual SOL from a settled/voided market to admin wallet.
