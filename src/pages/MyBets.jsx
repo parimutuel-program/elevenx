@@ -135,33 +135,12 @@ export default function MyBets() {
   const { data: myBets = [], isLoading, refetch } = useQuery({
     queryKey: ['myBets', authWallet, phantomWallet, user?.id],
     queryFn: async () => {
-      console.log('[MyBets] Query executing, wallets:', { authWallet, phantomWallet, allMyWallets, userId: user?.id });
       const all = await base44.entities.UserBet.list('-created_date', 100);
-      console.log('[MyBets] Total bets in DB:', all.length);
-      console.log('[MyBets] All bets:', all.map(b => ({ id: b.id, wallet: b.wallet_address?.slice(0, 8), amount: b.amount, status: b.status, role: b.role, created_by: b.created_by_id })));
-      
-      // CRITICAL FIX: Filter by wallet address OR by created_by_id (user account)
-      // This ensures bets from ALL your wallets show up, not just currently connected ones
-      const filtered = all.filter((ub) => {
-        // Match by any wallet address
+      return all.filter((ub) => {
         const walletMatch = allMyWallets.length > 0 && allMyWallets.some(w => ub.wallet_address?.trim() === w?.trim());
-        // Match by user account (for bets from other wallets you've used)
         const userMatch = user?.id && ub.created_by_id === user.id;
-        
-        const matches = walletMatch || userMatch;
-        console.log('[MyBets] Bet filter check:', { 
-          bet_id: ub.id, 
-          bet_wallet: ub.wallet_address?.slice(0, 8), 
-          bet_created_by: ub.created_by_id,
-          walletMatch, 
-          userMatch,
-          matches 
-        });
-        return matches;
+        return walletMatch || userMatch;
       });
-      
-      console.log('[MyBets] Filtered bets:', filtered.length, filtered.map(b => ({ id: b.id, role: b.role, status: b.status, wallet: b.wallet_address?.slice(0, 8) })));
-      return filtered;
     },
     enabled: !!user || allMyWallets.length > 0,
     refetchOnWindowFocus: true,
@@ -175,37 +154,13 @@ export default function MyBets() {
     queryFn: () => base44.entities.Match.list()
   });
 
-  // Filter: Regular bets show in My Bets, LP positions show ONLY in LP Dashboard
-  // LP positions are identified by: role='lp'
-  console.log('[MyBets] myBets (raw from DB):', myBets.map(b => ({ id: b.id, role: b.role, match_title: b.match_title, futures_market_id: b.futures_market_id, status: b.status })));
   const myMatcherBets = myBets.filter(b => b.role !== 'lp');
   const myLpBets = myBets.filter(b => b.role === 'lp');
-  console.log('[MyBets] myMatcherBets (filtered):', myMatcherBets.length, myMatcherBets);
-  console.log('[MyBets] myLpBets (LP positions):', myLpBets.length, myLpBets.map(b => ({ id: b.id, role: b.role, status: b.status })));
   
-  // Debug toggle: show all bets including LP positions
   const displayBets = showAllBets ? myBets : myMatcherBets;
   
-  // Separate futures bets from match bets
-  // Futures bets have futures_market_id (primary indicator)
-  console.log('[MyBets] displayBets:', displayBets.map(b => ({ id: b.id, match_title: b.match_title, futures_market_id: b.futures_market_id, role: b.role })));
-  const myFuturesBets = displayBets.filter(b => {
-    const isFutures = !!b.futures_market_id;
-    console.log('[MyBets] Checking futures:', { id: b.id, match_title: b.match_title, futures_market_id: b.futures_market_id, isFutures });
-    return isFutures;
-  });
-  console.log('[MyBets] myFuturesBets result:', myFuturesBets.length, myFuturesBets);
-  const myMatchBets = displayBets.filter(b => {
-    const isMatch = b.match_id && !b.futures_market_id;
-    console.log('[MyBets] Match bet:', { id: b.id, match_title: b.match_title, isMatch });
-    return isMatch;
-  });
-  
-  console.log('[MyBets] Classified bets:', {
-    total: myMatcherBets.length,
-    futures: myFuturesBets.map(b => ({ id: b.id, match_title: b.match_title, futures_market_id: b.futures_market_id, status: b.status })),
-    matches: myMatchBets.map(b => ({ id: b.id, match_title: b.match_title, status: b.status }))
-  });
+  const myFuturesBets = displayBets.filter(b => !!b.futures_market_id);
+  const myMatchBets = displayBets.filter(b => b.match_id && !b.futures_market_id);
   
   // Group match bets by match_id + outcome
   const groupedMatchBets = myMatchBets.reduce((acc, bet) => {
@@ -258,28 +213,7 @@ export default function MyBets() {
   const groupedMatchBetsArray = Object.values(groupedMatchBets);
   const groupedFuturesBetsArray = Object.values(groupedFuturesBets);
   
-  console.log('[MyBets] GROUPED FUTURES:', groupedFuturesBetsArray.map(b => ({
-    key: `${b.futures_market_id || b.match_id}-${b.outcome}`,
-    betIds: b.betIds,
-    status: b.status,
-    outcome: b.outcome_label,
-    totalAmount: b.totalAmount
-  })));
-  
-  // Debug: Check which futures bets pass the filter
-  console.log('[MyBets] Futures statuses (raw):', groupedFuturesBetsArray.map(b => ({
-    betIds: b.betIds,
-    status: JSON.stringify(b.status),
-    statusLength: b.status?.length,
-    statusTrimmed: b.status?.trim(),
-    outcome: b.outcome_label
-  })));
-  const futuresForMyBets = groupedFuturesBetsArray.filter(b => ['active', 'pending', 'won'].includes(b.status));
-  console.log('[MyBets] Futures for My Bets tab:', futuresForMyBets.length, futuresForMyBets.map(b => ({
-    betIds: b.betIds,
-    status: b.status,
-    outcome: b.outcome_label
-  })));
+
   
   const totalStaked = [...groupedMatchBetsArray, ...groupedFuturesBetsArray].reduce((s, b) => s + (b.totalAmount || 0), 0);
   const totalWon = [...groupedMatchBetsArray, ...groupedFuturesBetsArray].filter((b) => b.status === 'won' || b.status === 'claimed').reduce((s, b) => s + (b.totalPayout || 0), 0);
@@ -361,24 +295,7 @@ export default function MyBets() {
     console.log('[MyBets] Cache cleared and refetched');
   };
 
-  // Debug: Log all bets and their wallet addresses
-  console.log('[MyBets DEBUG] ===== BET FILTERING DEBUG =====');
-  console.log('[MyBets DEBUG] All wallets to match:', allMyWallets);
-  console.log('[MyBets DEBUG] Total bets in myBets:', myBets.length);
-  myBets.forEach((bet, idx) => {
-    console.log(`[MyBets DEBUG] Bet #${idx + 1}:`, {
-      id: bet.id,
-      wallet: bet.wallet_address,
-      role: bet.role,
-      status: bet.status,
-      amount: bet.amount,
-      match_title: bet.match_title,
-      futures_market_id: bet.futures_market_id,
-      matches_wallet: allMyWallets.some(w => bet.wallet_address?.trim() === w?.trim()),
-      created_by: bet.created_by_id
-    });
-  });
-  console.log('[MyBets DEBUG] ========================================');
+
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -613,8 +530,9 @@ export default function MyBets() {
               </div>
             )}
             
-            {groupedMatchBetsArray.length === 0 && groupedFuturesBetsArray.length === 0 && (
-              <EmptyState message="No betting history" />
+            {groupedMatchBetsArray.filter(b => ['lost', 'claimed', 'refunded', 'void'].includes(b.status)).length === 0 &&
+             groupedFuturesBetsArray.filter(b => ['lost', 'won', 'claimed', 'refunded', 'void'].includes(b.status)).length === 0 && (
+              <EmptyState message="No betting history yet" />
             )}
           </div>
         </TabsContent>
