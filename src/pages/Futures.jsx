@@ -57,11 +57,12 @@ export default function Futures() {
     }
     
     const groupTeams = WORLD_CUP_GROUPS_2026[activeGroup]?.map(t => t.name) || [];
-    // Show markets for this group: country matches group name (e.g., "Group A") OR team names
+    // For group tabs A-L: show markets where country is a team in that group OR is the group itself (Group A Winner markets)
     return futuresMarkets.filter(m => {
-      if (m.country === activeGroup) return true; // Group winner markets
-      if (groupTeams.includes(m.country)) return true; // Team-specific markets
-      return false;
+      // Include "Group X Winner" markets for the selected group
+      if (m.country === `Group ${activeGroup}`) return true;
+      // Include individual country markets that belong to this group
+      return groupTeams.includes(m.country);
     });
   }, [futuresMarkets, activeGroup]);
 
