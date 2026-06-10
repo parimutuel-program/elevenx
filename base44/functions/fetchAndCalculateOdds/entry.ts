@@ -136,6 +136,167 @@ Deno.serve(async (req) => {
 
     console.log('Processed winner outcomes:', winnerOutcomes.length);
 
+    // Fetch World Cup match fixtures
+    console.log('[fetchAndCalculateOdds] Fetching match fixtures...');
+    let matchEvents = [];
+    
+    try {
+      const matchesResponse = await fetch(
+        `https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup/odds?apiKey=${THE_ODDS_API_KEY}&regions=us&markets=h2h&oddsFormat=decimal`,
+        { headers: { 'Accept': 'application/json' } }
+      );
+      
+      if (matchesResponse.ok) {
+        const matchesData = await matchesResponse.json();
+        if (Array.isArray(matchesData)) {
+          matchEvents = matchesData;
+          console.log(`[fetchAndCalculateOdds] Found ${matchEvents.length} match fixtures`);
+        }
+      }
+    } catch (err) {
+      console.error('[fetchAndCalculateOdds] Error fetching matches:', err.message);
+    }
+
+    // Process matches and create/update Match entities
+    const existingMatches = await base44.entities.Match.list();
+    const existingBets = await base44.entities.Bet.list();
+    
+    for (const event of matchEvents) {
+      try {
+        const homeTeam = event.home_team;
+        const awayTeam = event.away_team;
+        const commenceTime = new Date(event.commence_time);
+        
+        if (!homeTeam || !awayTeam) continue;
+        
+        // Get odds from first bookmaker
+        let oddsA = 2.0;
+        let oddsB = 2.0;
+        let oddsDraw = 3.0;
+        
+        if (event.bookmakers && event.bookmakers.length > 0) {
+          const bookmaker = event.bookmakers[0];
+          const markets = bookmaker.markets;
+          
+          if (markets && markets.length > 0) {
+            const h2hMarket = markets.find(m => m.key === 'h2h');
+            if (h2hMarket && h2hMarket.outcomes) {
+              const homeOutcome = h2hMarket.outcomes.find(o => o.name === homeTeam);
+              const awayOutcome = h2hMarket.outcomes.find(o => o.name === awayTeam);
+              const drawOutcome = h2hMarket.outcomes.find(o => o.name === 'Draw' || o.name === 'Tie');
+              
+              if (homeOutcome) oddsA = homeOutcome.price;
+              if (awayOutcome) oddsB = awayOutcome.price;
+              if (drawOutcome) oddsDraw = drawOutcome.price;
+            }
+          }
+        }
+        
+        // Determine group stage (simplified - would need better mapping in production)
+        const groupStage = 'Group Stage';
+        
+        // Calculate match end time (assume 2 hours after start)
+        const matchEndTime = new Date(commenceTime.getTime() + 2 * 60 * 60 * 1000);
+        
+        // Check if match already exists
+        const existingMatch = existingMatches.find(m => 
+          m.team_a === homeTeam && m.team_b === awayTeam
+        );
+        
+        if (existingMatch) {
+          // Update existing match with latest odds
+          await base44.entities.Match.update(existingMatch.id, {
+            match_time: commenceTime.toISOString(),
+            match_end_time: matchEndTime.toISOString(),
+            venue: event.home_team ? 'TBD' : undefined,
+          });
+          
+          // Update or create Bet entity
+          const existingBet = existingBets.find(b => b.match_id === existingMatch.id);
+          if (existingBet) {
+            await base44.entities.Bet.update(existingBet.id, {
+              odds_a: oddsA,
+              odds_b: oddsB,
+              odds_draw: oddsDraw,
+              odds_bookmaker: event.bookmakers?.[0]?.title || 'Average',
+              odds_updated_at: new Date().toISOString(),
+            });
+          } else {
+            await base44.entities.Bet.create({
+              match_id: existingMatch.id,
+              title: `${homeTeam} vs ${awayTeam}`,
+              outcome_a: homeTeam,
+              outcome_b: awayTeam,
+              outcome_draw: 'Draw',
+              open_until: commenceTime.toISOString(),
+              status: 'open',
+              odds_a: oddsA,
+              odds_b: oddsB,
+              odds_draw: oddsDraw,
+              odds_bookmaker: event.bookmakers?.[0]?.title || 'Average',
+              odds_updated_at: new Date().toISOString(),
+              pool_a: 0,
+              pool_b: 0,
+              pool_draw: 0,
+              total_pool: 0,
+              fee_percent: 200, // 2%
+              total_bettors: 0,
+              solana_market_created: false,
+              solana_market_pda: null,
+            });
+          }
+          
+          console.log(`Updated match: ${homeTeam} vs ${awayTeam}`);
+        } else {
+          // Create new Match entity
+          const newMatch = await base44.entities.Match.create({
+            team_a: homeTeam,
+            team_b: awayTeam,
+            team_a_flag: getFlag(homeTeam),
+            team_b_flag: getFlag(awayTeam),
+            group_stage: groupStage,
+            match_time: commenceTime.toISOString(),
+            match_end_time: matchEndTime.toISOString(),
+            venue: 'TBD',
+            status: 'upcoming',
+            score_a: 0,
+            score_b: 0,
+            winner: '',
+          });
+          
+          // Create Bet entity for this match
+          await base44.entities.Bet.create({
+            match_id: newMatch.id,
+            title: `${homeTeam} vs ${awayTeam}`,
+            outcome_a: homeTeam,
+            outcome_b: awayTeam,
+            outcome_draw: 'Draw',
+            open_until: commenceTime.toISOString(),
+            status: 'open',
+            odds_a: oddsA,
+            odds_b: oddsB,
+            odds_draw: oddsDraw,
+            odds_bookmaker: event.bookmakers?.[0]?.title || 'Average',
+            odds_updated_at: new Date().toISOString(),
+            pool_a: 0,
+            pool_b: 0,
+            pool_draw: 0,
+            total_pool: 0,
+            fee_percent: 200,
+            total_bettors: 0,
+            solana_market_created: false,
+            solana_market_pda: null,
+          });
+          
+          console.log(`✅ Created match: ${homeTeam} vs ${awayTeam} with odds ${oddsA.toFixed(2)} - ${oddsDraw.toFixed(2)} - ${oddsB.toFixed(2)}`);
+        }
+      } catch (err) {
+        console.error(`Error processing match ${event.home_team} vs ${event.away_team}:`, err.message);
+      }
+    }
+
+    console.log('[fetchAndCalculateOdds] Match sync complete');
+
     // Calculate 2nd and 3rd place odds using formula
     const calculatedOutcomes = winnerOutcomes.map(team => {
       const firstPlaceOdds = team.odds;
@@ -218,6 +379,7 @@ Deno.serve(async (req) => {
     return Response.json({
       success: true,
       countriesProcessed: calculatedOutcomes.length,
+      matchesSynced: matchEvents.length,
       timestamp: new Date().toISOString(),
     });
 
