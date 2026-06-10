@@ -467,60 +467,82 @@ export default function LpDashboard() {
   const [pendingFuturesTx, setPendingFuturesTx] = useState(null);
   const [pendingFuturesCommit, setPendingFuturesCommit] = useState(null);
   
-  // Fetch on-chain lp_offer data for futures markets
+  // Fetch on-chain lp_offer data for futures markets - ONE CARD PER OUTCOME (0,1,2)
   const { data: onChainFuturesLpOffers = {} } = useQuery({
-    queryKey: ['onchain-futures-lp-offers', walletAddress],
+    queryKey: ['onchain-futures-lp-offers', walletAddress, futuresMarkets.length],
     queryFn: async () => {
-      if (!walletAddress) return {};
+      if (!walletAddress || futuresMarkets.length === 0) return {};
       
-      console.log('[LpDashboard] Fetching on-chain futures LP offers...');
+      console.log('[LpDashboard] === FETCHING ON-CHAIN FUTURES LP OFFERS ===');
       const result = {};
       
-      // For each futures market, fetch lp_offer PDAs for outcomes 0, 1, 2
+      // For each futures market, derive and fetch lp_offer PDAs for outcomes 0, 1, 2
       for (const market of futuresMarkets) {
         const marketPda = market.solana_market_pda;
-        if (!marketPda) continue;
+        if (!marketPda) {
+          console.log('[LpDashboard] Skipping market', market.id, '- no solana_market_pda');
+          continue;
+        }
         
+        console.log('[LpDashboard] Market:', market.id, 'solana_market_pda:', marketPda);
         const marketOffers = [];
         
         // Derive PDA for each outcome: seeds ["lp_offer", marketPda, lpWallet, [outcome]]
         for (let outcome = 0; outcome < 3; outcome++) {
           try {
-            const res = await base44.functions.invoke('deriveLpOfferPda', {
+            // Derive PDA
+            const deriveRes = await base44.functions.invoke('deriveLpOfferPda', {
               market_pda: marketPda,
               lp_wallet: walletAddress,
               outcome,
             });
             
-            if (res.data.pda) {
-              // Fetch on-chain data for this PDA
-              const chainData = await base44.functions.invoke('fetchLpOfferOnChain', {
-                pda: res.data.pda,
+            const pda = deriveRes.data?.pda;
+            if (!pda) {
+              console.log('[LpDashboard] No PDA derived for outcome', outcome);
+              continue;
+            }
+            
+            console.log('[LpDashboard] Outcome', outcome, '→ PDA:', pda);
+            
+            // Fetch on-chain account data directly
+            const chainData = await base44.functions.invoke('fetchLpOfferOnChain', {
+              pda,
+            });
+            
+            if (chainData.data && chainData.data.exists && !chainData.error) {
+              console.log('[LpDashboard] ✓ On-chain data for outcome', outcome, ':', chainData.data);
+              marketOffers.push({
+                outcome,
+                pda,
+                amountCommitted: chainData.data.amountCommitted,
+                amountMatched: chainData.data.amountMatched,
+                available: chainData.data.available,
+                closed: chainData.data.closed,
               });
-              
-              if (chainData.data && !chainData.error) {
-                marketOffers.push({
-                  outcome,
-                  pda: res.data.pda,
-                  ...chainData.data,
-                });
-              }
+            } else {
+              console.log('[LpDashboard] ✗ No data for outcome', outcome, '- error:', chainData.error);
             }
           } catch (err) {
-            console.error('[LpDashboard] Error fetching lp_offer for outcome', outcome, ':', err.message);
+            console.error('[LpDashboard] Error fetching outcome', outcome, ':', err.message);
           }
         }
         
         if (marketOffers.length > 0) {
+          console.log('[LpDashboard] Market', market.id, 'has', marketOffers.length, 'offers:', marketOffers);
           result[market.id] = marketOffers;
         }
       }
       
-      console.log('[LpDashboard] On-chain futures LP offers:', result);
+      console.log('[LpDashboard] === FINAL RESULT ===');
+      console.log('[LpDashboard] Total markets with offers:', Object.keys(result).length);
+      console.log('[LpDashboard] Result:', result);
       return result;
     },
     enabled: !!walletAddress && futuresMarkets.length > 0,
-    staleTime: 5000,
+    staleTime: 3000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   const handleFuturesLiquidity = async (outcome, amount) => {
