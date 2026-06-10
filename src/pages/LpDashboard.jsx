@@ -466,6 +466,62 @@ export default function LpDashboard() {
 
   const [pendingFuturesTx, setPendingFuturesTx] = useState(null);
   const [pendingFuturesCommit, setPendingFuturesCommit] = useState(null);
+  
+  // Fetch on-chain lp_offer data for futures markets
+  const { data: onChainFuturesLpOffers = {} } = useQuery({
+    queryKey: ['onchain-futures-lp-offers', walletAddress],
+    queryFn: async () => {
+      if (!walletAddress) return {};
+      
+      console.log('[LpDashboard] Fetching on-chain futures LP offers...');
+      const result = {};
+      
+      // For each futures market, fetch lp_offer PDAs for outcomes 0, 1, 2
+      for (const market of futuresMarkets) {
+        const marketPda = market.solana_market_pda;
+        if (!marketPda) continue;
+        
+        const marketOffers = [];
+        
+        // Derive PDA for each outcome: seeds ["lp_offer", marketPda, lpWallet, [outcome]]
+        for (let outcome = 0; outcome < 3; outcome++) {
+          try {
+            const res = await base44.functions.invoke('deriveLpOfferPda', {
+              market_pda: marketPda,
+              lp_wallet: walletAddress,
+              outcome,
+            });
+            
+            if (res.data.pda) {
+              // Fetch on-chain data for this PDA
+              const chainData = await base44.functions.invoke('fetchLpOfferOnChain', {
+                pda: res.data.pda,
+              });
+              
+              if (chainData.data && !chainData.error) {
+                marketOffers.push({
+                  outcome,
+                  pda: res.data.pda,
+                  ...chainData.data,
+                });
+              }
+            }
+          } catch (err) {
+            console.error('[LpDashboard] Error fetching lp_offer for outcome', outcome, ':', err.message);
+          }
+        }
+        
+        if (marketOffers.length > 0) {
+          result[market.id] = marketOffers;
+        }
+      }
+      
+      console.log('[LpDashboard] On-chain futures LP offers:', result);
+      return result;
+    },
+    enabled: !!walletAddress && futuresMarkets.length > 0,
+    staleTime: 5000,
+  });
 
   const handleFuturesLiquidity = async (outcome, amount) => {
     if (!walletAddress) {
@@ -947,16 +1003,16 @@ export default function LpDashboard() {
                 )}
               </div>
 
-              {/* Futures LP Section */}
+              {/* Futures LP Section - Show ONE card per ON-CHAIN lp_offer */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Trophy className="w-4 h-4 text-yellow-400" />
                   <h2 className="font-heading font-bold text-base">Futures LP</h2>
                   <Badge className="bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 text-[10px] font-bold">
-                    {futuresLpPositions.length}
+                    {Object.values(onChainFuturesLpOffers).flat().length || futuresLpPositions.length}
                   </Badge>
                 </div>
-                {futuresLpPositions.length === 0 ? (
+                {Object.keys(onChainFuturesLpOffers).length === 0 && futuresLpPositions.length === 0 ? (
                   <div className="bg-card border border-border/50 rounded-2xl p-8 text-center">
                     <Trophy className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
                     <p className="font-heading font-bold text-sm text-muted-foreground mb-1">No Futures LP positions yet</p>
@@ -964,12 +1020,74 @@ export default function LpDashboard() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                    {futuresLpPositions.map((offer, idx) => {
-                      // Fetch futures market to get solana_market_pda
+                    {/* Render cards from ON-CHAIN data - ONE card per lp_offer */}
+                    {Object.entries(onChainFuturesLpOffers).flatMap(([marketId, offers]) => {
+                      const futuresMarket = futuresMarkets.find((fm) => fm.id === marketId);
+                      if (!futuresMarket) return [];
+                      
+                      return offers.map((chainOffer) => {
+                        // Get outcome label from market outcomes array
+                        const outcomeData = futuresMarket.outcomes?.[chainOffer.outcome];
+                        const outcomeLabel = outcomeData?.label || `Outcome ${chainOffer.outcome + 1}`;
+                        
+                        // Build position object from on-chain data
+                        const position = {
+                          id: `onchain-${chainOffer.pda}`,
+                          bet_id: marketId,
+                          match_id: marketId,
+                          outcome: chainOffer.outcome === 0 ? 'a' : chainOffer.outcome === 1 ? 'b' : 'draw',
+                          outcome_label: outcomeLabel,
+                          outcome_num: chainOffer.outcome,
+                          liquidity_deposited: chainOffer.amountCommitted,
+                          liquidity_matched: chainOffer.amountMatched,
+                          liquidity_unmatched: chainOffer.available,
+                          status: chainOffer.closed ? 'withdrawn' : 'open',
+                          wallet_address: walletAddress,
+                          solana_market_pda: futuresMarket.solana_market_pda,
+                          solana_position_pda: chainOffer.pda,
+                          _isFutures: true,
+                          userBetId: null,
+                          userBetStatus: chainOffer.closed ? 'withdrawn' : 'active',
+                        };
+                        
+                        console.log('[LpDashboard] Rendering on-chain futures LP:', {
+                          market: marketId,
+                          outcome: chainOffer.outcome,
+                          label: outcomeLabel,
+                          committed: chainOffer.amountCommitted,
+                          matched: chainOffer.amountMatched,
+                          available: chainOffer.available,
+                          closed: chainOffer.closed,
+                          pda: chainOffer.pda,
+                        });
+                        
+                        return (
+                          <LpPositionCard
+                            key={`futures-onchain-${chainOffer.pda}`}
+                            position={position}
+                            match={null}
+                            bet={futuresMarket}
+                            walletAddress={walletAddress}
+                            onWithdrawRequest={(withdrawData) => {
+                              setPendingTx({
+                                instruction: withdrawData.solanaInstruction,
+                                amount: withdrawData.withdrawAmount || 0,
+                                type: 'withdraw_liquidity',
+                                userBetId: withdrawData.positionId,
+                                offerId: withdrawData.offerId,
+                                onSuccess: withdrawData.onSuccess,
+                              });
+                            }} />
+                        );
+                      });
+                    })}
+                    
+                    {/* Fallback to DB data if on-chain fetch failed or empty */}
+                    {Object.keys(onChainFuturesLpOffers).length === 0 && futuresLpPositions.map((offer, idx) => {
                       const futuresMarket = futuresMarkets.find((fm) => fm.id === offer.bet_id);
                       return (
                         <LpPositionCard
-                          key={`futures-${offer.id || offer.userBetId}`}
+                          key={`futures-db-${offer.id || offer.userBetId}`}
                           position={{ 
                             ...offer, 
                             userBetId: offer.userBetId || offer.id,

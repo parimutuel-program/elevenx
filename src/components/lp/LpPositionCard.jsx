@@ -114,10 +114,15 @@ export default function LpPositionCard({ position, match, bet, walletAddress, on
 
   // Fetch on-chain lp_offer state - PRIMARY SOURCE OF TRUTH
   // CRITICAL: positionPda MUST be the lp_offer PDA (seeds: ["lp_offer", marketPda, lpWallet, [outcome]])
+  // For futures, outcome is stored as outcome_label (e.g. "Team Alpha") or we derive from position data
   const positionPda = position?.solana_position_pda || position?.userBet?.solana_position_pda;
   const marketPda = position?.solana_market_pda || position?.userBet?.solana_market_pda || bet?.solana_market_pda;
   const lpWallet = position?.wallet_address || position?.userBet?.wallet_address;
-  const outcomeNum = offer?.outcome === 'a' ? 1 : offer?.outcome === 'b' ? 2 : 3;
+  
+  // For futures: outcome is 0/1/2 or outcome_label; for matches: 'a'/'b'/'draw'
+  const outcomeNum = isFutures 
+    ? (offer.outcome_num !== undefined ? offer.outcome_num : (offer.outcome === 'a' ? 0 : offer.outcome === 'b' ? 1 : 2))
+    : (offer?.outcome === 'a' ? 1 : offer?.outcome === 'b' ? 2 : 3);
   
   console.log('[LpPositionCard] === PDA LOOKUP ===');
   console.log('[LpPositionCard] position.id:', position.id);
@@ -300,6 +305,11 @@ export default function LpPositionCard({ position, match, bet, walletAddress, on
   const totalValue = liquidityDeposited + potentialEarnings;
 
   const getOutcomeLabel = () => {
+    // For futures: use outcome_label directly (e.g. "Team Alpha", "Team Beta", "Team Gamma")
+    if (isFutures) {
+      return offer.outcome_label || 'Unknown Outcome';
+    }
+    // For matches: use team names or Draw
     if (offer.outcome === 'a') return offer.outcome_label || matchData.team_a;
     if (offer.outcome === 'b') return offer.outcome_label || matchData.team_b;
     return 'Draw';
