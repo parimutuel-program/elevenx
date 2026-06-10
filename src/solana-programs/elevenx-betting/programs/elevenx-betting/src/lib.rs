@@ -49,6 +49,20 @@ pub mod elevenx_betting {
         instructions::market::update_market_timestamps(ctx, open_until, settle_after)
     }
 
+    /// Admin-only: Pin the Switchboard feed pubkey to a market (set once).
+    /// CRITICAL: Must be set before settlement to prevent oracle substitution.
+    pub fn set_settlement_feed(
+        ctx: Context<SetSettlementFeed>,
+        feed_pubkey: Pubkey,
+    ) -> Result<()> {
+        instructions::market::set_settlement_feed(ctx, feed_pubkey)
+    }
+
+    /// Admin-only: Sweep residual SOL from a settled/voided market (30-day grace).
+    pub fn sweep_market_funds(ctx: Context<SweepMarketFunds>) -> Result<()> {
+        instructions::market::sweep_market_funds(ctx)
+    }
+
     // ── Liquidity (LP) ──────────────────────────────────────────────────────
 
     /// LP deposits SOL to cover bettors on a specific outcome at oracle odds.
@@ -64,49 +78,32 @@ pub mod elevenx_betting {
     // ── Betting ─────────────────────────────────────────────────────────────
 
     /// Place a bet on a specific outcome (0, 1, or 2) at the oracle fixed odds.
-    /// Stake is matched against available LP liquidity immediately; any remainder
-    /// enters a pending state until more liquidity is provided.
     pub fn place_bet(ctx: Context<PlaceBet>, outcome: u8, amount: u64) -> Result<()> {
         instructions::betting::place_bet(ctx, outcome, amount)
     }
 
     // ── Oracle / Settlement ─────────────────────────────────────────────────
 
-    /// Oracle signer submits a vote for the winning outcome.
-    /// Settlement executes automatically when consensus threshold is reached.
-    pub fn submit_oracle_vote(
-        ctx: Context<SubmitOracleVote>,
-        winning_outcome: u8,
-    ) -> Result<()> {
-        instructions::oracle::submit_oracle_vote(ctx, winning_outcome)
-    }
-
-    /// Admin-only: Force-void a stuck market (emergency recovery).
-    /// Enables refunds to all bettors and LPs — admin cannot pick winners.
-    pub fn force_void_market(
-        ctx: Context<ForceVoidMarket>,
-    ) -> Result<()> {
-        instructions::oracle::force_void_market(ctx)
-    }
-
     /// Permissionless: Settle market from verified Switchboard On-Demand feed.
-    /// Anyone can crank this — outcome is determined by oracle, not admin.
+    /// Anyone can crank this — outcome is determined by the oracle, not admin.
     pub fn settle_from_oracle(ctx: Context<SettleFromOracle>) -> Result<()> {
         instructions::oracle::settle_from_oracle(ctx)
     }
 
-    /// Admin-only: Pin the Switchboard feed pubkey to a market.
-    /// CRITICAL: Must be set before settlement to prevent oracle substitution.
-    pub fn set_settlement_feed(
-        ctx: Context<SetSettlementFeed>,
-        feed_pubkey: Pubkey,
-    ) -> Result<()> {
-        instructions::market::set_settlement_feed(ctx, feed_pubkey)
+    /// Admin-only: Force-void a stuck market (emergency recovery).
+    /// Enables refunds to all bettors and LPs — admin CANNOT pick winners.
+    pub fn force_void_market(ctx: Context<ForceVoidMarket>) -> Result<()> {
+        instructions::oracle::force_void_market(ctx)
     }
 
-    /// Admin-only: Sweep residual SOL from a settled/voided market to admin wallet.
-    pub fn sweep_market_funds(ctx: Context<SweepMarketFunds>) -> Result<()> {
-        instructions::market::sweep_market_funds(ctx)
+    /// TEST ONLY: announce a winner manually. Compiled out of release/mainnet
+    /// builds via the `testing` feature flag. NEVER ships to mainnet.
+    #[cfg(feature = "testing")]
+    pub fn test_announce_winner(
+        ctx: Context<TestAnnounceWinner>,
+        winning_outcome: u8,
+    ) -> Result<()> {
+        instructions::oracle::test_announce_winner(ctx, winning_outcome)
     }
 
     // ── Claims & Refunds ────────────────────────────────────────────────────
@@ -119,6 +116,11 @@ pub mod elevenx_betting {
     /// Bettor reclaims stake if market was voided.
     pub fn refund(ctx: Context<Refund>) -> Result<()> {
         instructions::claims::refund(ctx)
+    }
+
+    /// LP reclaims committed capital if market was voided (no fee on void).
+    pub fn refund_lp(ctx: Context<RefundLp>) -> Result<()> {
+        instructions::claims::refund_lp(ctx)
     }
 
     /// LP withdraws winnings from a settled market.

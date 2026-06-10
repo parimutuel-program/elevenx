@@ -152,3 +152,38 @@ pub struct ForceVoidMarket<'info> {
 
     pub system_program: Program<'info, System>,
 }
+
+// ── TEST ONLY: test_announce_winner ─────────────────────────────────────────
+// Admin-only test helper for devnet testing. Compiled OUT of mainnet builds.
+
+#[cfg(feature = "testing")]
+pub fn test_announce_winner(ctx: Context<TestAnnounceWinner>, winning_outcome: u8) -> Result<()> {
+    let market = &mut ctx.accounts.market;
+    let fee_vault = &mut ctx.accounts.fee_vault;
+    require!(winning_outcome < market.outcome_count, BettingError::InvalidOutcome);
+    require!(!market.settled && !market.voided, BettingError::AlreadySettled);
+    execute_settlement(market, winning_outcome, fee_vault)?;
+    Ok(())
+}
+
+#[cfg(feature = "testing")]
+#[derive(Accounts)]
+pub struct TestAnnounceWinner<'info> {
+    #[account(
+        mut,
+        seeds = [b"market", market.match_id.as_ref()],
+        bump = market.bump,
+    )]
+    pub market: Account<'info, BetMarket>,
+
+    #[account(mut, seeds = [b"fee_vault"], bump = fee_vault.bump)]
+    pub fee_vault: Account<'info, FeeVault>,
+
+    #[account(seeds = [b"platform"], bump = platform_config.bump)]
+    pub platform_config: Account<'info, PlatformConfig>,
+
+    #[account(mut, constraint = admin.key() == platform_config.admin @ BettingError::Unauthorized)]
+    pub admin: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+}
