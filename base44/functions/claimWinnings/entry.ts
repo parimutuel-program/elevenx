@@ -85,59 +85,10 @@ Deno.serve(async (req) => {
       }, { status: 404 });
     }
     
-    // Verify bets actually won by checking market winning_outcome matches bet outcome
+    // Will validate bets after on-chain check below
     let validBets = [];
-    const debugInfo = [];
-    for (const ub of betsToClaim) {
-      const bet = (await serviceRole.entities.Bet.filter({ id: ub.bet_id }))[0];
-      const betDebug = {
-        userBetId: ub.id,
-        betId: ub.bet_id,
-        userOutcome: ub.outcome,
-        userStatus: ub.status,
-        marketSettled: bet?.winning_outcome && bet.winning_outcome.length > 0,
-        winningOutcome: bet?.winning_outcome,
-        matched: false,
-        reason: ''
-      };
-      
-      if (bet && bet.winning_outcome && bet.winning_outcome.length > 0) {
-        // Check if user's outcome matches the winning outcome
-        if (ub.outcome === bet.winning_outcome) {
-          validBets.push(ub);
-          betDebug.matched = true;
-          betDebug.reason = 'outcome_matched';
-        } else {
-          betDebug.reason = `outcome_mismatch (user: ${ub.outcome}, winning: ${bet.winning_outcome})`;
-          console.log('[claimWinnings] Bet outcome mismatch:', betDebug);
-        }
-      } else if (ub.status === 'won') {
-        // 'won' status already validated - but this shouldn't happen without market being settled
-        validBets.push(ub);
-        betDebug.matched = true;
-        betDebug.reason = 'status_won';
-      } else {
-        betDebug.reason = 'market_not_settled_and_status_not_won';
-      }
-      
-      debugInfo.push(betDebug);
-    }
-    
-    if (validBets.length === 0) {
-      console.log('[claimWinnings] No valid bets - debug:', debugInfo);
-      return Response.json({ 
-        error: 'No winning bets found',
-        debug: { 
-          attempted: betsToClaim.length,
-          betDetails: debugInfo,
-          hint: 'Market must be settled (have winning_outcome) AND your outcome must match the winner'
-        },
-        status: 404
-      });
-    }
-    const betsToClaim_validated = validBets;
 
-    const userBet = betsToClaim_validated[0];
+    const userBet = betsToClaim[0];
 
     const bets = await serviceRole.entities.Bet.filter({ id: userBet.bet_id });
     const bet  = bets[0];
@@ -238,7 +189,62 @@ Deno.serve(async (req) => {
       positionData,
     });
 
-    const totalPayout = betsToClaim_validated.reduce((sum, b) => sum + (b.actual_payout || b.potential_payout || 0), 0);
+    // NOW validate bets using on-chain data (TRUST ON-CHAIN OVER DATABASE)
+    const winningOutcomeByte = marketInfo?.data?.[155];
+    let onChainWinningOutcome = null;
+    if (winningOutcomeByte === 1) onChainWinningOutcome = 'a';
+    else if (winningOutcomeByte === 2) onChainWinningOutcome = 'b';
+    else if (winningOutcomeByte === 3) onChainWinningOutcome = 'draw';
+    
+    console.log('[claimWinnings] === BET VALIDATION (ON-CHAIN) ===');
+    console.log('[claimWinnings] On-chain winning_outcome:', onChainWinningOutcome);
+    
+    validBets = [];
+    for (const ub of betsToClaim) {
+      const betDebug = {
+        userBetId: ub.id,
+        userOutcome: ub.outcome,
+        userStatus: ub.status,
+        onChainWinningOutcome,
+        matched: false,
+        reason: ''
+      };
+      
+      if (isSettledOnChain && onChainWinningOutcome) {
+        if (ub.outcome === onChainWinningOutcome) {
+          validBets.push(ub);
+          betDebug.matched = true;
+          betDebug.reason = 'outcome_matched_on_chain';
+          console.log('[claimWinnings] ✓ Valid bet:', betDebug);
+        } else {
+          betDebug.reason = `outcome_mismatch (user: ${ub.outcome}, on_chain: ${onChainWinningOutcome})`;
+          console.log('[claimWinnings] ✗ Outcome mismatch:', betDebug);
+        }
+      } else if (ub.status === 'won') {
+        validBets.push(ub);
+        betDebug.matched = true;
+        betDebug.reason = 'status_won';
+        console.log('[claimWinnings] ✓ Won status:', betDebug);
+      } else {
+        betDebug.reason = 'market_not_settled_on_chain';
+        console.log('[claimWinnings] ✗ Not settled:', betDebug);
+      }
+    }
+    
+    if (validBets.length === 0) {
+      console.log('[claimWinnings] No valid bets after on-chain validation');
+      return Response.json({ 
+        error: 'No winning bets found',
+        debug: { 
+          attempted: betsToClaim.length,
+          onChainWinningOutcome,
+          isSettledOnChain,
+          hint: 'Market must be settled on-chain AND your outcome must match the winner'
+        }
+      }, { status: 404 });
+    }
+
+    const totalPayout = validBets.reduce((sum, b) => sum + (b.actual_payout || b.potential_payout || 0), 0);
     console.log(`✓ Claim: wallet=${trimmedWallet.slice(0, 8)}... | bets=${betsToClaim_validated.length} | total=${totalPayout} SOL`);
 
     // Validate market is settled and position exists
@@ -269,6 +275,7 @@ Deno.serve(async (req) => {
     }
     
     console.log('[claimWinnings] Proceeding with on-chain claim');
+    console.log('[claimWinnings] Validated bets:', validBets.length);
     
     // Construct claim_winnings instruction for Solana
     const [feeVaultPda] = PublicKey.findProgramAddressSync(
@@ -403,8 +410,8 @@ Deno.serve(async (req) => {
     
     return Response.json({
       success: true,
-      message: `✓ ${betsToClaim_validated.length} winning bet(s) ready for claim`,
-      betIds: betsToClaim_validated.map(b => b.id),
+      message: `✓ ${validBets.length} winning bet(s) ready for claim`,
+      betIds: validBets.map(b => b.id),
       totalPayout: Number(totalPayout),
       solana_instruction: claimInstruction,
     });
