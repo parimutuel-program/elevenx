@@ -402,6 +402,10 @@ export default function Admin() {
                           remaining: res.data.remaining,
                           marketId: res.data.market_id,
                         });
+                      } else if (res.data.autoContinue) {
+                        // Auto-continue if market already exists
+                        toast.success('Continuing deployment...');
+                        setTimeout(() => handleDeployFuturesSuccess(), 500);
                       } else {
                         toast.success(res.data.message || '✓ All futures deployed!');
                         queryClient.invalidateQueries({ queryKey: ['futuresMarkets'] });
@@ -412,8 +416,8 @@ export default function Admin() {
                   }}
                   className="h-24 flex flex-col gap-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-600/30 rounded-xl"
                 >
-                  <span className="font-bold text-lg text-white">🚀 Futures Deploy</span>
-                  <span className="text-xs text-gray-400">Deploy all futures</span>
+                  <span className="font-bold text-lg text-white">🚀 Deploy All Futures</span>
+                  <span className="text-xs text-gray-400">Deploy all futures markets</span>
                 </Button>
                 <Button
                   onClick={async () => {
@@ -425,6 +429,10 @@ export default function Admin() {
                           remaining: res.data.remaining,
                           betId: res.data.bet_id,
                         });
+                      } else if (res.data.autoContinue) {
+                        // Auto-continue if market already exists
+                        toast.success('Continuing deployment...');
+                        setTimeout(() => handleDeployMatchesSuccess(), 500);
                       } else {
                         toast.success(res.data.message || '✓ All matches deployed!');
                         queryClient.invalidateQueries({ queryKey: ['allBets'] });
@@ -436,7 +444,7 @@ export default function Admin() {
                   className="h-24 flex flex-col gap-2 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-600/30 rounded-xl"
                 >
                   <span className="font-bold text-lg text-white">⚡ Deploy All Matches</span>
-                  <span className="text-xs text-gray-400">Deploy entire DB</span>
+                  <span className="text-xs text-gray-400">Deploy all match markets</span>
                 </Button>
                 <Button
                   onClick={async () => {
