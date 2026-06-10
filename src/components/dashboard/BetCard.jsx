@@ -216,13 +216,13 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
     alert(`✓ Withdrawal successful! ◎${bet.amount.toFixed(4)} SOL returned to your wallet`);
   };
 
+  // LP bet: role='lp' with unmatched liquidity - can withdraw
+  const isLp = bet.role === 'lp';
+
   // LPs can claim if: status is 'won' OR (status is 'active' AND market is settled on-chain)
   const canClaim = localBetStatus === 'won' || (isLp && localBetStatus === 'active');
   const canRefund = localBetStatus === 'refunded';
   const isCompleted = ['lost', 'claimed', 'void'].includes(localBetStatus);
-
-  // LP bet: role='lp' with unmatched liquidity - can withdraw
-  const isLp = bet.role === 'lp';
   const unmatched = isLp && (bet.status === 'pending' || bet.status === 'active') ? bet.liquidity_unmatched || bet.amount : 0;
   const canWithdraw = isLp && unmatched > 0 && (bet.status === 'pending' || bet.status === 'active');
 
