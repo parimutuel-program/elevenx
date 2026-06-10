@@ -85,7 +85,9 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
           <div className="flex items-center justify-between gap-2 mb-3">
             {/* Team A */}
             <div className="flex-1 text-center">
-              <div className="text-2xl mb-1">{getTeamFlag(match.team_a, match.team_a_flag)}</div>
+              <div className="w-8 h-8 mx-auto mb-1 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center text-lg">
+                {getTeamFlag(match.team_a, match.team_a_flag)}
+              </div>
               <p className="text-[10px] text-foreground truncate font-medium">{match.team_a}</p>
             </div>
 
@@ -109,7 +111,9 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
 
             {/* Team B */}
             <div className="flex-1 text-center">
-              <div className="text-2xl mb-1">{getTeamFlag(match.team_b, match.team_b_flag)}</div>
+              <div className="w-8 h-8 mx-auto mb-1 rounded-md bg-accent/10 border border-accent/20 flex items-center justify-center text-lg">
+                {getTeamFlag(match.team_b, match.team_b_flag)}
+              </div>
               <p className="text-[10px] text-foreground truncate font-medium">{match.team_b}</p>
             </div>
           </div>

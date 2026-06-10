@@ -210,37 +210,13 @@ export const getFlagFromName = (countryName) => {
   return COUNTRY_FLAGS[normalizedName] || '🏳️';
 };
 
-// Country name to 2-letter code mapping (for display when emojis don't render)
-const COUNTRY_CODES = {
-  'mexico': 'MX', 'usa': 'US', 'united states': 'US', 'canada': 'CA',
-  'england': 'EN', 'france': 'FR', 'germany': 'DE', 'spain': 'ES', 'portugal': 'PT',
-  'netherlands': 'NL', 'belgium': 'BE', 'croatia': 'HR', 'switzerland': 'CH',
-  'denmark': 'DK', 'serbia': 'RS', 'poland': 'PL', 'sweden': 'SE', 'wales': 'WA',
-  'italy': 'IT', 'austria': 'AT', 'czechia': 'CZ', 'czech republic': 'CZ',
-  'ukraine': 'UA', 'bosnia and herzegovina': 'BA', 'bosnia & herzegovina': 'BA',
-  'brazil': 'BR', 'argentina': 'AR', 'uruguay': 'UY', 'colombia': 'CO', 'chile': 'CL',
-  'ecuador': 'EC', 'paraguay': 'PY', 'peru': 'PE',
-  'morocco': 'MA', 'senegal': 'SN', 'tunisia': 'TN', 'egypt': 'EG', 'nigeria': 'NG',
-  'cameroon': 'CM', 'ghana': 'GH', 'south africa': 'ZA', 'algeria': 'DZ',
-  'japan': 'JP', 'south korea': 'KR', 'korea republic': 'KR', 'iran': 'IR',
-  'saudi arabia': 'SA', 'australia': 'AU', 'qatar': 'QA', 'uzbekistan': 'UZ',
-  'jordan': 'JO', 'panama': 'PA', 'jamaica': 'JM', 'costa rica': 'CR',
-};
-
-// Get country code from team name
-const getCountryCode = (teamName) => {
-  if (!teamName) return '';
-  return COUNTRY_CODES[teamName.toLowerCase().trim()] || teamName.substring(0, 2).toUpperCase();
-};
-
-// Get flag for team (handles both name and country code) - now returns country codes as visual fallback
+// Get flag for team (handles both name and country code)
 export const getTeamFlag = (teamName, countryCode) => {
-  // Try to use emoji first, but if it doesn't work well, fallback to country code display
   if (countryCode) {
-    return getCountryCode(teamName) || countryCode;
+    return getFlagEmoji(countryCode);
   }
   if (teamName) {
-    return getCountryCode(teamName);
+    return getFlagFromName(teamName);
   }
-  return '??';
+  return '🏳️';
 };
