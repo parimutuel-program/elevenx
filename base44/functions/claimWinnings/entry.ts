@@ -149,6 +149,14 @@ Deno.serve(async (req) => {
         bet_id: userBet.bet_id
       }, { status: 404 });
     }
+    
+    console.log('[claimWinnings] === BET ENTITY DEBUG ===');
+    console.log('[claimWinnings] Bet ID:', bet.id);
+    console.log('[claimWinnings] Bet title:', bet.title);
+    console.log('[claimWinnings] Bet status:', bet.status);
+    console.log('[claimWinnings] Bet winning_outcome:', bet.winning_outcome);
+    console.log('[claimWinnings] Bet solana_market_pda:', bet.solana_market_pda);
+    console.log('[claimWinnings] Bet.solana_market_pda matches derived PDA:', bet.solana_market_pda === marketPda.toBase58());
 
     // Check on-chain market state
     const { Connection: SolanaConnection } = await import('npm:@solana/web3.js@1.98.4');
@@ -158,7 +166,24 @@ Deno.serve(async (req) => {
     Buffer.from(userBet.match_id, 'utf-8').copy(matchIdBytes, 0, 0, Math.min(userBet.match_id.length, 32));
     const [marketPda] = PublicKey.findProgramAddressSync([Buffer.from('market'), matchIdBytes], programId);
 
+    // CRITICAL DEBUG: Log the EXACT market PDA being checked
+    console.log('[claimWinnings] === MARKET PDA DEBUG ===');
+    console.log('[claimWinnings] userBet.match_id:', userBet.match_id);
+    console.log('[claimWinnings] userBet.bet_id:', userBet.bet_id);
+    console.log('[claimWinnings] Derived market PDA:', marketPda.toBase58());
+    console.log('[claimWinnings] Expected market PDA (from user): 7TYAbqA5hCiwQZBzMhu6LaTJ51xP8Z4WfUNQmewf8mW5');
+    console.log('[claimWinnings] PDA match:', marketPda.toBase58() === '7TYAbqA5hCiwQZBzMhu6LaTJ51xP8Z4WfUNQmewf8mW5');
+    
     const marketInfo = await connection.getAccountInfo(marketPda);
+    console.log('[claimWinnings] Market account exists:', !!marketInfo);
+    console.log('[claimWinnings] Market account data length:', marketInfo?.data.length);
+    console.log('[claimWinnings] Market account lamports:', marketInfo?.lamports);
+    
+    if (marketInfo && marketInfo.data.length >= 249) {
+      console.log('[claimWinnings] Market data byte 244 (settled flag):', marketInfo.data[244]);
+      console.log('[claimWinnings] Market is settled (on-chain):', marketInfo.data[244] === 1);
+    }
+    
     const isSettledOnChain = marketInfo && marketInfo.data.length >= 249 && marketInfo.data[244] === 1;
     
     // Check if position exists on-chain and read its state - include outcome byte in PDA
