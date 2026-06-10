@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
     
     const now = new Date();
     const matchTime = now;
-    const matchEndTime = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes from now
+    const matchEndTime = new Date(now.getTime() + 10 * 60 * 1000); // 10 minutes from now
     
     console.log('[createQuickTestMatch] Creating match:', {
       start: matchTime.toISOString(),
@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
     // Create bet
     const bet = await serviceRole.entities.Bet.create({
       match_id: match.id,
-      title: 'Test Match - 5min Window',
+      title: 'Test Match - 10min Window',
       outcome_a: 'Test Team A',
       outcome_b: 'Test Team B',
       outcome_draw: 'Draw',
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     
     return Response.json({
       success: true,
-      message: 'Test match created with 5-minute betting window',
+      message: 'Test match created with 10-minute betting window',
       match: {
         id: match.id,
         team_a: match.team_a,
