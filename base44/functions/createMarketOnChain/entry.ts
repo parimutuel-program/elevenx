@@ -49,8 +49,9 @@ Deno.serve(async (req) => {
     // Frontend will handle the transaction and we'll check on-chain status after
     console.log('Preparing create_market instruction for:', marketPda.toBase58());
 
-    // Prepare create_market instruction with global: prefix (Anchor default)
-    const discriminator = Buffer.from(sha256("global:create_market")).slice(0, 8);
+    // CRITICAL: Use exact discriminator expected by deployed program EQiqoL7VX5n4BTxuHwyWBa1bmYvTSeWRWBdSCyyFxHvN
+    // Pre-computed: [103,226,97,235,200,188,251,254] = 0x67e261ebc8cbfbfe
+    const discriminator = Buffer.from([103, 226, 97, 235, 200, 188, 251, 254]);
 
     // CRITICAL: Check if this is a TEST market (title contains "Test" or "Quick Test")
     // Test markets should use their DB timeline exactly, no World Cup overrides
@@ -81,14 +82,18 @@ Deno.serve(async (req) => {
     Buffer.from(bet.outcome_b || 'B').copy(outcomeNames[1], 0, 0, Math.min(bet.outcome_b?.length || 1, 32));
     Buffer.from(bet.outcome_draw || 'Draw').copy(outcomeNames[2], 0, 0, Math.min(bet.outcome_draw?.length || 4, 32));
 
-    // Build instruction data: discriminator + CreateMarketParams
-    // CreateMarketParams size: 32 + 96 + 8 + 8 + 2 + 1 + 24 = 171 bytes
-    const paramsData = Buffer.alloc(171);
+    // Build instruction data: discriminator + CreateMarketParams (Borsh serialized)
+    // CreateMarketParams: match_id [u8;32] + outcome_names [[u8;32];3] + open_until i64 + settle_after i64
+    //                     + fee_percent_override Option<u16> (1 flag + 2 bytes if Some) + outcome_count u8 + oracle_odds [u64;3]
+    // Total: 32 + 96 + 8 + 8 + 3 + 1 + 24 = 172 bytes
+    const paramsData = Buffer.alloc(172);
     let offset = 0;
     
+    // match_id: [u8; 32]
     matchIdBytes.copy(paramsData, offset);
     offset += 32;
     
+    // outcome_names: [[u8; 32]; 3]
     outcomeNames[0].copy(paramsData, offset);
     offset += 32;
     outcomeNames[1].copy(paramsData, offset);
@@ -96,19 +101,25 @@ Deno.serve(async (req) => {
     outcomeNames[2].copy(paramsData, offset);
     offset += 32;
     
+    // open_until: i64 LE
     paramsData.writeBigInt64LE(BigInt(openUntil), offset);
     offset += 8;
     
+    // settle_after: i64 LE
     paramsData.writeBigInt64LE(BigInt(settleAfter), offset);
     offset += 8;
     
+    // fee_percent_override: Option<u16> - Borsh requires 1 byte flag (0=None, 1=Some), then 2 bytes if Some
+    paramsData.writeUInt8(1, offset); // flag = 1 (Some)
+    offset += 1;
     paramsData.writeUInt16LE(bet.fee_percent || 200, offset);
     offset += 2;
     
-    paramsData.writeUInt8(3, offset); // outcome_count
+    // outcome_count: u8
+    paramsData.writeUInt8(3, offset);
     offset += 1;
     
-    // oracle_odds: [u64; 3] - 24 bytes (3 x 8 bytes)
+    // oracle_odds: [u64; 3] LE
     // Convert decimal odds to basis points (multiply by 100) before converting to BigInt
     const oddsA = BigInt(Math.round((bet.odds_a || bet.oracle_odds_a || 0) * 100));
     const oddsB = BigInt(Math.round((bet.odds_b || bet.oracle_odds_b || 0) * 100));
@@ -171,7 +182,9 @@ Deno.serve(async (req) => {
       }
     }
     
-    // Build create market instruction
+    // Build create market instruction with EXACT 5 accounts in required order:
+    // (1) market PDA [writable], (2) vote_tally PDA [writable], (3) platform_config PDA [writable],
+    // (4) admin [signer, writable], (5) system_program
     const createMarketInstruction = {
       instruction_type: 'create_market',
       programId: SOLANA_PROGRAM_ID,
@@ -182,6 +195,7 @@ Deno.serve(async (req) => {
         voteTally: voteTallyPda.toBase58(),
         platformConfig: platformConfigPda.toBase58(),
         admin: 'SIGNER_WALLET',
+        systemProgram: SystemProgram.programId.toBase58(),
       }
     };
     

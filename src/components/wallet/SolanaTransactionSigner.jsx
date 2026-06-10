@@ -147,43 +147,30 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
           console.error('[SolanaTransactionSigner] WARNING: Unexpected instruction data length:', data.length, '(expected 179)');
         }
         
-        // Build keys in the EXACT order required by the Rust CreateMarket struct:
-        // market, vote_tally, platform_config, admin (payer/signer), system_program
+        // Build keys in the EXACT order required by the deployed program:
+        // (1) market PDA [seeds: "market" + match_id, writable]
+        // (2) vote_tally PDA [seeds: "vote_tally" + market pubkey, writable]
+        // (3) platform_config PDA [seeds: "platform", writable]
+        // (4) admin [signer, writable]
+        // (5) system_program
         const keys = [];
-        console.log('[SolanaTransactionSigner] create_market instruction:', {
-          hasAccounts: !!instruction.accounts,
-          accounts: instruction.accounts,
-          adminValue: instruction.accounts?.admin,
-          adminType: typeof instruction.accounts?.admin,
-        });
         
         if (instruction.accounts) {
           const accounts = instruction.accounts;
           
-          // Validate all required accounts are present
-          if (!accounts.market) {
-            console.error('[SolanaTransactionSigner] Missing market:', accounts);
-            throw new Error('Missing market account in instruction');
-          }
-          if (!accounts.voteTally) {
-            console.error('[SolanaTransactionSigner] Missing voteTally:', accounts);
-            throw new Error('Missing voteTally account in instruction');
-          }
-          if (!accounts.platformConfig) {
-            console.error('[SolanaTransactionSigner] Missing platformConfig:', accounts);
-            throw new Error('Missing platformConfig account in instruction');
-          }
-          if (!accounts.admin) {
-            console.error('[SolanaTransactionSigner] Missing admin:', accounts);
-            throw new Error('Missing admin account in instruction');
-          }
+          // Validate all 5 required accounts are present
+          if (!accounts.market) throw new Error('Missing market account in instruction');
+          if (!accounts.voteTally) throw new Error('Missing voteTally account in instruction');
+          if (!accounts.platformConfig) throw new Error('Missing platformConfig account in instruction');
+          if (!accounts.admin) throw new Error('Missing admin account in instruction');
+          if (!accounts.systemProgram) throw new Error('Missing systemProgram account in instruction');
           
           keys.push({ pubkey: new PublicKey(accounts.market), isSigner: false, isWritable: true });
           keys.push({ pubkey: new PublicKey(accounts.voteTally), isSigner: false, isWritable: true });
           keys.push({ pubkey: new PublicKey(accounts.platformConfig), isSigner: false, isWritable: true });
-          // Admin/payer must be the signer wallet
+          // Admin must be the signer wallet
           keys.push({ pubkey: provider.publicKey, isSigner: true, isWritable: true });
-          keys.push({ pubkey: SystemProgram.programId, isSigner: false, isWritable: false });
+          keys.push({ pubkey: new PublicKey(accounts.systemProgram), isSigner: false, isWritable: false });
         } else {
           throw new Error('Missing accounts in create_market instruction');
         }
