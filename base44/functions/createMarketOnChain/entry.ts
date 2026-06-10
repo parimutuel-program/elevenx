@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
     const [marketPda] = PublicKey.findProgramAddressSync([Buffer.from('market'), matchIdBytes], programId);
     const [voteTallyPda] = PublicKey.findProgramAddressSync([Buffer.from('vote_tally'), marketPda.toBuffer()], programId);
     const [platformPda] = PublicKey.findProgramAddressSync([Buffer.from('platform')], programId);
-    const [feeVaultPda] = PublicKey.findProgramAddressSync([Buffer.from('fee_vault')], programId);
+    const [feeVaultPda] = PublicKey.findProgramAddressSync([Buffer.from('fee_vault')], programId); // kept for response metadata only
 
     // Check platform init
     const platformInfo = await connection.getAccountInfo(platformPda);
@@ -64,16 +64,37 @@ Deno.serve(async (req) => {
       });
     }
 
-    const isTestMarket = bet.title?.toLowerCase().includes('test');
     const openUntil = Math.floor(new Date(bet.open_until).getTime() / 1000);
-    const settleAfter = isTestMarket ? openUntil + 1 : openUntil + 300;
+    // settle_after MUST be strictly greater than open_until
+    const settleAfter = openUntil + 60;
 
-    const outcomeNames = [Buffer.alloc(32), Buffer.alloc(32), Buffer.alloc(32)];
-    Buffer.from(bet.outcome_a || 'A').copy(outcomeNames[0], 0, 0, Math.min(bet.outcome_a?.length || 1, 32));
-    Buffer.from(bet.outcome_b || 'B').copy(outcomeNames[1], 0, 0, Math.min(bet.outcome_b?.length || 1, 32));
-    Buffer.from(bet.outcome_draw || 'Draw').copy(outcomeNames[2], 0, 0, Math.min(bet.outcome_draw?.length || 4, 32));
+    // Outcome names: each exactly 32 bytes, zero-padded
+    const outcomeNames = ['A', 'B', 'Draw'].map((fallback, i) => {
+      const src = [bet.outcome_a, bet.outcome_b, bet.outcome_draw][i] || fallback;
+      const buf = Buffer.alloc(32);
+      Buffer.from(src, 'utf-8').copy(buf, 0, 0, Math.min(src.length, 32));
+      return buf;
+    });
 
-    // 32 + 96 + 8 + 8 + 3 + 1 + 24 = 172 bytes
+    // fee_percent_override: Option<u16> — must be ≤ 200
+    const feeRaw = Math.min(bet.fee_percent || 200, 200);
+    // Encode as Some(feeRaw): 1 byte (0x01) + u16 LE (2 bytes) = 3 bytes
+    const feeOptionBuf = Buffer.alloc(3);
+    feeOptionBuf.writeUInt8(1, 0);
+    feeOptionBuf.writeUInt16LE(feeRaw, 1);
+
+    // oracle_odds: each must be > 100 (100 = 1.0x). Ensure minimum of 101.
+    const oddsA = Math.max(Math.round((bet.odds_a || 2.0) * 100), 101);
+    const oddsB = Math.max(Math.round((bet.odds_b || 2.0) * 100), 101);
+    const oddsDraw = Math.max(Math.round((bet.odds_draw || 3.0) * 100), 101);
+
+    console.log('[createMarketOnChain] openUntil:', openUntil, 'settleAfter:', settleAfter);
+    console.log('[createMarketOnChain] odds (bps):', oddsA, oddsB, oddsDraw);
+    console.log('[createMarketOnChain] feeRaw:', feeRaw);
+
+    // Build instruction data:
+    // 8 (discriminator) + 32 (match_id) + 96 (3x outcome names) + 8 (open_until) + 8 (settle_after)
+    // + 3 (Option<u16> fee) + 1 (outcome_count) + 24 (3x u64 odds) = 180 bytes
     const paramsData = Buffer.alloc(172);
     let offset = 0;
     matchIdBytes.copy(paramsData, offset); offset += 32;
@@ -82,12 +103,11 @@ Deno.serve(async (req) => {
     outcomeNames[2].copy(paramsData, offset); offset += 32;
     paramsData.writeBigInt64LE(BigInt(openUntil), offset); offset += 8;
     paramsData.writeBigInt64LE(BigInt(settleAfter), offset); offset += 8;
-    paramsData.writeUInt8(1, offset); offset += 1; // Option::Some
-    paramsData.writeUInt16LE(bet.fee_percent || 200, offset); offset += 2;
-    paramsData.writeUInt8(3, offset); offset += 1; // outcome_count
-    paramsData.writeBigUInt64LE(BigInt(Math.round((bet.odds_a || 0) * 100)), offset); offset += 8;
-    paramsData.writeBigUInt64LE(BigInt(Math.round((bet.odds_b || 0) * 100)), offset); offset += 8;
-    paramsData.writeBigUInt64LE(BigInt(Math.round((bet.odds_draw || 0) * 100)), offset); offset += 8;
+    feeOptionBuf.copy(paramsData, offset); offset += 3;
+    paramsData.writeUInt8(3, offset); offset += 1; // outcome_count = 3
+    paramsData.writeBigUInt64LE(BigInt(oddsA), offset); offset += 8;
+    paramsData.writeBigUInt64LE(BigInt(oddsB), offset); offset += 8;
+    paramsData.writeBigUInt64LE(BigInt(oddsDraw), offset); offset += 8;
 
     const discriminator = Buffer.from([103, 226, 97, 235, 200, 188, 251, 254]);
     const instructionData = Buffer.concat([discriminator, paramsData]);
