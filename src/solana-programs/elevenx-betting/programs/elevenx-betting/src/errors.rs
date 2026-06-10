@@ -61,4 +61,10 @@ pub enum BettingError {
 
     #[msg("Unauthorized")]
     Unauthorized,
+
+    #[msg("Odds have drifted - cannot top up at different odds")]
+    OddsMismatch,
+
+    #[msg("Unmatched liquidity already withdrawn")]
+    AlreadyWithdrawn,
 }
