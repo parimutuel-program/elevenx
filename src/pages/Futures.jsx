@@ -57,8 +57,12 @@ export default function Futures() {
     }
     
     const groupTeams = WORLD_CUP_GROUPS_2026[activeGroup]?.map(t => t.name) || [];
-    // Show markets that match group OR don't have a country assigned (test markets)
-    return futuresMarkets.filter(m => !m.country || groupTeams.includes(m.country));
+    // Show markets for this group: country matches group name (e.g., "Group A") OR team names
+    return futuresMarkets.filter(m => {
+      if (m.country === activeGroup) return true; // Group winner markets
+      if (groupTeams.includes(m.country)) return true; // Team-specific markets
+      return false;
+    });
   }, [futuresMarkets, activeGroup]);
 
   // Scroll to group section
@@ -228,8 +232,8 @@ export default function Futures() {
     ? searchFilteredMarkets 
     : searchFilteredMarkets.filter(m => {
         const groupTeams = WORLD_CUP_GROUPS_2026[activeGroup]?.map(t => t.name) || [];
-        // Show markets that match group OR are test markets (country='Test')
-        return m.country === 'Test' || groupTeams.includes(m.country);
+        // Show markets for this group (e.g., "Group A") OR team names OR test markets
+        return m.country === activeGroup || m.country === 'Test' || groupTeams.includes(m.country);
       });
 
   // Auto-scroll to first matching group when search query changes
@@ -258,6 +262,19 @@ export default function Futures() {
   const testMarkets = futuresMarkets.filter(m => m.title?.includes('Quick Test') || m.title?.includes('Future Test'));
   const openMarkets = filteredMarkets.filter((m) => m.status === 'open' && !m.title?.includes('Quick Test') && !m.title?.includes('Future Test'));
   const comingMarkets = filteredMarkets.filter((m) => m.status === 'coming_soon' && !m.title?.includes('Quick Test') && !m.title?.includes('Future Test'));
+  
+  // Group markets by actual group (Group A, B, C, etc.) for ALL view
+  const marketsByGroup = React.useMemo(() => {
+    const grouped = {};
+    openMarkets.forEach(m => {
+      if (m.country?.startsWith('Group ')) {
+        const groupName = m.country; // e.g., "Group A"
+        if (!grouped[groupName]) grouped[groupName] = [];
+        grouped[groupName].push(m);
+      }
+    });
+    return grouped;
+  }, [openMarkets]);
 
   // Calculate totals for hero
   const totalPool = openMarkets.reduce((sum, m) =>
@@ -452,41 +469,34 @@ export default function Futures() {
             </div>
           </section>
         ) : (
-          /* All Groups View */
+          /* All Groups View - Group markets by their actual group */
           <div className="space-y-6 sm:space-y-8">
-            {Object.entries(WORLD_CUP_GROUPS_2026).map(([groupName, teams]) => {
-              const groupMarkets = filteredMarkets.filter(m => 
-                m.country && teams.some(t => t.name === m.country)
-              );
-              if (groupMarkets.length === 0) return null;
-
-              return (
-                <section key={groupName} id={`group-${groupName}`} className="scroll-mt-20 sm:scroll-mt-24">
-                  <div className="flex items-center gap-2.5 sm:gap-3 mb-3 sm:mb-4">
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 border border-primary/30 flex items-center justify-center">
-                      <span className="font-heading font-black text-base sm:text-lg text-primary">{groupName}</span>
-                    </div>
-                    <div>
-                      <h2 className="font-heading font-bold text-sm sm:text-base text-foreground">Group {groupName}</h2>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">
-                        {groupMarkets.length} teams
-                      </p>
-                    </div>
+            {Object.entries(marketsByGroup).map(([groupName, groupMarkets]) => (
+              <section key={groupName} id={`group-${groupName}`} className="scroll-mt-20 sm:scroll-mt-24">
+                <div className="flex items-center gap-2.5 sm:gap-3 mb-3 sm:mb-4">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 border border-primary/30 flex items-center justify-center">
+                    <span className="font-heading font-black text-base sm:text-lg text-primary">{groupName.replace('Group ', '')}</span>
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {groupMarkets.map((market, index) => (
-                      <FuturesCard
-                        key={market.id}
-                        market={market}
-                        index={index}
-                        onSelect={handleCountrySelect}
-                      />
-                    ))}
+                  <div>
+                    <h2 className="font-heading font-bold text-sm sm:text-base text-foreground">{groupName}</h2>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">
+                      {groupMarkets.length} markets
+                    </p>
                   </div>
-                </section>
-              );
-            })}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {groupMarkets.map((market, index) => (
+                    <FuturesCard
+                      key={market.id}
+                      market={market}
+                      index={index}
+                      onSelect={handleCountrySelect}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
           </div>
         )
       ) : (

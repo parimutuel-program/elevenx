@@ -114,10 +114,13 @@ export default function FuturesCard({ market, index, onSelect }) {
                   onClick={() => onSelect && onSelect(market, outcome)}
                   className={`flex flex-col items-center justify-center rounded-lg px-2 py-2 border transition-all ${colors.bg} ${colors.border} ${colors.hover} hover:scale-[1.02] active:scale-[0.98]`}>
                   
-                  <span className={`text-[9px] font-bold uppercase tracking-wide mb-1 ${colors.text}`}>
+                  <span className={`text-[9px] font-bold uppercase tracking-wide mb-0.5 ${colors.text}`}>
                     {outcome.position}
                   </span>
-                  <p className={`font-heading font-bold text-sm ${colors.text} mb-0.5`}>
+                  <p className={`text-[10px] font-bold ${colors.text} mb-0.5 truncate w-full text-center`}>
+                    {outcome.flag || '🏳️'} {outcome.label}
+                  </p>
+                  <p className={`font-heading font-bold text-xs ${colors.text}`}>
                     {outcome.odds.toFixed(2)}x
                   </p>
                   {isLoadingLiquidity ? (
