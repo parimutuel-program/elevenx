@@ -281,6 +281,7 @@ export default function Futures() {
     console.log('[Futures] Total markets:', futuresMarkets.length);
     console.log('[Futures] Open markets:', openMarkets.length);
     console.log('[Futures] Markets by group:', marketsByGroup);
+    console.log('[Futures] First 3 markets:', futuresMarkets.slice(0, 3).map(m => ({ country: m.country, status: m.status, title: m.title })));
   }, [futuresMarkets, openMarkets, marketsByGroup]);
 
   // Calculate totals for hero
@@ -478,7 +479,8 @@ export default function Futures() {
         ) : (
           /* All Groups View - Group ALL markets by their actual group */
           <div className="space-y-6 sm:space-y-8">
-            {Object.entries(WORLD_CUP_GROUPS_2026).map(([groupName, teams]) => {
+            {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'].map((letter) => {
+              const groupName = `Group ${letter}`;
               const groupMarkets = futuresMarkets.filter(m => m.country === groupName);
               if (groupMarkets.length === 0) return null;
               
@@ -486,7 +488,7 @@ export default function Futures() {
                 <section key={groupName} id={`group-${groupName}`} className="scroll-mt-20 sm:scroll-mt-24">
                   <div className="flex items-center gap-2.5 sm:gap-3 mb-3 sm:mb-4">
                     <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 border border-primary/30 flex items-center justify-center">
-                      <span className="font-heading font-black text-base sm:text-lg text-primary">{groupName}</span>
+                      <span className="font-heading font-black text-base sm:text-lg text-primary">{letter}</span>
                     </div>
                     <div>
                       <h2 className="font-heading font-bold text-sm sm:text-base text-foreground">{groupName}</h2>
