@@ -313,6 +313,20 @@ Deno.serve(async (req) => {
     discriminator.copy(instructionData, 0);
     instructionData.writeUInt8(outcomeIndex, 8);
     
+    // DEBUG: Log discriminator bytes to verify
+    console.log('[claimWinnings] Discriminator (hex):', discriminator.toString('hex'));
+    console.log('[claimWinnings] Discriminator (bytes):', Array.from(discriminator));
+    console.log('[claimWinnings] Instruction data (hex):', instructionData.toString('hex'));
+    console.log('[claimWinnings] Instruction data (base64):', instructionData.toString('base64'));
+    
+    // DEBUG: Log accounts
+    console.log('[claimWinnings] Accounts:');
+    console.log('  [0] market:', marketPda.toBase58(), '(writable)');
+    console.log('  [1] position:', positionPda.toBase58(), '(writable)');
+    console.log('  [2] fee_vault:', feeVaultPda.toBase58(), '(writable)');
+    console.log('  [3] bettor:', trimmedWallet, '(writable, signer)');
+    console.log('  [4] system_program: 11111111111111111111111111111111 (readonly)');
+    
     const claimInstruction = {
       instruction_type: 'claim_winnings',
       programId: SOLANA_PROGRAM_ID,
