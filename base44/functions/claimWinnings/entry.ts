@@ -376,7 +376,13 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('claimWinnings error:', error);
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error('=== claimWinnings ERROR ===');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Error name:', error.name);
+    console.error('Error code:', error.code);
+    console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    console.error('==========================');
+    return Response.json({ error: error.message, stack: error.stack, name: error.name }, { status: 500 });
   }
 });
