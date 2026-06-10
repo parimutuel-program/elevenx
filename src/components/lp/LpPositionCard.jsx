@@ -106,12 +106,18 @@ async function fetchMarketStateOnChain(marketPda) {
 export default function LpPositionCard({ position, match, bet, walletAddress, onWithdrawRequest }) {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
 
+  // Support both BetOffer (offer) and UserBet (position) entities - DEFINE EARLY (but no early return yet)
+  const offer = position;
+
+  // Detect if this is a futures LP position
+  const isFutures = offer?._isFutures || position?._isFutures || false;
+
   // Fetch on-chain lp_offer state - PRIMARY SOURCE OF TRUTH
   // CRITICAL: positionPda MUST be the lp_offer PDA (seeds: ["lp_offer", marketPda, lpWallet, [outcome]])
-  const positionPda = position.solana_position_pda || position.userBet?.solana_position_pda;
-  const marketPda = position.solana_market_pda || position.userBet?.solana_market_pda || bet?.solana_market_pda;
-  const lpWallet = position.wallet_address || position.userBet?.wallet_address;
-  const outcomeNum = offer.outcome === 'a' ? 1 : offer.outcome === 'b' ? 2 : 3;
+  const positionPda = position?.solana_position_pda || position?.userBet?.solana_position_pda;
+  const marketPda = position?.solana_market_pda || position?.userBet?.solana_market_pda || bet?.solana_market_pda;
+  const lpWallet = position?.wallet_address || position?.userBet?.wallet_address;
+  const outcomeNum = offer?.outcome === 'a' ? 1 : offer?.outcome === 'b' ? 2 : 3;
   
   console.log('[LpPositionCard] === PDA LOOKUP ===');
   console.log('[LpPositionCard] position.id:', position.id);
@@ -141,13 +147,6 @@ export default function LpPositionCard({ position, match, bet, walletAddress, on
     enabled: !!marketPda,
     staleTime: 5000,
   });
-
-  // Support both BetOffer (offer) and UserBet (position) entities
-  const offer = position;
-  if (!offer) return null;
-
-  // Detect if this is a futures LP position
-  const isFutures = offer._isFutures || position._isFutures || false;
 
   // Get match from position data if not passed
   const matchData = match || position.match || { team_a: 'Team A', team_b: 'Team B', team_a_flag: '', team_b_flag: '', group_stage: '', match_end_time: null, winner: '' };
