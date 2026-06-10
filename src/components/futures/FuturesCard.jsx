@@ -91,7 +91,9 @@ export default function FuturesCard({ market, index, onSelect }) {
 
           {/* Market Icon & Title */}
           <div className="flex items-center gap-3 mb-3">
-            <div className="text-4xl">{market.icon || '🏆'}</div>
+            <div className="w-14 h-14 flex items-center justify-center text-3xl">
+              {market.country_flag || '🏳️'}
+            </div>
             <div className="flex-1">
               <h3 className="font-heading font-bold text-sm text-foreground truncate">{market.title}</h3>
               <p className="text-[10px] text-muted-foreground">{market.subtitle}</p>
