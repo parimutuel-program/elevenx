@@ -120,7 +120,9 @@ export default function BetCard({ bet, index, walletAddress, onRefundRequest }) 
     },
     onError: (err) => {
       console.error('[BetCard] Claim error:', err);
-      alert('Claim failed: ' + err.message);
+      console.error('[BetCard] Claim error response:', err.response?.data);
+      console.error('[BetCard] Claim error status:', err.response?.status);
+      alert('Claim failed: ' + err.message + (err.response?.data?.error ? ' - ' + err.response?.data.error : ''));
     }
   });
 
