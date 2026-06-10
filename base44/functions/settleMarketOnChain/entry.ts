@@ -301,12 +301,13 @@ Deno.serve(async (req) => {
       instruction_type: 'settle_market',
       programId: SOLANA_PROGRAM_ID,
       // EXACT account order as required by the program:
-      // 1. market (writable), 2. fee_vault (writable), 3. platform_config (readonly), 4. admin (signer, writable)
+      // 1. market (writable), 2. fee_vault (writable), 3. platform_config (readonly), 4. admin (signer, writable), 5. system_program (readonly)
       keys: [
         { pubkey: marketPda.toBase58(), isSigner: false, isWritable: true },
         { pubkey: feeVaultPda.toBase58(), isSigner: false, isWritable: true },
         { pubkey: platformPda.toBase58(), isSigner: false, isWritable: false },
         { pubkey: admin_wallet, isSigner: true, isWritable: true },
+        { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false },
       ],
       instruction_data: testData.toString('base64'),
     };
