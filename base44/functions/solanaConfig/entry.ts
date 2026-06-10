@@ -3,6 +3,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 /**
  * Returns the current SOLANA_PROGRAM_ID secret value.
  * Forces a fresh read from environment on each call.
+ * Version: 2026-06-10 - New program ID EQiqoL7VX5n4BTxuHwyWBa1bmYvTSeWRWBdSCyyFxHvN
  */
 Deno.serve(async (req) => {
   try {

@@ -6,6 +6,7 @@ import { sha256 } from 'npm:@noble/hashes@1.4.0/sha256';
 /**
  * Creates a pari-mutuel market on-chain for a bet entity.
  * No LP required - bettors bet directly against the pool.
+ * Version: 2026-06-10 - Updated for program ID EQiqoL7VX5n4BTxuHwyWBa1bmYvTSeWRWBdSCyyFxHvN
  */
 Deno.serve(async (req) => {
   try {
