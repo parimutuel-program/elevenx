@@ -81,6 +81,15 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
             </Badge>
           </div>
 
+          {/* Kickoff date & time */}
+          {matchTime && (
+            <div className="flex items-center gap-1.5 mb-3 bg-secondary/60 border border-border/50 rounded-lg px-2.5 py-1.5">
+              <span className="text-[11px] font-bold text-foreground">{format(matchTime, 'MMM d')}</span>
+              <span className="text-muted-foreground text-[10px]">·</span>
+              <span className="text-[11px] font-semibold text-primary">{format(matchTime, 'h:mm a')}</span>
+            </div>
+          )}
+
           {/* Match Matchup */}
           <div className="flex items-center justify-between gap-2 mb-3">
             {/* Team A */}
@@ -102,11 +111,7 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
 
               <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">VS</span>
               }
-              {matchTime &&
-              <span className="text-[10px] text-muted-foreground font-medium">
-                  {format(matchTime, 'MMM d')}
-                </span>
-              }
+
             </div>
 
             {/* Team B */}
