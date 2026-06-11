@@ -444,6 +444,11 @@ export default function Docs() {
             <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto px-2">
               The biggest sporting event in history — 48 teams, 104 matches, 3 host nations. ElevenX is the first fully on-chain betting protocol built specifically for this tournament.
             </p>
+            <div className="mt-5 inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl px-5 py-3">
+              <span className="text-xl">🏆</span>
+              <span className="font-heading font-bold text-yellow-400 text-sm sm:text-base">48 Nations, 48 Markets</span>
+              <span className="text-muted-foreground text-xs sm:text-sm">— One futures market per country. Bet on 1st, 2nd, or 3rd place finishes.</span>
+            </div>
           </motion.div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto mb-10">
