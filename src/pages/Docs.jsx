@@ -446,7 +446,7 @@ export default function Docs() {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-10">
             {/* Card 1: 48 Nations */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -463,8 +463,8 @@ export default function Docs() {
 
             {/* Card 2: 72 Match Markets */}
             <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               className="p-6 md:p-8 rounded-3xl border border-yellow-500/20 bg-yellow-500/5"
             >
@@ -472,6 +472,20 @@ export default function Docs() {
               <h3 className="font-heading font-black text-xl md:text-2xl text-yellow-400 mb-2">72 Match Markets</h3>
               <p className="text-muted-foreground text-sm leading-relaxed">
                 Every group stage and knockout match has its own on-chain betting pool deployed before kickoff.
+              </p>
+            </motion.div>
+
+            {/* Card 3: Launch Date */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="p-6 md:p-8 rounded-3xl border border-yellow-500/20 bg-yellow-500/5"
+            >
+              <div className="text-4xl mb-4">📅</div>
+              <h3 className="font-heading font-black text-xl md:text-2xl text-yellow-400 mb-2">Launches June 11, 2026</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                The World Cup begins June 11. Markets go live as each match is deployed to Solana by the admin.
               </p>
             </motion.div>
           </div>
