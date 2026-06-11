@@ -269,29 +269,20 @@ export default function Admin() {
     }
   };
 
-  // After each successful sign, advance the offset by 1 (skip the just-deployed bet)
-  const handleDeployMatchesSuccess = async (batchOffset, batchLabel) => {
-    const nextOffset = batchOffset + 1;
-    const batchEnd = Math.ceil((batchOffset + 1) / 12) * 12; // end of this batch window
-    if (nextOffset >= batchEnd) {
-      // Whole batch done
-      setDeployMatchesDialog(null);
-      toast.success(`✓ ${batchLabel || 'Batch'} deployed!`);
-      queryClient.invalidateQueries({ queryKey: ['allBets'] });
-      return;
-    }
+  // After signing, the deployed bet is removed from undeployed list, so always fetch offset=0 next
+  const handleDeployMatchesSuccess = async (batchLabel, batchSize) => {
     try {
-      const res = await base44.functions.invoke('deployAllMatches', { batch_offset: nextOffset, batch_size: batchEnd - nextOffset });
+      const res = await base44.functions.invoke('deployAllMatches', { batch_offset: 0, batch_size: batchSize });
       if (res.data.needsSigning) {
         setDeployMatchesDialog({
           instruction: res.data.solana_instruction,
           remaining: res.data.remaining,
           betId: res.data.bet_id,
-          batchOffset: nextOffset,
           batchLabel,
+          batchSize,
         });
       } else if (res.data.autoContinue) {
-        handleDeployMatchesSuccess(nextOffset, batchLabel);
+        handleDeployMatchesSuccess(batchLabel, batchSize);
       } else {
         setDeployMatchesDialog(null);
         toast.success(res.data.message || `✓ ${batchLabel || 'Batch'} deployed!`);
@@ -311,11 +302,11 @@ export default function Admin() {
           instruction: res.data.solana_instruction,
           remaining: res.data.remaining,
           betId: res.data.bet_id,
-          batchOffset,
           batchLabel,
+          batchSize: 12,
         });
       } else if (res.data.autoContinue) {
-        handleDeployMatchesSuccess(batchOffset, batchLabel);
+        handleDeployMatchesSuccess(batchLabel, 12);
       } else {
         toast.success(res.data.message || `✓ ${batchLabel} deployed!`);
         queryClient.invalidateQueries({ queryKey: ['allBets'] });
@@ -989,7 +980,7 @@ export default function Admin() {
                 <SolanaTransactionSigner
                   instruction={deployMatchesDialog.instruction}
                   amount="0"
-                  onSuccess={() => handleDeployMatchesSuccess(deployMatchesDialog.batchOffset, deployMatchesDialog.batchLabel)}
+                  onSuccess={() => handleDeployMatchesSuccess(deployMatchesDialog.batchLabel, deployMatchesDialog.batchSize)}
                   onError={(err) => {
                     toast.error('Failed: ' + err.message);
                     setDeployMatchesDialog(null);
