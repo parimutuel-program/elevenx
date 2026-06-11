@@ -122,7 +122,7 @@ export default function Home() {
               Hybrid Betting Protocol
             </h2>
             <p className="text-white/60 text-xs sm:text-sm mb-4 sm:mb-5">
-              Revolutionary parimutuel pools meet dynamic fixed odds. Zero house edge. LPs earn fees on every bet. Pure P2P on Solana.
+              Bet on the 2026 World Cup. Win on-chain. Zero platform fees — 100% goes to winners.
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[10px] font-black text-primary tracking-wide bg-primary/10 px-2 py-1 rounded border border-primary/20">⚡ DYNAMIC ODDS</span>
