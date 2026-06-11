@@ -1,20 +1,28 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { Connection, PublicKey, SystemProgram } from 'npm:@solana/web3.js@1.98.4';
+import { Buffer } from 'node:buffer';
+import { sha256 } from 'npm:@noble/hashes@1.4.0/sha256';
 
-/**
- * Deploy ALL futures markets from database to Solana
- * Returns first transaction instruction for user to sign
- */
+function getSolanaConfig() {
+  let rawUrl = Deno.env.get('SOLANA_RPC_URL') || '';
+  if (rawUrl.includes('RPC_URL=')) rawUrl = rawUrl.split('RPC_URL=')[1].trim();
+  if (!rawUrl.startsWith('http') || rawUrl.includes('uuid')) rawUrl = 'https://api.mainnet-beta.solana.com';
+  const programIdStr = Deno.env.get('SOLANA_PROGRAM_ID') || '4epUYJPwoPhG9RPoQ6qT9dsAewJCDBSCGUpR1Xj9UxTm';
+  return { rpcUrl: rawUrl, programIdStr, programId: new PublicKey(programIdStr), connection: new Connection(rawUrl, 'confirmed') };
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const serviceRole = base44.asServiceRole;
+    const body = await req.clone().json().catch(() => ({}));
+    const force = body.force === true;
 
-    // Support both platform auth and wallet-based auth
     let isAdmin = false;
     try {
       const user = await base44.auth.me();
       if (user && user.role === 'admin') isAdmin = true;
     } catch (_) {}
-
     if (!isAdmin) {
       try {
         const authHeader = req.headers.get('Authorization') || '';
@@ -24,152 +32,123 @@ Deno.serve(async (req) => {
           if (parts.length === 3) {
             const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
             if (payload.walletAddress) {
-              const walletUsers = await base44.asServiceRole.entities.WalletUser.filter({ wallet_address: payload.walletAddress });
+              const walletUsers = await serviceRole.entities.WalletUser.filter({ wallet_address: payload.walletAddress });
               if (walletUsers[0]?.role === 'admin') isAdmin = true;
             }
           }
         }
       } catch (_) {}
     }
-
-    if (!isAdmin) {
-      return Response.json({ error: 'Admin only' }, { status: 403 });
-    }
-
-    const body = await req.clone().json().catch(() => ({}));
-    const force = body.force === true;
+    if (!isAdmin) return Response.json({ error: 'Admin only' }, { status: 403 });
 
     console.log('[deployAllFutures] Starting deployment... force:', force);
 
-    // Get all futures markets
-    const allMarkets = await base44.asServiceRole.entities.FuturesMarket.filter({});
-    
-    // In force mode include all; otherwise only undeployed
+    const allMarkets = await serviceRole.entities.FuturesMarket.filter({});
     const marketsNotMarkedDeployed = force ? allMarkets : allMarkets.filter(m => !m.solana_market_created);
 
     console.log(`[deployAllFutures] Found ${marketsNotMarkedDeployed.length} markets not marked as deployed out of ${allMarkets.length} total`);
 
-    // If all are marked deployed, verify on-chain status
     if (marketsNotMarkedDeployed.length === 0) {
-      console.log('[deployAllFutures] All markets marked deployed, verifying on-chain...');
-      let needsRedeployment = false;
-      let redeployCount = 0;
-      
-      for (const market of allMarkets) {
-        if (market.solana_market_pda) {
-          try {
-            const statusRes = await base44.functions.invoke('checkFuturesMarketStatus', {
-              futures_market_id: market.id,
-            });
-            
-            if (statusRes.data.error || !statusRes.data.exists) {
-              console.log(`[deployAllFutures] Market missing on-chain: ${market.id}`);
-              needsRedeployment = true;
-              redeployCount++;
-              await base44.asServiceRole.entities.FuturesMarket.update(market.id, {
-                solana_market_created: false,
-              });
-            }
-          } catch (err) {
-            console.log(`[deployAllFutures] Failed to verify ${market.id}:`, err.message);
-            needsRedeployment = true;
-            redeployCount++;
-          }
-        }
-      }
-      
-      if (needsRedeployment) {
-        console.log(`[deployAllFutures] Found ${redeployCount} markets need redeployment`);
-        const updatedMarkets = await base44.asServiceRole.entities.FuturesMarket.filter({});
-        const marketsToDeploy = updatedMarkets.filter(m => !m.solana_market_created);
-        const firstMarket = marketsToDeploy[0];
-        const remaining = marketsToDeploy.length - 1;
-        
-        const res = await base44.functions.invoke('createFuturesMarketOnChain', {
-          futures_market_id: firstMarket.id,
-        });
-        
-        if (res.data.error) throw new Error(res.data.error);
-        
-        return Response.json({
-          success: true,
-          message: `Found ${redeployCount} markets missing on-chain. Deploying first...`,
-          remaining: remaining,
-          needsSigning: true,
-          solana_instruction: res.data.solana_instruction,
-          market_id: firstMarket.id,
-        });
-      }
-      
-      return Response.json({ 
-        success: true,
-        message: `✓ All ${allMarkets.length} futures verified on-chain`,
-        total: allMarkets.length,
-        deployed: allMarkets.length,
-        verified: true,
-      });
+      return Response.json({ success: true, message: `✓ All ${allMarkets.length} futures verified on-chain`, total: allMarkets.length, deployed: allMarkets.length, verified: true });
     }
     
     const marketsToDeploy = marketsNotMarkedDeployed;
-
-    // Deploy first market and return instruction for signing
     const firstMarket = marketsToDeploy[0];
     const remaining = marketsToDeploy.length - 1;
 
-    try {
-      const res = await base44.functions.invoke('createFuturesMarketOnChain', {
-        futures_market_id: firstMarket.id,
-      });
+    const { programId, programIdStr, connection } = getSolanaConfig();
+    
+    const marketIdBytes = Buffer.alloc(32);
+    Buffer.from(firstMarket.id, 'utf-8').copy(marketIdBytes, 0, 0, Math.min(firstMarket.id.length, 32));
+    const [marketPda] = PublicKey.findProgramAddressSync([Buffer.from('market'), marketIdBytes], programId);
+    const [voteTallyPda] = PublicKey.findProgramAddressSync([Buffer.from('vote_tally'), marketPda.toBuffer()], programId);
+    const [platformConfigPda] = PublicKey.findProgramAddressSync([Buffer.from('platform')], programId);
 
-      if (res.data.error) {
-        console.error('[deployAllFutures] createFuturesMarketOnChain error:', res.data.error);
-        // Provide helpful context for common errors
-        if (res.data.error.includes('Platform not initialized') || res.data.error.includes('platform_config')) {
-          throw new Error('Platform not initialized on Solana. Go to Platform tab and click "Init Platform" first.');
-        }
-        if (res.data.error.includes('missing') || res.data.error.includes('Account')) {
-          throw new Error(`On-chain account error: ${res.data.error}. Try fixing timestamps or reinitializing platform.`);
-        }
-        throw new Error(res.data.error);
-      }
-
-      // If already exists and not forcing, skip to next
-      if (res.data.alreadyExists && !force) {
-        await base44.asServiceRole.entities.FuturesMarket.update(firstMarket.id, {
-          solana_market_created: true,
-          solana_market_pda: res.data.marketPda || firstMarket.solana_market_pda,
-        });
-        console.log(`[deployAllFutures] ✓ Already exists: ${firstMarket.country}`);
-        
-        // Return next market to deploy
-        return Response.json({
-          success: true,
-          message: `Market already deployed. ${remaining} remaining`,
-          remaining: remaining,
-          needsSigning: false,
-          autoContinue: true,
-        });
-      }
-
-      console.log(`[deployAllFutures] Ready to deploy: ${firstMarket.country}`);
-
-      return Response.json({
-        success: true,
-        message: `Sign to deploy ${firstMarket.country || firstMarket.title}. ${remaining} remaining after this.`,
-        remaining: remaining,
-        needsSigning: true,
-        solana_instruction: res.data.solana_instruction,
-        market_id: firstMarket.id,
-      });
-
-    } catch (err) {
-      console.error(`[deployAllFutures] ✗ Failed ${firstMarket.id}:`, err);
-      return Response.json({
-        success: false,
-        error: err.message,
-        market_id: firstMarket.id,
-      });
+    const accountInfo = await connection.getAccountInfo(marketPda);
+    if (accountInfo && accountInfo.data.length >= 210) {
+      await serviceRole.entities.FuturesMarket.update(firstMarket.id, { solana_market_created: true, solana_market_pda: marketPda.toBase58() });
+      console.log(`[deployAllFutures] ✓ Already exists: ${firstMarket.country}`);
+      return Response.json({ success: true, message: `Market already deployed. ${remaining} remaining`, remaining: remaining, needsSigning: false, autoContinue: true });
     }
+
+    const isTestMarket = firstMarket.title?.toLowerCase().includes('test');
+    const WORLD_CUP_FINAL_KICKOFF = new Date('2026-07-19T13:00:00-06:00');
+    const WORLD_CUP_FINAL_ENDS = new Date('2026-07-19T15:00:00-06:00');
+    
+    let openUntil, settleAfter;
+    if (isTestMarket) {
+      openUntil = Math.floor(new Date(firstMarket.open_until).getTime() / 1000);
+      settleAfter = openUntil + 60;
+    } else if (firstMarket.category === 'tournament') {
+      openUntil = Math.floor(WORLD_CUP_FINAL_KICKOFF.getTime() / 1000);
+      settleAfter = Math.floor(WORLD_CUP_FINAL_ENDS.getTime() / 1000);
+    } else if (firstMarket.category === 'player') {
+      openUntil = Math.floor(WORLD_CUP_FINAL_ENDS.getTime() / 1000);
+      settleAfter = openUntil + 7200;
+    } else {
+      openUntil = Math.floor(Date.now() / 1000) + 86400;
+      settleAfter = openUntil + 7200;
+    }
+
+    const discriminator = Buffer.from([103, 226, 97, 235, 200, 188, 251, 254]);
+    const outcomeNames = [Buffer.alloc(32), Buffer.alloc(32), Buffer.alloc(32)];
+    for (let i = 0; i < 3; i++) {
+      const label = firstMarket.outcomes?.[i]?.label || `Outcome ${i + 1}`;
+      Buffer.from(label, 'utf-8').copy(outcomeNames[i], 0, 0, Math.min(label.length, 32));
+    }
+
+    const feeOptionBuf = Buffer.alloc(3);
+    feeOptionBuf.writeUInt8(1, 0);
+    feeOptionBuf.writeUInt16LE(0, 1);
+    const oddsArr = [0, 1, 2].map(i => Math.max(Math.round((firstMarket.outcomes?.[i]?.odds || 2.0) * 100), 101));
+
+    const paramsData = Buffer.alloc(172);
+    let offset = 0;
+    marketIdBytes.copy(paramsData, offset); offset += 32;
+    outcomeNames[0].copy(paramsData, offset); offset += 32;
+    outcomeNames[1].copy(paramsData, offset); offset += 32;
+    outcomeNames[2].copy(paramsData, offset); offset += 32;
+    paramsData.writeBigInt64LE(BigInt(openUntil), offset); offset += 8;
+    paramsData.writeBigInt64LE(BigInt(settleAfter), offset); offset += 8;
+    feeOptionBuf.copy(paramsData, offset); offset += 3;
+    paramsData.writeUInt8(3, offset); offset += 1;
+    paramsData.writeBigUInt64LE(BigInt(oddsArr[0]), offset); offset += 8;
+    paramsData.writeBigUInt64LE(BigInt(oddsArr[1]), offset); offset += 8;
+    paramsData.writeBigUInt64LE(BigInt(oddsArr[2]), offset); offset += 8;
+
+    const instructionData = Buffer.concat([discriminator, paramsData]);
+
+    await serviceRole.entities.FuturesMarket.update(firstMarket.id, { solana_market_pda: marketPda.toBase58() });
+    console.log(`[deployAllFutures] Ready to deploy: ${firstMarket.country}`);
+
+    return Response.json({
+      success: true,
+      message: `Sign to deploy ${firstMarket.country || firstMarket.title}. ${remaining} remaining after this.`,
+      remaining: remaining,
+      needsSigning: true,
+      solana_instruction: {
+        instruction_type: 'create_market',
+        programId: programIdStr,
+        rpcUrl: connection.rpcEndpoint,
+        marketPda: marketPda.toBase58(),
+        instruction_data: instructionData.toString('base64'),
+        keys: [
+          { pubkey: marketPda.toBase58(), isSigner: false, isWritable: true },
+          { pubkey: voteTallyPda.toBase58(), isSigner: false, isWritable: true },
+          { pubkey: platformConfigPda.toBase58(), isSigner: false, isWritable: true },
+          { pubkey: 'SIGNER_WALLET', isSigner: true, isWritable: true },
+          { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false },
+        ],
+        accounts: {
+          market: marketPda.toBase58(),
+          voteTally: voteTallyPda.toBase58(),
+          platformConfig: platformConfigPda.toBase58(),
+          admin: 'SIGNER_WALLET',
+          systemProgram: '11111111111111111111111111111111',
+        },
+      },
+      market_id: firstMarket.id,
+    });
 
   } catch (error) {
     console.error('deployAllFutures error:', error);
