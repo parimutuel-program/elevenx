@@ -286,8 +286,8 @@ export default function Admin() {
   };
 
   const startDeployBatch = async (batchOffset, batchLabel, force = false) => {
-    if (!walletAddress) {
-      // Try to connect Phantom directly
+    let activeWallet = walletAddress;
+    if (!activeWallet) {
       const phantom = window.solana;
       if (!phantom) {
         toast.error('Phantom wallet not found. Please install it.');
@@ -295,11 +295,16 @@ export default function Admin() {
       }
       try {
         await phantom.connect();
-        toast('Wallet connected! Click the batch button again to deploy.', { icon: '🔗' });
+        activeWallet = phantom.publicKey?.toString();
+        if (!activeWallet) {
+          toast.error('Could not get wallet address after connecting.');
+          return;
+        }
+        toast('Wallet connected! Deploying...', { icon: '🔗' });
       } catch (e) {
         toast.error('Failed to connect wallet: ' + e.message);
+        return;
       }
-      return;
     }
     try {
       const res = await base44.functions.invoke('deployAllMatches', { batch_offset: batchOffset, batch_size: 12, force });
