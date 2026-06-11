@@ -277,16 +277,16 @@ export default function Matches() {
         <Tabs value={activeGroup} onValueChange={setActiveGroup} className="w-full">
           <TabsList className="w-full justify-start overflow-x-auto scrollbar-hide h-auto p-0 gap-2 bg-transparent">
             <TabsTrigger
-              value="TODAY"
-              className="px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all shrink-0 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:border data-[state=active]:border-accent/30 bg-secondary/50 text-muted-foreground hover:bg-secondary border border-border/50 data-[state=active]:border-transparent"
-            >
-              📅 Today
-            </TabsTrigger>
-            <TabsTrigger
               value="ALL"
               className="px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border data-[state=active]:border-primary/30 bg-secondary/50 text-muted-foreground hover:bg-secondary border border-border/50 data-[state=active]:border-transparent"
             >
               All Matches
+            </TabsTrigger>
+            <TabsTrigger
+              value="TODAY"
+              className="px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all shrink-0 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:border data-[state=active]:border-accent/30 bg-secondary/50 text-muted-foreground hover:bg-secondary border border-border/50 data-[state=active]:border-transparent"
+            >
+              📅 Today
             </TabsTrigger>
           </TabsList>
         </Tabs>
