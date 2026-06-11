@@ -287,7 +287,18 @@ export default function Admin() {
 
   const startDeployBatch = async (batchOffset, batchLabel, force = false) => {
     if (!walletAddress) {
-      toast.error('Please connect your wallet first');
+      // Try to connect Phantom directly
+      const phantom = window.solana;
+      if (!phantom) {
+        toast.error('Phantom wallet not found. Please install it.');
+        return;
+      }
+      try {
+        await phantom.connect();
+        toast('Wallet connected! Click the batch button again to deploy.', { icon: '🔗' });
+      } catch (e) {
+        toast.error('Failed to connect wallet: ' + e.message);
+      }
       return;
     }
     try {
