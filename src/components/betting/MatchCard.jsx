@@ -132,19 +132,18 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
                 {getTeamFlag(match.team_a, match.team_a_flag)}
               </div>
               <p className="text-[10px] text-foreground truncate font-medium">{match.team_a}</p>
+              {(liveMatch.status === 'live' || liveMatch.status === 'finished') && (
+                <div className="mt-1 flex items-center justify-center gap-1 bg-destructive/10 border border-destructive/20 rounded px-2 py-0.5">
+                  <span className="text-xs font-bold text-destructive">{liveMatch.score_a ?? 0}</span>
+                </div>
+              )}
             </div>
 
             {/* VS */}
             <div className="flex flex-col items-center gap-1 px-2 flex-shrink-0">
               {liveMatch.status === 'finished' || liveMatch.status === 'live' ?
               <div className="flex items-center gap-1.5 text-sm font-bold">
-                  <span className={liveMatch.status === 'live' ? 'text-destructive animate-pulse' : ''}>
-                    {liveMatch.score_a ?? 0}
-                  </span>
                   <span className="text-muted-foreground text-xs">-</span>
-                  <span className={liveMatch.status === 'live' ? 'text-destructive animate-pulse' : ''}>
-                    {liveMatch.score_b ?? 0}
-                  </span>
                 </div> :
 
               <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">VS</span>
@@ -158,6 +157,11 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
                 {getTeamFlag(match.team_b, match.team_b_flag)}
               </div>
               <p className="text-[10px] text-foreground truncate font-medium">{match.team_b}</p>
+              {(liveMatch.status === 'live' || liveMatch.status === 'finished') && (
+                <div className="mt-1 flex items-center justify-center gap-1 bg-destructive/10 border border-destructive/20 rounded px-2 py-0.5">
+                  <span className="text-xs font-bold text-destructive">{liveMatch.score_b ?? 0}</span>
+                </div>
+              )}
             </div>
           </div>
 
