@@ -287,8 +287,8 @@ export default function Admin() {
   };
 
   const startDeployBatch = async (startIndex, endIndex, batchLabel, force = false) => {
-    let activeWallet = walletAddress;
-    if (!activeWallet) {
+    let effectiveWalletAddress = walletAddress;
+    if (!effectiveWalletAddress) {
       const phantom = window.solana;
       if (!phantom) {
         toast.error('Phantom wallet not found. Please install it.');
@@ -296,8 +296,8 @@ export default function Admin() {
       }
       try {
         await phantom.connect();
-        activeWallet = phantom.publicKey?.toString();
-        if (!activeWallet) {
+        effectiveWalletAddress = phantom.publicKey?.toString();
+        if (!effectiveWalletAddress) {
           toast.error('Could not get wallet address after connecting.');
           return;
         }
