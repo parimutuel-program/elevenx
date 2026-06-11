@@ -27,39 +27,15 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [liveMatch, setLiveMatch] = useState(match);
 
-  // Fetch live score for live/finished matches
+  // Use database scores directly (no API calls to avoid rate limiting)
   useEffect(() => {
-    const fetchScore = async () => {
-      try {
-        const res = await base44.functions.invoke('fetchTheOddsApi', {
-          sport: 'soccer',
-          match_id: match.id
-        });
-        if (res.data.success && res.data.matches?.[0]) {
-          const apiMatch = res.data.matches[0];
-          setLiveMatch(prev => ({
-            ...prev,
-            score_a: apiMatch.scores?.[0]?.score ?? prev.score_a ?? match.score_a ?? 0,
-            score_b: apiMatch.scores?.[1]?.score ?? prev.score_b ?? match.score_b ?? 0,
-            status: apiMatch.status || prev.status
-          }));
-        }
-      } catch (err) {
-        console.error('Failed to fetch score:', err);
-      }
-    };
-
-    // Always fetch on mount for matches that might have scores
-    if (match.status === 'live' || match.status === 'finished' || match.score_a !== undefined || match.score_b !== undefined) {
-      fetchScore();
-    }
-    
-    // Poll every 30s for live matches
-    if (match.status === 'live') {
-      const interval = setInterval(fetchScore, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [match.id, match.status, match.score_a, match.score_b]);
+    setLiveMatch(prev => ({
+      ...prev,
+      score_a: match.score_a ?? 0,
+      score_b: match.score_b ?? 0,
+      status: match.status
+    }));
+  }, [match.score_a, match.score_b, match.status]);
 
   const handleRefreshOdds = async (e) => {
     e.preventDefault();
