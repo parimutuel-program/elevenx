@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { WalletProvider } from '@/lib/WalletContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { Outlet } from 'react-router-dom';
 
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
@@ -39,6 +40,17 @@ import TestDiscriminators from '@/pages/TestDiscriminators';
 import Docs from '@/pages/Docs';
 import Privacy from '@/pages/Privacy';
 import Terms from '@/pages/Terms';
+
+// AdminRoute: Protects admin and debug routes - redirects non-admin users to home
+const AdminRoute = () => {
+  const { user } = useAuth();
+  
+  if (!user || user.role !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
+  
+  return <Outlet />;
+};
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -76,23 +88,27 @@ const AuthenticatedApp = () => {
         <Route path="/match/:matchId" element={<MatchDetail />} />
         <Route path="/my-bets" element={<MyBets />} />
         <Route path="/profile" element={<Profile />} />
-        <Route path="/admin" element={<Admin />} />
         <Route path="/lp" element={<LpDashboard />} />
         <Route path="/futures" element={<Futures />} />
-        <Route path="/recreate-market" element={<RecreateMarket />} />
-        <Route path="/init-platform" element={<InitPlatform />} />
-        <Route path="/diagnostics" element={<Diagnostics />} />
-        <Route path="/fix-admin" element={<FixAdmin />} />
-        <Route path="/debug-wallet" element={<DebugWallet />} />
-        <Route path="/debug-claim" element={<DebugClaim />} />
-        <Route path="/debug-storage" element={<DebugStorage />} />
-        <Route path="/debug-program-id" element={<DebugProgramId />} />
-        <Route path="/test-losing-lp" element={<TestLosingLp />} />
-        <Route path="/update-secret" element={<UpdateSecret />} />
-        <Route path="/test-discriminators" element={<TestDiscriminators />} />
         <Route path="/docs" element={<Docs />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
+        
+        {/* Admin-only routes protected by AdminRoute */}
+        <Route element={<AdminRoute />}>
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/recreate-market" element={<RecreateMarket />} />
+          <Route path="/init-platform" element={<InitPlatform />} />
+          <Route path="/diagnostics" element={<Diagnostics />} />
+          <Route path="/fix-admin" element={<FixAdmin />} />
+          <Route path="/debug-wallet" element={<DebugWallet />} />
+          <Route path="/debug-claim" element={<DebugClaim />} />
+          <Route path="/debug-storage" element={<DebugStorage />} />
+          <Route path="/debug-program-id" element={<DebugProgramId />} />
+          <Route path="/test-losing-lp" element={<TestLosingLp />} />
+          <Route path="/update-secret" element={<UpdateSecret />} />
+          <Route path="/test-discriminators" element={<TestDiscriminators />} />
+        </Route>
       </Route>
 
       <Route path="*" element={<PageNotFound />} />
