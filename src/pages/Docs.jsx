@@ -425,6 +425,80 @@ export default function Docs() {
         </div>
       </section>
 
+      {/* World Cup 2026 Section */}
+      <section className="py-12 md:py-20 bg-gradient-to-b from-background via-yellow-500/5 to-background">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12 md:mb-16"
+          >
+            <Badge className="mb-4 bg-yellow-500/10 text-yellow-400 border-yellow-500/20">
+              <Trophy className="w-3 h-3 mr-1" />
+              FIFA World Cup 2026
+            </Badge>
+            <h2 className="font-heading font-black text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-3 md:mb-4 px-2">
+              Built for the <span className="text-yellow-400">2026 World Cup</span>
+            </h2>
+            <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto px-2">
+              The biggest sporting event in history — 48 teams, 104 matches, 3 host nations. ElevenX is the first fully on-chain betting protocol built specifically for this tournament.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto mb-10">
+            {[
+              { emoji: '🌎', label: '3 Host Nations', detail: 'USA · Canada · Mexico — the first ever tri-hosted World Cup' },
+              { emoji: '⚽', label: '48 Teams', detail: 'Expanded from 32 — the largest World Cup field ever contested' },
+              { emoji: '🏟️', label: '104 Matches', detail: '16 venues across 16 cities spanning two continents' },
+              { emoji: '📅', label: 'Jun 11 – Jul 19', detail: '39 days of non-stop football, group stages through the final' },
+              { emoji: '🏆', label: '12 Groups', detail: 'Groups A–L with 4 teams each; top 2 advance plus 8 best 3rd-place sides' },
+              { emoji: '💰', label: '$1B+ Prize Fund', detail: 'FIFA record prize money with the 2026 champion collecting ~$100M+' },
+            ].map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.07 }}
+                className="flex items-start gap-4 p-5 rounded-2xl border border-yellow-500/15 bg-yellow-500/5 hover:border-yellow-500/30 transition-all"
+              >
+                <span className="text-2xl flex-shrink-0">{item.emoji}</span>
+                <div>
+                  <p className="font-bold text-sm text-yellow-400 mb-0.5">{item.label}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{item.detail}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="max-w-3xl mx-auto rounded-3xl border border-yellow-500/20 bg-yellow-500/5 p-6 md:p-8 text-center"
+          >
+            <p className="text-muted-foreground text-sm md:text-base mb-5 leading-relaxed">
+              Every group stage match, every knockout fixture — ElevenX deploys an on-chain market for each one. Bet on match outcomes, or take a longer view with futures markets predicting where all 48 nations finish.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button asChild className="rounded-xl font-bold bg-yellow-500 hover:bg-yellow-400 text-yellow-950">
+                <Link to="/matches">
+                  View All Matches
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="rounded-xl font-bold border-yellow-500/30 hover:border-yellow-500/60 text-yellow-400">
+                <Link to="/futures">
+                  Explore Futures Markets
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Link>
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* Security & Transparency Section */}
       <section className="py-12 md:py-20">
         <div className="container mx-auto px-4">
