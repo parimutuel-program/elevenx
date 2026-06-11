@@ -244,8 +244,8 @@ export default function Admin() {
           marketId: res.data.market_id,
         });
       } else if (res.data.autoContinue) {
-        // Market already exists, continue to next
-        handleDeployFuturesSuccess(); // Recursively call to get next
+        // Market already exists, continue to next (delay to avoid rate limits)
+        setTimeout(() => handleDeployFuturesSuccess(), 3000);
       } else {
         // All done
         setDeployFuturesDialog(null);
@@ -273,7 +273,7 @@ export default function Admin() {
           force,
         });
       } else if (res.data.autoContinue) {
-        handleDeployMatchesSuccess(batchLabel, batchSize, force);
+        setTimeout(() => handleDeployMatchesSuccess(batchLabel, batchSize, force), 3000);
       } else {
         setDeployMatchesDialog(null);
         toast.success(res.data.message || `✓ ${batchLabel || 'Batch'} deployed!`);
@@ -433,7 +433,7 @@ export default function Admin() {
                         });
                       } else if (res.data.autoContinue) {
                         toast.success('Continuing deployment...');
-                        setTimeout(() => handleDeployFuturesSuccess(), 500);
+                        setTimeout(() => handleDeployFuturesSuccess(), 3000);
                       } else {
                         toast.success(res.data.message || '✓ All futures deployed!');
                         queryClient.invalidateQueries({ queryKey: ['futuresMarkets'] });
