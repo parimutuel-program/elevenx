@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +25,40 @@ const statusLabels = {
 export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
   const matchTime = match.match_time ? new Date(match.match_time) : null;
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [liveMatch, setLiveMatch] = useState(match);
+
+  // Fetch live score for live/finished matches
+  useEffect(() => {
+    const fetchScore = async () => {
+      if (match.status === 'live' || match.status === 'finished') {
+        try {
+          const res = await base44.functions.invoke('fetchTheOddsApi', {
+            sport: 'soccer',
+            match_id: match.id
+          });
+          if (res.data.success && res.data.matches?.[0]) {
+            const apiMatch = res.data.matches[0];
+            setLiveMatch(prev => ({
+              ...prev,
+              score_a: apiMatch.scores?.[0]?.score || prev.score_a || 0,
+              score_b: apiMatch.scores?.[1]?.score || prev.score_b || 0,
+              status: apiMatch.status || prev.status
+            }));
+          }
+        } catch (err) {
+          console.error('Failed to fetch score:', err);
+        }
+      }
+    };
+
+    fetchScore();
+    
+    // Poll every 30s for live matches
+    if (match.status === 'live') {
+      const interval = setInterval(fetchScore, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [match.id, match.status]);
 
   const handleRefreshOdds = async (e) => {
     e.preventDefault();
@@ -102,11 +136,15 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
 
             {/* VS */}
             <div className="flex flex-col items-center gap-1 px-2 flex-shrink-0">
-              {match.status === 'finished' || match.status === 'live' ?
+              {liveMatch.status === 'finished' || liveMatch.status === 'live' ?
               <div className="flex items-center gap-1.5 text-sm font-bold">
-                  <span>{match.score_a ?? 0}</span>
+                  <span className={liveMatch.status === 'live' ? 'text-destructive animate-pulse' : ''}>
+                    {liveMatch.score_a ?? 0}
+                  </span>
                   <span className="text-muted-foreground text-xs">-</span>
-                  <span>{match.score_b ?? 0}</span>
+                  <span className={liveMatch.status === 'live' ? 'text-destructive animate-pulse' : ''}>
+                    {liveMatch.score_b ?? 0}
+                  </span>
                 </div> :
 
               <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">VS</span>
