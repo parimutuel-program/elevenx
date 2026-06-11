@@ -425,6 +425,104 @@ export default function Docs() {
         </div>
       </section>
 
+      {/* Security & Transparency Section */}
+      <section className="py-12 md:py-20">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="max-w-4xl mx-auto"
+          >
+            <div className="text-center mb-10">
+              <Badge className="mb-4 bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                <Shield className="w-3 h-3 mr-1" />
+                Security & Transparency
+              </Badge>
+              <h2 className="font-heading font-black text-2xl sm:text-3xl md:text-4xl mb-3">
+                Don't Trust. <span className="text-emerald-400">Verify.</span>
+              </h2>
+              <p className="text-muted-foreground text-sm md:text-base max-w-xl mx-auto">
+                Everything on ElevenX can be verified on-chain or in our open-source code. Read the full security report below.
+              </p>
+            </div>
+
+            {/* Security doc card */}
+            <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/5 p-6 md:p-8 mb-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center flex-shrink-0">
+                  <Shield className="w-6 h-6 text-emerald-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-heading font-bold text-lg text-emerald-400">ElevenX — Security &amp; Transparency</h3>
+                  <p className="text-xs text-muted-foreground">Full audit report · Open source · On-chain verifiable</p>
+                </div>
+                <a
+                  href="https://media.base44.com/files/public/6a1da108eb293de119e4e930/e956f23e8_ElevenX_Security_Transparency.md"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-xs px-4 py-2 rounded-xl transition-colors flex-shrink-0"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Read Report
+                </a>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  "Open-source smart contract — read every line",
+                  "No admin backdoor in the deployed program",
+                  "Fees hard-capped at 2% in code",
+                  "Funds cannot be locked — users always claim or refund",
+                  "Trust-minimized oracle-based settlement",
+                  "Independent audit in progress"
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* GitHub + Claude row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* GitHub */}
+              <a
+                href="https://github.com/parimutuel-program/elevenx"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center gap-4 p-5 rounded-2xl border border-border/50 bg-card/50 hover:border-primary/30 transition-all"
+              >
+                <div className="w-11 h-11 rounded-xl bg-[#161b22] border border-white/10 flex items-center justify-center flex-shrink-0">
+                  <svg viewBox="0 0 24 24" className="w-6 h-6 text-white" fill="currentColor">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">ElevenX on GitHub</p>
+                  <p className="text-xs text-muted-foreground truncate">github.com/parimutuel-program/elevenx</p>
+                </div>
+                <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
+              </a>
+
+              {/* Claude AI reference */}
+              <div className="flex items-center gap-4 p-5 rounded-2xl border border-border/50 bg-card/50">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+                  style={{ background: 'linear-gradient(135deg, #D4A574 0%, #C8956C 50%, #B8814A 100%)' }}>
+                  <svg viewBox="0 0 40 40" className="w-7 h-7" fill="none">
+                    <path d="M20 8C13.37 8 8 13.37 8 20s5.37 12 12 12 12-5.37 12-12S26.63 8 20 8zm0 4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm6 14H14v-2c0-2 4-3.1 6-3.1s6 1.1 6 3.1v2z" fill="white" opacity="0.9"/>
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-sm text-foreground">Built with Claude AI</p>
+                  <p className="text-xs text-muted-foreground">Security analysis &amp; smart contract logic reviewed by Anthropic's Claude</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-12 md:py-20 bg-gradient-to-b from-background via-primary/5 to-background">
         <div className="container mx-auto px-4">
