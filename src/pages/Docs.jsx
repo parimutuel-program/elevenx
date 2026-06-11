@@ -444,37 +444,36 @@ export default function Docs() {
             <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto px-2">
               The biggest sporting event in history — 48 teams, 104 matches, 3 host nations. ElevenX is the first fully on-chain betting protocol built specifically for this tournament.
             </p>
-            <div className="mt-5 inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl px-5 py-3">
-              <span className="text-xl">🏆</span>
-              <span className="font-heading font-bold text-yellow-400 text-sm sm:text-base">48 Nations, 48 Markets</span>
-              <span className="text-muted-foreground text-xs sm:text-sm">— One futures market per country. Bet on 1st, 2nd, or 3rd place finishes.</span>
-            </div>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto mb-10">
-            {[
-              { emoji: '🌎', label: '3 Host Nations', detail: 'USA · Canada · Mexico — the first ever tri-hosted World Cup' },
-              { emoji: '⚽', label: '48 Teams', detail: 'Expanded from 32 — the largest World Cup field ever contested' },
-              { emoji: '🏟️', label: '104 Matches', detail: '16 venues across 16 cities spanning two continents' },
-              { emoji: '📅', label: 'Jun 11 – Jul 19', detail: '39 days of non-stop football, group stages through the final' },
-              { emoji: '🏆', label: '12 Groups', detail: 'Groups A–L with 4 teams each; top 2 advance plus 8 best 3rd-place sides' },
-              { emoji: '💰', label: '$1B+ Prize Fund', detail: 'FIFA record prize money with the 2026 champion collecting ~$100M+' },
-            ].map((item, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.07 }}
-                className="flex items-start gap-4 p-5 rounded-2xl border border-yellow-500/15 bg-yellow-500/5 hover:border-yellow-500/30 transition-all"
-              >
-                <span className="text-2xl flex-shrink-0">{item.emoji}</span>
-                <div>
-                  <p className="font-bold text-sm text-yellow-400 mb-0.5">{item.label}</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{item.detail}</p>
-                </div>
-              </motion.div>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-10">
+            {/* Card 1: 48 Nations */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="p-6 md:p-8 rounded-3xl border border-yellow-500/20 bg-yellow-500/5"
+            >
+              <div className="text-4xl mb-4">🌍</div>
+              <h3 className="font-heading font-black text-xl md:text-2xl text-yellow-400 mb-2">48 Nations, 48 Markets</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                One futures market per country competing in the 2026 World Cup. Bet on 1st, 2nd, or 3rd place finishes.
+              </p>
+            </motion.div>
+
+            {/* Card 2: 72 Match Markets */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="p-6 md:p-8 rounded-3xl border border-yellow-500/20 bg-yellow-500/5"
+            >
+              <div className="text-4xl mb-4">⚽</div>
+              <h3 className="font-heading font-black text-xl md:text-2xl text-yellow-400 mb-2">72 Match Markets</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Every group stage and knockout match has its own on-chain betting pool deployed before kickoff.
+              </p>
+            </motion.div>
           </div>
 
           <motion.div
