@@ -124,17 +124,15 @@ Deno.serve(async (req) => {
 
     const batchOffset = body.batch_offset || 0; // which global index to start from
     const batchSize = body.batch_size || 12;    // how many to include in this batch
-    const forceCheck = body.force_check === true;
 
     const allBets = await base44.asServiceRole.entities.Bet.filter({});
     // Sort deterministically by id for stable batching
     allBets.sort((a, b) => a.id.localeCompare(b.id));
 
-    const undeployed = forceCheck
-      ? allBets
-      : allBets.filter(b => !b.solana_market_created || !b.solana_market_pda);
+    // Only include bets that are not yet deployed on-chain
+    const undeployed = allBets.filter(b => !b.solana_market_created || !b.solana_market_pda);
 
-    // Apply batch window
+    // Apply batch window: batchOffset is an index into the undeployed list
     const betsToDeploy = undeployed.slice(batchOffset, batchOffset + batchSize);
 
     console.log(`[deployAllMatches] Batch offset=${batchOffset} size=${batchSize}: ${betsToDeploy.length} bets (${undeployed.length} total undeployed)`);

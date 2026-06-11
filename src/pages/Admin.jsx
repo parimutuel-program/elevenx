@@ -269,19 +269,29 @@ export default function Admin() {
     }
   };
 
+  // After each successful sign, advance the offset by 1 (skip the just-deployed bet)
   const handleDeployMatchesSuccess = async (batchOffset, batchLabel) => {
+    const nextOffset = batchOffset + 1;
+    const batchEnd = Math.ceil((batchOffset + 1) / 12) * 12; // end of this batch window
+    if (nextOffset >= batchEnd) {
+      // Whole batch done
+      setDeployMatchesDialog(null);
+      toast.success(`✓ ${batchLabel || 'Batch'} deployed!`);
+      queryClient.invalidateQueries({ queryKey: ['allBets'] });
+      return;
+    }
     try {
-      const res = await base44.functions.invoke('deployAllMatches', { batch_offset: batchOffset, batch_size: 12, force_check: true });
+      const res = await base44.functions.invoke('deployAllMatches', { batch_offset: nextOffset, batch_size: batchEnd - nextOffset });
       if (res.data.needsSigning) {
         setDeployMatchesDialog({
           instruction: res.data.solana_instruction,
           remaining: res.data.remaining,
           betId: res.data.bet_id,
-          batchOffset,
+          batchOffset: nextOffset,
           batchLabel,
         });
       } else if (res.data.autoContinue) {
-        handleDeployMatchesSuccess(batchOffset, batchLabel);
+        handleDeployMatchesSuccess(nextOffset, batchLabel);
       } else {
         setDeployMatchesDialog(null);
         toast.success(res.data.message || `✓ ${batchLabel || 'Batch'} deployed!`);
@@ -295,7 +305,7 @@ export default function Admin() {
 
   const startDeployBatch = async (batchOffset, batchLabel) => {
     try {
-      const res = await base44.functions.invoke('deployAllMatches', { batch_offset: batchOffset, batch_size: 12, force_check: true });
+      const res = await base44.functions.invoke('deployAllMatches', { batch_offset: batchOffset, batch_size: 12 });
       if (res.data.needsSigning) {
         setDeployMatchesDialog({
           instruction: res.data.solana_instruction,
