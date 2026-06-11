@@ -128,11 +128,16 @@ Deno.serve(async (req) => {
     const force = body.force === true;           // force redeploy all bets regardless of status
 
     const allBets = await base44.asServiceRole.entities.Bet.filter({});
+    const allMatches = await base44.asServiceRole.entities.Match.filter({});
+    const matchIds = new Set(allMatches.map(m => m.id));
+    
     // Sort deterministically by id for stable batching
     allBets.sort((a, b) => a.id.localeCompare(b.id));
 
     // In force mode, include all bets; otherwise only undeployed
-    const undeployed = force ? allBets : allBets.filter(b => !b.solana_market_created || !b.solana_market_pda);
+    // Also filter out orphan bets (no matching match entity)
+    const undeployed = (force ? allBets : allBets.filter(b => !b.solana_market_created || !b.solana_market_pda))
+      .filter(b => matchIds.has(b.match_id));
 
     // Apply batch window: batchOffset is an index into the undeployed list
     const betsToDeploy = undeployed.slice(batchOffset, batchOffset + batchSize);
