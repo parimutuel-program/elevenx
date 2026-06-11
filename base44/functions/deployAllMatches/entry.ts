@@ -86,6 +86,7 @@ function buildCreateMarketInstruction(bet, match, programIdStr, programId, platf
 
 Deno.serve(async (req) => {
   try {
+    const body = await req.clone().json().catch(() => ({}));
     const base44 = createClientFromRequest(req);
 
     // Support both platform auth and wallet-based auth
@@ -121,31 +122,29 @@ Deno.serve(async (req) => {
 
     console.log('[deployAllMatches] Starting deployment...');
 
-    const body = await req.json().catch(() => ({}));
-    const groupFilter = body.group_stage || null;
+    const batchOffset = body.batch_offset || 0; // which global index to start from
+    const batchSize = body.batch_size || 12;    // how many to include in this batch
+    const forceCheck = body.force_check === true;
 
     const allBets = await base44.asServiceRole.entities.Bet.filter({});
-    let betsToDeploy = allBets.filter(b => !b.solana_market_created);
+    // Sort deterministically by id for stable batching
+    allBets.sort((a, b) => a.id.localeCompare(b.id));
 
-    // If group filter provided, also check matches for group_stage
-    if (groupFilter) {
-      const allMatches2 = await base44.asServiceRole.entities.Match.filter({});
-      const matchMap = {};
-      allMatches2.forEach(m => { matchMap[m.id] = m; });
-      betsToDeploy = betsToDeploy.filter(b => {
-        const m = matchMap[b.match_id];
-        return m && m.group_stage && m.group_stage.toLowerCase().includes(groupFilter.toLowerCase());
-      });
-    }
+    const undeployed = forceCheck
+      ? allBets
+      : allBets.filter(b => !b.solana_market_created || !b.solana_market_pda);
 
-    console.log(`[deployAllMatches] Found ${betsToDeploy.length} bets to deploy${groupFilter ? ` for ${groupFilter}` : ''} out of ${allBets.length} total`);
+    // Apply batch window
+    const betsToDeploy = undeployed.slice(batchOffset, batchOffset + batchSize);
+
+    console.log(`[deployAllMatches] Batch offset=${batchOffset} size=${batchSize}: ${betsToDeploy.length} bets (${undeployed.length} total undeployed)`);
 
     if (betsToDeploy.length === 0) {
       return Response.json({
         success: true,
-        message: `✓ All ${allBets.length} matches already deployed`,
+        message: `✓ Batch complete! ${undeployed.length - batchOffset <= 0 ? 'All matches deployed' : `${undeployed.length} matches still pending`}`,
         total: allBets.length,
-        deployed: allBets.length,
+        deployed: allBets.length - undeployed.length,
       });
     }
 
@@ -184,7 +183,16 @@ Deno.serve(async (req) => {
     const matches = await base44.asServiceRole.entities.Match.filter({ id: firstBet.match_id });
     const match = matches[0];
     if (!match) {
-      return Response.json({ success: false, error: `Match not found for bet ${firstBet.id}`, bet_id: firstBet.id });
+      // Skip this bet and mark it as deployed to avoid infinite loop
+      await base44.asServiceRole.entities.Bet.update(firstBet.id, { solana_market_created: true });
+      console.log(`[deployAllMatches] Skipping bet ${firstBet.id} - no match found`);
+      return Response.json({
+        success: true,
+        message: `Skipped bet (no match). ${remaining} remaining`,
+        remaining,
+        needsSigning: false,
+        autoContinue: true,
+      });
     }
 
     const { solana_instruction } = buildCreateMarketInstruction(firstBet, match, programIdStr, programId, platformPda);

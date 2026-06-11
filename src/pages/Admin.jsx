@@ -269,23 +269,22 @@ export default function Admin() {
     }
   };
 
-  const handleDeployMatchesSuccess = async (groupFilter) => {
-    // After signing, call deployAllMatches again to get next match
+  const handleDeployMatchesSuccess = async (batchOffset, batchLabel) => {
     try {
-      const res = await base44.functions.invoke('deployAllMatches', groupFilter ? { group_stage: groupFilter } : {});
+      const res = await base44.functions.invoke('deployAllMatches', { batch_offset: batchOffset, batch_size: 12, force_check: true });
       if (res.data.needsSigning) {
-        // More matches to deploy
         setDeployMatchesDialog({
           instruction: res.data.solana_instruction,
           remaining: res.data.remaining,
           betId: res.data.bet_id,
-          groupFilter,
+          batchOffset,
+          batchLabel,
         });
       } else if (res.data.autoContinue) {
-        handleDeployMatchesSuccess(groupFilter);
+        handleDeployMatchesSuccess(batchOffset, batchLabel);
       } else {
         setDeployMatchesDialog(null);
-        toast.success(res.data.message || '✓ All matches deployed!');
+        toast.success(res.data.message || `✓ ${batchLabel || 'Batch'} deployed!`);
         queryClient.invalidateQueries({ queryKey: ['allBets'] });
       }
     } catch (err) {
@@ -294,20 +293,21 @@ export default function Admin() {
     }
   };
 
-  const startDeployGroup = async (groupFilter) => {
+  const startDeployBatch = async (batchOffset, batchLabel) => {
     try {
-      const res = await base44.functions.invoke('deployAllMatches', groupFilter ? { group_stage: groupFilter } : {});
+      const res = await base44.functions.invoke('deployAllMatches', { batch_offset: batchOffset, batch_size: 12, force_check: true });
       if (res.data.needsSigning) {
         setDeployMatchesDialog({
           instruction: res.data.solana_instruction,
           remaining: res.data.remaining,
           betId: res.data.bet_id,
-          groupFilter,
+          batchOffset,
+          batchLabel,
         });
       } else if (res.data.autoContinue) {
-        handleDeployMatchesSuccess(groupFilter);
+        handleDeployMatchesSuccess(batchOffset, batchLabel);
       } else {
-        toast.success(res.data.message || `✓ ${groupFilter || 'All matches'} deployed!`);
+        toast.success(res.data.message || `✓ ${batchLabel} deployed!`);
         queryClient.invalidateQueries({ queryKey: ['allBets'] });
       }
     } catch (err) {
@@ -439,14 +439,27 @@ export default function Admin() {
                   <span className="font-bold text-lg text-white">🚀 Deploy All Futures</span>
                   <span className="text-xs text-gray-400">Deploy all futures markets</span>
                 </Button>
-                {['A','B','C','D','E','F','G','H'].map(group => (
+                {[
+                  [0,'Batch 1–12'],
+                  [12,'Batch 13–24'],
+                  [24,'Batch 25–36'],
+                  [36,'Batch 37–48'],
+                  [48,'Batch 49–60'],
+                  [60,'Batch 61–72'],
+                  [72,'Batch 73–84'],
+                  [84,'Batch 85–96'],
+                  [96,'Batch 97–108'],
+                  [108,'Batch 109–120'],
+                  [120,'Batch 121–132'],
+                  [132,'Batch 133–144'],
+                ].map(([offset, label]) => (
                   <Button
-                    key={group}
-                    onClick={() => startDeployGroup(`Group ${group}`)}
+                    key={offset}
+                    onClick={() => startDeployBatch(offset, label)}
                     className="h-24 flex flex-col gap-2 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-600/30 rounded-xl"
                   >
-                    <span className="font-bold text-lg text-white">⚡ Group {group}</span>
-                    <span className="text-xs text-gray-400">Deploy Group {group} matches</span>
+                    <span className="font-bold text-sm text-white">⚡ {label}</span>
+                    <span className="text-xs text-gray-400">Deploy matches {label.split('–')[0].replace('Batch ','')}-{label.split('–')[1]}</span>
                   </Button>
                 ))}
                 <Button
@@ -960,13 +973,13 @@ export default function Admin() {
             <Card className="bg-gray-900 border border-gray-800 p-6 max-w-lg w-full">
               <div className="space-y-4">
                 <div className="bg-purple-600/20 border border-purple-600/30 rounded-xl p-4">
-                  <h3 className="font-heading font-bold text-lg text-purple-400 mb-1">Deploy {deployMatchesDialog.groupFilter || 'All Matches'} — {deployMatchesDialog.remaining} remaining</h3>
+                  <h3 className="font-heading font-bold text-lg text-purple-400 mb-1">Deploy {deployMatchesDialog.batchLabel || 'Matches'} — {deployMatchesDialog.remaining} remaining</h3>
                   <p className="text-sm text-gray-400">Sign each transaction to deploy one match at a time.</p>
                 </div>
                 <SolanaTransactionSigner
                   instruction={deployMatchesDialog.instruction}
                   amount="0"
-                  onSuccess={() => handleDeployMatchesSuccess(deployMatchesDialog.groupFilter)}
+                  onSuccess={() => handleDeployMatchesSuccess(deployMatchesDialog.batchOffset, deployMatchesDialog.batchLabel)}
                   onError={(err) => {
                     toast.error('Failed: ' + err.message);
                     setDeployMatchesDialog(null);
