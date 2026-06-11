@@ -286,6 +286,10 @@ export default function Admin() {
   };
 
   const startDeployBatch = async (batchOffset, batchLabel, force = false) => {
+    if (!walletAddress) {
+      toast.error('Please connect your wallet first');
+      return;
+    }
     try {
       const res = await base44.functions.invoke('deployAllMatches', { batch_offset: batchOffset, batch_size: 12, force });
       if (res.data.needsSigning) {
