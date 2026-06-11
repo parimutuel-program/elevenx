@@ -1,147 +1,190 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { Connection, PublicKey, SystemProgram } from 'npm:@solana/web3.js@1.98.4';
+import { Buffer } from 'node:buffer';
+import { sha256 } from 'npm:@noble/hashes@1.4.0/sha256';
 
-/**
- * Deploy ALL match markets from database to Solana
- * Returns first transaction instruction for user to sign
- */
+function getSolanaConfig() {
+  const rpcUrl = Deno.env.get('SOLANA_RPC_URL') || '';
+  const programIdStr = Deno.env.get('ELEVENX_PROGRAM_ID') || '';
+  if (!rpcUrl) throw new Error('SOLANA_RPC_URL secret not set');
+  if (!programIdStr) throw new Error('ELEVENX_PROGRAM_ID secret not set');
+  return { rpcUrl, programIdStr, programId: new PublicKey(programIdStr), connection: new Connection(rpcUrl, 'confirmed') };
+}
+
+function buildCreateMarketInstruction(bet, match, programIdStr, programId, platformPda) {
+  const matchIdBytes = Buffer.alloc(32);
+  Buffer.from(match.id, 'utf-8').copy(matchIdBytes, 0, 0, Math.min(match.id.length, 32));
+
+  const [marketPda] = PublicKey.findProgramAddressSync([Buffer.from('market'), matchIdBytes], programId);
+  const [voteTallyPda] = PublicKey.findProgramAddressSync([Buffer.from('vote_tally'), marketPda.toBuffer()], programId);
+  const [feeVaultPda] = PublicKey.findProgramAddressSync([Buffer.from('fee_vault')], programId);
+
+  const openUntil = Math.floor(new Date(bet.open_until).getTime() / 1000);
+  const settleAfter = openUntil + 60;
+
+  const outcomeNames = ['A', 'B', 'Draw'].map((fallback, i) => {
+    const src = [bet.outcome_a, bet.outcome_b, bet.outcome_draw][i] || fallback;
+    const buf = Buffer.alloc(32);
+    Buffer.from(src, 'utf-8').copy(buf, 0, 0, Math.min(src.length, 32));
+    return buf;
+  });
+
+  const feeRaw = Math.min(bet.fee_percent || 200, 200);
+  const feeOptionBuf = Buffer.alloc(3);
+  feeOptionBuf.writeUInt8(1, 0);
+  feeOptionBuf.writeUInt16LE(feeRaw, 1);
+
+  const oddsA = Math.max(Math.round((bet.odds_a || 2.0) * 100), 101);
+  const oddsB = Math.max(Math.round((bet.odds_b || 2.0) * 100), 101);
+  const oddsDraw = Math.max(Math.round((bet.odds_draw || 3.0) * 100), 101);
+
+  const paramsData = Buffer.alloc(172);
+  let offset = 0;
+  matchIdBytes.copy(paramsData, offset); offset += 32;
+  outcomeNames[0].copy(paramsData, offset); offset += 32;
+  outcomeNames[1].copy(paramsData, offset); offset += 32;
+  outcomeNames[2].copy(paramsData, offset); offset += 32;
+  paramsData.writeBigInt64LE(BigInt(openUntil), offset); offset += 8;
+  paramsData.writeBigInt64LE(BigInt(settleAfter), offset); offset += 8;
+  feeOptionBuf.copy(paramsData, offset); offset += 3;
+  paramsData.writeUInt8(3, offset); offset += 1;
+  paramsData.writeBigUInt64LE(BigInt(oddsA), offset); offset += 8;
+  paramsData.writeBigUInt64LE(BigInt(oddsB), offset); offset += 8;
+  paramsData.writeBigUInt64LE(BigInt(oddsDraw), offset); offset += 8;
+
+  const discriminator = Buffer.from([103, 226, 97, 235, 200, 188, 251, 254]);
+  const instructionData = Buffer.concat([discriminator, paramsData]);
+
+  const keys = [
+    { pubkey: marketPda.toBase58(), isSigner: false, isWritable: true },
+    { pubkey: voteTallyPda.toBase58(), isSigner: false, isWritable: true },
+    { pubkey: platformPda.toBase58(), isSigner: false, isWritable: true },
+    { pubkey: 'SIGNER_WALLET', isSigner: true, isWritable: true },
+    { pubkey: SystemProgram.programId.toBase58(), isSigner: false, isWritable: false },
+  ];
+
+  const accounts = {
+    market: marketPda.toBase58(),
+    voteTally: voteTallyPda.toBase58(),
+    platformConfig: platformPda.toBase58(),
+    admin: 'SIGNER_WALLET',
+    systemProgram: SystemProgram.programId.toBase58(),
+  };
+
+  return {
+    marketPda: marketPda.toBase58(),
+    feeVaultPda: feeVaultPda.toBase58(),
+    solana_instruction: {
+      instruction_type: 'create_market',
+      programId: programIdStr,
+      keys,
+      accounts,
+      instruction_data: instructionData.toString('base64'),
+    },
+  };
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    
-    if (!user || user.role !== 'admin') {
+
+    // Support both platform auth and wallet-based auth
+    let isAdmin = false;
+    try {
+      const user = await base44.auth.me();
+      if (user && user.role === 'admin') isAdmin = true;
+    } catch (_) {}
+
+    if (!isAdmin) {
+      try {
+        const authHeader = req.headers.get('Authorization') || '';
+        const token = authHeader.replace('Bearer ', '');
+        if (token) {
+          const parts = token.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+            if (payload.walletAddress) {
+              const walletUsers = await base44.asServiceRole.entities.WalletUser.filter({ wallet_address: payload.walletAddress });
+              if (walletUsers[0]?.role === 'admin') isAdmin = true;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (!isAdmin) {
       return Response.json({ error: 'Admin only' }, { status: 403 });
     }
 
+    const { rpcUrl, programIdStr, programId, connection } = getSolanaConfig();
+    const [platformPda] = PublicKey.findProgramAddressSync([Buffer.from('platform')], programId);
+
     console.log('[deployAllMatches] Starting deployment...');
 
-    // Get all bets
     const allBets = await base44.asServiceRole.entities.Bet.filter({});
-    
-    // Find bets that need deployment (not marked as deployed)
-    const betsNotMarkedDeployed = allBets.filter(b => !b.solana_market_created);
+    const betsToDeploy = allBets.filter(b => !b.solana_market_created);
 
-    console.log(`[deployAllMatches] Found ${betsNotMarkedDeployed.length} bets not marked as deployed out of ${allBets.length} total`);
+    console.log(`[deployAllMatches] Found ${betsToDeploy.length} bets to deploy out of ${allBets.length} total`);
 
-    // If all are marked deployed, verify on-chain status
-    if (betsNotMarkedDeployed.length === 0) {
-      console.log('[deployAllMatches] All bets marked deployed, verifying on-chain...');
-      let needsRedeployment = false;
-      let redeployCount = 0;
-      
-      for (const bet of allBets) {
-        if (bet.solana_market_pda) {
-          try {
-            // Check if market exists on-chain
-            const statusRes = await base44.functions.invoke('checkMarketStatus', {
-              bet_id: bet.id,
-            });
-            
-            if (statusRes.data.error || !statusRes.data.exists) {
-              console.log(`[deployAllMatches] Market missing on-chain: ${bet.id}`);
-              needsRedeployment = true;
-              redeployCount++;
-              // Mark for redeployment
-              await base44.asServiceRole.entities.Bet.update(bet.id, {
-                solana_market_created: false,
-              });
-            }
-          } catch (err) {
-            console.log(`[deployAllMatches] Failed to verify ${bet.id}:`, err.message);
-            needsRedeployment = true;
-            redeployCount++;
-          }
-        }
-      }
-      
-      if (needsRedeployment) {
-        console.log(`[deployAllMatches] Found ${redeployCount} markets need redeployment`);
-        // Refresh the list after marking missing markets
-        const updatedBets = await base44.asServiceRole.entities.Bet.filter({});
-        const betsToDeploy = updatedBets.filter(b => !b.solana_market_created);
-        // Continue to deploy the first one
-        const firstBet = betsToDeploy[0];
-        const remaining = betsToDeploy.length - 1;
-        
-        const res = await base44.functions.invoke('createMarketOnChain', {
-          bet_id: firstBet.id,
-          force_recreate: true,
-        });
-        
-        if (res.data.error) throw new Error(res.data.error);
-        
-        return Response.json({
-          success: true,
-          message: `Found ${redeployCount} markets missing on-chain. Deploying first...`,
-          remaining: remaining,
-          needsSigning: true,
-          solana_instruction: res.data.solana_instruction,
-          bet_id: firstBet.id,
-        });
-      }
-      
-      return Response.json({ 
+    if (betsToDeploy.length === 0) {
+      return Response.json({
         success: true,
-        message: `✓ All ${allBets.length} matches verified on-chain`,
+        message: `✓ All ${allBets.length} matches already deployed`,
         total: allBets.length,
         deployed: allBets.length,
-        verified: true,
       });
     }
-    
-    const betsToDeploy = betsNotMarkedDeployed;
 
-    // Deploy first bet and return instruction for signing
+    // Check platform is initialized
+    const platformInfo = await connection.getAccountInfo(platformPda);
+    if (!platformInfo) {
+      return Response.json({ error: 'Platform not initialized on Solana. Go to Platform tab and click "Init Platform" first.' });
+    }
+
     const firstBet = betsToDeploy[0];
     const remaining = betsToDeploy.length - 1;
 
-    try {
-      const res = await base44.functions.invoke('createMarketOnChain', {
-        bet_id: firstBet.id,
-        force_recreate: false,
+    // Check if already deployed on-chain
+    const matchIdBytes = Buffer.alloc(32);
+    Buffer.from(firstBet.match_id, 'utf-8').copy(matchIdBytes, 0, 0, Math.min(firstBet.match_id.length, 32));
+    const [marketPda] = PublicKey.findProgramAddressSync([Buffer.from('market'), matchIdBytes], programId);
+    const marketInfo = await connection.getAccountInfo(marketPda);
+
+    if (marketInfo) {
+      // Already exists on-chain, mark as deployed and signal auto-continue
+      await base44.asServiceRole.entities.Bet.update(firstBet.id, {
+        solana_market_created: true,
+        solana_market_pda: marketPda.toBase58(),
       });
-
-      if (res.data.error) {
-        throw new Error(res.data.error);
-      }
-
-      // If already exists, skip to next
-      if (res.data.alreadyExists) {
-        await base44.asServiceRole.entities.Bet.update(firstBet.id, {
-          solana_market_created: true,
-          solana_market_pda: res.data.marketPda || firstBet.solana_market_pda,
-        });
-        console.log(`[deployAllMatches] ✓ Already exists: ${firstBet.title}`);
-        
-        // Return next bet to deploy
-        return Response.json({
-          success: true,
-          message: `Market already deployed. ${remaining} remaining`,
-          remaining: remaining,
-          needsSigning: false,
-          autoContinue: true,
-        });
-      }
-
-      console.log(`[deployAllMatches] Ready to deploy: ${firstBet.title}`);
-
+      console.log(`[deployAllMatches] ✓ Already exists on-chain: ${firstBet.title}`);
       return Response.json({
         success: true,
-        message: `Sign to deploy ${firstBet.title || firstBet.match_id}. ${remaining} remaining after this.`,
-        remaining: remaining,
-        needsSigning: true,
-        solana_instruction: res.data.solana_instruction,
-        bet_id: firstBet.id,
-      });
-
-    } catch (err) {
-      console.error(`[deployAllMatches] ✗ Failed ${firstBet.id}:`, err);
-      return Response.json({
-        success: false,
-        error: err.message,
-        bet_id: firstBet.id,
+        message: `Market already deployed. ${remaining} remaining`,
+        remaining,
+        needsSigning: false,
+        autoContinue: true,
       });
     }
+
+    // Fetch the match
+    const matches = await base44.asServiceRole.entities.Match.filter({ id: firstBet.match_id });
+    const match = matches[0];
+    if (!match) {
+      return Response.json({ success: false, error: `Match not found for bet ${firstBet.id}`, bet_id: firstBet.id });
+    }
+
+    const { solana_instruction } = buildCreateMarketInstruction(firstBet, match, programIdStr, programId, platformPda);
+
+    console.log(`[deployAllMatches] Ready to deploy: ${firstBet.title}, remaining: ${remaining}`);
+
+    return Response.json({
+      success: true,
+      message: `Sign to deploy ${firstBet.title || firstBet.match_id}. ${remaining} remaining after this.`,
+      remaining,
+      needsSigning: true,
+      solana_instruction,
+      bet_id: firstBet.id,
+    });
 
   } catch (error) {
     console.error('deployAllMatches error:', error);

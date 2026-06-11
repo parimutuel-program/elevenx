@@ -26,11 +26,11 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing bet_id or match_id' }, { status: 400 });
     }
 
-    const bets = await base44.entities.Bet.filter({ id: bet_id });
+    const bets = await base44.asServiceRole.entities.Bet.filter({ id: bet_id });
     const bet = bets[0];
     if (!bet) return Response.json({ error: 'Bet not found' }, { status: 404 });
 
-    const matches = await base44.entities.Match.filter({ id: match_id });
+    const matches = await base44.asServiceRole.entities.Match.filter({ id: match_id });
     const match = matches[0];
     if (!match) return Response.json({ error: 'Match not found' }, { status: 404 });
 
