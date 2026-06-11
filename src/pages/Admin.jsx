@@ -258,10 +258,11 @@ export default function Admin() {
     }
   };
 
-  // After signing, the deployed bet is removed from undeployed list, so always fetch offset=0 next
-  const handleDeployMatchesSuccess = async (batchLabel, batchSize, force = false) => {
+  // After signing, continue deploying the same batch range
+  const handleDeployMatchesSuccess = async (startIndex, endIndex, batchLabel, force = false) => {
+    const batchSize = endIndex - startIndex + 1;
     try {
-      const res = await base44.functions.invoke('deployAllMatches', { batch_offset: 0, batch_size: batchSize, force });
+      const res = await base44.functions.invoke('deployAllMatches', { batch_offset: startIndex, batch_size: batchSize, force });
       if (res.data.needsSigning) {
         setDeployMatchesDialog({
           instruction: res.data.solana_instruction,
@@ -273,7 +274,7 @@ export default function Admin() {
           force,
         });
       } else if (res.data.autoContinue) {
-        setTimeout(() => handleDeployMatchesSuccess(batchLabel, batchSize, force), 3000);
+        setTimeout(() => handleDeployMatchesSuccess(startIndex, endIndex, batchLabel, force), 3000);
       } else {
         setDeployMatchesDialog(null);
         toast.success(res.data.message || `✓ ${batchLabel || 'Batch'} deployed!`);
@@ -285,7 +286,7 @@ export default function Admin() {
     }
   };
 
-  const startDeployBatch = async (batchOffset, batchLabel, force = false) => {
+  const startDeployBatch = async (startIndex, endIndex, batchLabel, force = false) => {
     let activeWallet = walletAddress;
     if (!activeWallet) {
       const phantom = window.solana;
@@ -306,8 +307,9 @@ export default function Admin() {
         return;
       }
     }
+    const batchSize = endIndex - startIndex + 1;
     try {
-      const res = await base44.functions.invoke('deployAllMatches', { batch_offset: batchOffset, batch_size: 12, force });
+      const res = await base44.functions.invoke('deployAllMatches', { batch_offset: startIndex, batch_size: batchSize, force });
       if (res.data.needsSigning) {
         setDeployMatchesDialog({
           instruction: res.data.solana_instruction,
@@ -319,7 +321,7 @@ export default function Admin() {
           force,
         });
       } else if (res.data.autoContinue) {
-        handleDeployMatchesSuccess(batchLabel, 12, force);
+        setTimeout(() => handleDeployMatchesSuccess(startIndex, endIndex, batchLabel, force), 3000);
       } else {
         toast.success(res.data.message || `✓ ${batchLabel} deployed!`);
         queryClient.invalidateQueries({ queryKey: ['allBets'] });
@@ -453,29 +455,29 @@ export default function Admin() {
                   <span className="text-xs text-gray-400">Force redeploy all futures</span>
                 </Button>
                 <Button
-                  onClick={() => startDeployBatch(0, 'Force Redeploy', true)}
+                  onClick={() => startDeployBatch(0, 999, 'Force Redeploy', true)}
                   className="h-24 flex flex-col gap-2 bg-red-600/20 hover:bg-red-600/30 border border-red-600/30 rounded-xl"
                 >
                   <span className="font-bold text-sm text-white">🔄 Force Redeploy All Matches</span>
                   <span className="text-xs text-gray-400">Redeploy even if marked deployed</span>
                 </Button>
                 {[
-                  [0,'Batch 1–12'],
-                  [12,'Batch 13–24'],
-                  [24,'Batch 25–36'],
-                  [36,'Batch 37–48'],
-                  [48,'Batch 49–60'],
-                  [60,'Batch 61–72'],
-                  [72,'Batch 73–84'],
-                  [84,'Batch 85–96'],
-                  [96,'Batch 97–108'],
-                  [108,'Batch 109–120'],
-                  [120,'Batch 121–132'],
-                  [132,'Batch 133–144'],
-                ].map(([offset, label]) => (
+                  [0, 11, 'Batch 1–12'],
+                  [12, 23, 'Batch 13–24'],
+                  [24, 35, 'Batch 25–36'],
+                  [36, 47, 'Batch 37–48'],
+                  [48, 59, 'Batch 49–60'],
+                  [60, 71, 'Batch 61–72'],
+                  [72, 83, 'Batch 73–84'],
+                  [84, 95, 'Batch 85–96'],
+                  [96, 107, 'Batch 97–108'],
+                  [108, 119, 'Batch 109–120'],
+                  [120, 131, 'Batch 121–132'],
+                  [132, 143, 'Batch 133–144'],
+                ].map(([start, end, label]) => (
                   <Button
-                    key={offset}
-                    onClick={() => startDeployBatch(offset, label)}
+                    key={start}
+                    onClick={() => startDeployBatch(start, end, label)}
                     className="h-24 flex flex-col gap-2 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-600/30 rounded-xl"
                   >
                     <span className="font-bold text-sm text-white">⚡ {label}</span>
@@ -1011,7 +1013,12 @@ export default function Admin() {
                         console.error('[Admin] commitMarketDeployment failed:', e);
                       }
                     }
-                    handleDeployMatchesSuccess(deployMatchesDialog.batchLabel, deployMatchesDialog.batchSize, deployMatchesDialog.force);
+                    // Calculate start/end from batchOffset stored in batchLabel
+                    const label = deployMatchesDialog.batchLabel || '';
+                    const match = label.match(/Batch (\d+)–(\d+)/);
+                    const startIndex = match ? parseInt(match[1]) - 1 : 0;
+                    const endIndex = match ? parseInt(match[2]) - 1 : deployMatchesDialog.batchSize - 1;
+                    handleDeployMatchesSuccess(startIndex, endIndex, deployMatchesDialog.batchLabel, deployMatchesDialog.force);
                   }}
                   onError={(err) => {
                     toast.error('Failed: ' + err.message);
