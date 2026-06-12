@@ -19,11 +19,12 @@ function getSolanaConfig() {
 /**
  * Settle a market on-chain.
  *
- * winning_outcome = 'a' | 'b' | 'draw'  → settle_from_oracle (requires feed_pubkey)
- * winning_outcome = 'void'               → force_void_market (admin only)
+ * winning_outcome = 'a' | 'b' | 'draw'  → settle_with_attestation(outcome: u8)
+ *   outcome encoding: a=0, b=1, draw=2
+ *   accounts: market, fee_vault, admin (signer), system_program
  *
- * settle_from_oracle accounts: market, fee_vault, feed (Switchboard), cranker (signer), system_program
- * force_void_market  accounts: market, platform_config, admin (signer), system_program
+ * winning_outcome = 'void'              → force_void_market
+ *   accounts: market, platform_config, admin (signer), system_program
  */
 Deno.serve(async (req) => {
   try {
@@ -31,7 +32,7 @@ Deno.serve(async (req) => {
     const serviceRole = base44.asServiceRole;
     const { rpcUrl, programIdStr, programId, connection } = getSolanaConfig();
 
-    const { bet_id, winning_outcome, admin_wallet, feed_pubkey } = await req.json();
+    const { bet_id, winning_outcome, admin_wallet } = await req.json();
 
     const validOutcomes = ['a', 'b', 'draw', 'void'];
     if (!bet_id || !winning_outcome || !validOutcomes.includes(winning_outcome)) {
@@ -67,50 +68,43 @@ Deno.serve(async (req) => {
         solana_instruction: {
           instruction_type: 'settle_market',
           programId: programIdStr,
+          rpcUrl,
           keys,
           instruction_data: disc.toString('base64'),
         },
       });
     }
 
-    // ── SETTLE path: settle_from_oracle ───────────────────────────────────────
-    // Requires a Switchboard feed pubkey pinned to this market via set_settlement_feed.
-    // The market account's settlement_feed field must match feed_pubkey.
-    if (!feed_pubkey) {
-      return Response.json({
-        error: 'feed_pubkey required for settle_from_oracle. Call set_settlement_feed first, then provide the feed pubkey here.',
-      }, { status: 400 });
-    }
+    // ── SETTLE path: settle_with_attestation(outcome: u8) ─────────────────────
+    // outcome: a=0, b=1, draw=2
+    const outcomeMap = { a: 0, b: 1, draw: 2 };
+    const outcomeU8 = outcomeMap[winning_outcome];
 
-    // Validate feed pubkey is a valid Solana address
-    let feedPubkey;
-    try {
-      feedPubkey = new PublicKey(feed_pubkey);
-    } catch (_) {
-      return Response.json({ error: 'Invalid feed_pubkey: not a valid Solana address' }, { status: 400 });
-    }
+    const disc = await anchorDiscriminator('settle_with_attestation');
 
-    const disc = await anchorDiscriminator('settle_from_oracle');
+    // instruction data: 8-byte discriminator + 1-byte outcome (u8)
+    const data = Buffer.alloc(9);
+    disc.copy(data, 0);
+    data.writeUInt8(outcomeU8, 8);
 
-    // settle_from_oracle accounts: market, fee_vault, feed, cranker (signer), system_program
+    // accounts: market, fee_vault, admin (signer), system_program
     const keys = [
       { pubkey: marketPda.toBase58(), isSigner: false, isWritable: true },
       { pubkey: feeVaultPda.toBase58(), isSigner: false, isWritable: true },
-      { pubkey: feedPubkey.toBase58(), isSigner: false, isWritable: false },
-      { pubkey: 'SIGNER_WALLET', isSigner: true, isWritable: true }, // cranker
+      { pubkey: 'SIGNER_WALLET', isSigner: true, isWritable: true },
       { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false },
     ];
 
     const outcomeLabel = winning_outcome === 'a' ? bet.outcome_a : winning_outcome === 'b' ? bet.outcome_b : 'Draw';
     return Response.json({
       success: true, bet_id, winning_outcome,
-      message: `Sign to settle market via oracle: expected outcome ${outcomeLabel}`,
+      message: `Sign to settle: ${outcomeLabel} wins (settle_with_attestation, outcome=${outcomeU8})`,
       solana_instruction: {
         instruction_type: 'settle_market',
         programId: programIdStr,
         rpcUrl,
         keys,
-        instruction_data: disc.toString('base64'),
+        instruction_data: data.toString('base64'),
       },
     });
 
