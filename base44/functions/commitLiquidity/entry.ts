@@ -20,7 +20,10 @@ Deno.serve(async (req) => {
     console.log('[commitLiquidity] Committing liquidity for signature:', signature.slice(0, 20) + '...');
     
     // Commit BetOffer
-    const { offer, userBet, lpField, amount } = commit_data;
+    const { offer, userBet } = commit_data;
+    const outcomeMap = { a: 'pool_a', b: 'pool_b', draw: 'pool_draw' };
+    const lpField = outcomeMap[offer.outcome] || 'pool_a';
+    const amount = offer.amount_offered;
     
     // Check if existing offer exists (same LP, same outcome)
     const existingOffers = await serviceRole.entities.BetOffer.filter({
