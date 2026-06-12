@@ -225,11 +225,11 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         transaction.add(createMarketIx);
         
       } else if (instruction.instruction_type === 'settle_market' || instruction.instruction_type === 'settle_market_force' || instruction.instruction_type === 'test_announce_winner') {
-        // settle_market — supports both single-instruction (void) and 2-instruction (attestation) paths
+        // settle_market — supports either a single instruction OR a 2-ix array (Ed25519 + settle_with_attestation)
         console.log('=== SETTLE_MARKET INSTRUCTION ===');
 
         if (instruction.instructions && instruction.instructions.length > 0) {
-          // Multi-instruction path: [Ed25519SigVerify, settle_with_attestation]
+          // Multi-instruction path (Ed25519 sig verify + settle_with_attestation)
           for (const ix of instruction.instructions) {
             const programId = new PublicKey(ix.programId);
             const data = Buffer.from(ix.instruction_data, 'base64');
@@ -238,11 +238,11 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
               isSigner: k.isSigner,
               isWritable: k.isWritable,
             }));
-            console.log(`[settle_market] Adding ix: programId=${ix.programId.slice(0, 8)}... keys=${keys.length} dataLen=${data.length}`);
+            console.log(`[settle_market] Adding ix: ${ix.programId.slice(0, 8)}... keys=${keys.length} dataLen=${data.length}`);
             transaction.add(new TransactionInstruction({ keys, programId, data }));
           }
         } else {
-          // Single-instruction path (force_void_market)
+          // Single-instruction path (force_void_market or legacy)
           const programId = new PublicKey(instruction.programId);
           const data = Buffer.from(instruction.instruction_data, 'base64');
           if (!instruction.keys || instruction.keys.length === 0) {
@@ -253,6 +253,7 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
             isSigner: k.isSigner,
             isWritable: k.isWritable,
           }));
+          console.log('[settle_market] Single ix keys:', keys.map(k => k.pubkey.toBase58()));
           transaction.add(new TransactionInstruction({ keys, programId, data }));
         }
         
