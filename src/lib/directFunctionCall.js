@@ -18,28 +18,41 @@ export async function callBackendFunction(functionName, payload) {
   
   console.log('[callBackendFunction] Calling:', functionName, 'with payload:', payload);
   console.log('[callBackendFunction] Auth token exists:', !!authToken, 'length:', authToken?.length);
+  console.log('[callBackendFunction] Full URL:', `/api/functions/${functionName}`);
   
-  const response = await fetch(`/api/functions/${functionName}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${authToken}`,
-    },
-    body: JSON.stringify(payload),
-  });
+  let response;
+  try {
+    response = await fetch(`/api/functions/${functionName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (networkErr) {
+    console.error('[callBackendFunction] Network error:', networkErr);
+    throw new Error('Network error - cannot reach backend. Please check your connection.');
+  }
   
   console.log('[callBackendFunction] Response status:', response.status, response.ok);
+  console.log('[callBackendFunction] Response headers:', Object.fromEntries(response.headers.entries()));
   
-  // Try to parse response body regardless of status
+  // Try to read response body
+  const responseText = await response.text();
+  console.log('[callBackendFunction] Raw response text:', responseText);
+  
+  if (!responseText) {
+    throw new Error(`Empty response from server (HTTP ${response.status})`);
+  }
+  
   let responseData;
   try {
-    responseData = await response.json();
-    console.log('[callBackendFunction] Response data:', responseData);
+    responseData = JSON.parse(responseText);
+    console.log('[callBackendFunction] Parsed response data:', responseData);
   } catch (parseErr) {
-    console.error('[callBackendFunction] Failed to parse response:', parseErr);
-    const text = await response.text();
-    console.error('[callBackendFunction] Raw response:', text);
-    throw new Error(`Invalid response from server: ${text.slice(0, 200)}`);
+    console.error('[callBackendFunction] Failed to parse JSON:', parseErr);
+    throw new Error(`Invalid JSON from server: ${responseText.slice(0, 200)}`);
   }
   
   if (!response.ok) {
