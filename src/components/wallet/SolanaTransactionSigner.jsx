@@ -299,7 +299,7 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         const programId = new PublicKey(instruction.programId || window.SOLANA_PROGRAM_ID);
         const matchId = instruction.match_id;
         const outcome = instruction.outcome; // u8 (0, 1, or 2)
-        const amountSol = instruction.amount; // SOL amount
+        const amountSol = parseFloat(instruction.amount) || 0; // SOL amount — ensure numeric
         const amountLamports = BigInt(Math.floor(amountSol * 1e9));
         
         console.log('[provide_liquidity] Params:', { matchId, outcome, amountSol, amountLamports: amountLamports.toString() });
