@@ -112,7 +112,10 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
     setSuccessSignature(null);
 
     try {
-      const walletAddress = localStorage.getItem('solana_wallet');
+      const sessionRaw = localStorage.getItem('elevenx_wallet_session');
+      let walletAddress = null;
+      try { walletAddress = sessionRaw ? (JSON.parse(sessionRaw).address || JSON.parse(sessionRaw)) : null; } catch { walletAddress = sessionRaw; }
+      if (!walletAddress) { setError('Wallet not connected — please reconnect'); setIsLoading(false); return; }
       const response = await base44.functions.invoke('provideLiquidity', {
         walletAddress,
         bet_id: bet.id,
