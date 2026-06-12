@@ -16,11 +16,13 @@ async function anchorDiscriminator(name) {
 export default function SolanaTransactionSigner({ instruction, amount, userBetId, offerId, betId, isOffer, isPlatformInit, batchBetIds, futures_market_id, onSuccess, onError }) {
   // userBetId, offerId, betId, isOffer, isPlatformInit, batchBetIds, futures_market_id are optional - used for tracking DB records or flow control after transaction
   const [isSigning, setIsSigning] = useState(false);
+  const [signStep, setSignStep] = useState(''); // 'connecting' | 'signing' | 'confirming'
   const [signature, setSignature] = useState(null);
   const [error, setError] = useState(null);
 
   const handleSignTransaction = async () => {
     setIsSigning(true);
+    setSignStep('connecting');
     setError(null);
 
     try {
@@ -39,6 +41,7 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
 
       if (!provider.isConnected) {
         console.log('[SolanaTransactionSigner] Connecting to Phantom...');
+        setSignStep('connecting');
         await provider.connect();
         console.log('[SolanaTransactionSigner] Connected successfully');
       }
@@ -629,6 +632,7 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
       console.log('[SolanaTransactionSigner] Transaction built, ready to send');
       console.log('[SolanaTransactionSigner] Instructions count:', transaction.instructions.length);
       
+      setSignStep('signing');
       console.log('[SolanaTransactionSigner] Requesting signature from Phantom...');
       console.log('[SolanaTransactionSigner] Transaction details:', {
         feePayer: transaction.feePayer?.toBase58(),
@@ -673,6 +677,7 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         }
       }
 
+      setSignStep('confirming');
       console.log('Waiting for confirmation (90s timeout)...');
       let confirmation;
       try {
@@ -866,6 +871,7 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
       onError?.(err);
     } finally {
       setIsSigning(false);
+      setSignStep('');
     }
   };
 
@@ -975,7 +981,9 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         {isSigning ? (
           <>
             <Loader className="w-4 h-4 mr-2 animate-spin" />
-            Signing...
+            {signStep === 'connecting' && 'Connecting...'}
+            {signStep === 'signing' && 'Waiting for Phantom...'}
+            {signStep === 'confirming' && 'Confirming on-chain...'}
           </>
         ) : (
           <>
