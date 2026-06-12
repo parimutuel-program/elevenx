@@ -300,7 +300,9 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         const matchId = instruction.match_id;
         const outcome = instruction.outcome; // u8 (0, 1, or 2)
         const amountSol = instruction.amount; // SOL amount
-        const amountLamports = BigInt(Math.round(parseFloat(amountSol) * 1_000_000_000));
+        const _parsedSol = parseFloat(amountSol);
+        if (isNaN(_parsedSol) || _parsedSol <= 0) throw new Error('Invalid LP deposit amount — please enter a valid SOL value');
+        const amountLamports = BigInt(Math.round(_parsedSol * 1_000_000_000));
         
         console.log('[provide_liquidity] Params:', { matchId, outcome, amountSol, amountLamports: amountLamports.toString() });
         
@@ -396,7 +398,9 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         const data = Buffer.alloc(17);
         disc.copy(data, 0);
         data.writeUInt8(instruction.outcome, 8);
-        data.writeBigUInt64LE(BigInt(Math.round(parseFloat(String(instruction.amountLamports)))), 9);
+        const _parsedLamports = parseFloat(String(instruction.amountLamports));
+        if (isNaN(_parsedLamports) || _parsedLamports <= 0) throw new Error('Invalid bet amount — please enter a valid SOL value');
+        data.writeBigUInt64LE(BigInt(Math.round(_parsedLamports)), 9);
         console.log('[SolanaTransactionSigner] place_bet discriminator:', disc.toString('hex'));
         console.log('[SolanaTransactionSigner] full data:', data.toString('hex'));
         
