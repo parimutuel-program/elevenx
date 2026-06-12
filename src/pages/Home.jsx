@@ -313,11 +313,13 @@ export default function Home() {
                     </span>
                     <Badge className={`text-[9px] font-semibold uppercase tracking-wider flex-shrink-0 ${
                       match.status === 'live' ? 'bg-destructive/20 text-destructive border border-destructive/30' :
-                      match.status === 'finished' ? 'bg-muted text-muted-foreground border border-border/30' :
+                      match.status === 'finished' ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' :
                       'bg-secondary text-secondary-foreground border border-border/30'
                     }`}>
                       {match.status === 'live' && <span className="w-1 h-1 rounded-full bg-destructive animate-pulse mr-1" />}
-                      {match.status === 'live' ? 'LIVE' : match.status === 'finished' ? 'FT' : 'UPCOMING'}
+                      {match.status === 'live' ? '● LIVE' :
+                       match.status === 'finished' ? '🏆 FINAL' :
+                       'UPCOMING'}
                     </Badge>
                   </div>
 
