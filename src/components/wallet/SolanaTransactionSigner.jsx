@@ -75,7 +75,7 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
       const rpcUrl = instruction.rpcUrl || window.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
       const connection = new Connection(rpcUrl, {
         commitment: 'confirmed',
-        confirmTransactionInitialTimeout: 90000,
+        confirmTransactionInitialTimeout: 60000,
       });
       console.log('[SolanaTransactionSigner] Using RPC URL:', rpcUrl);
       const transaction = new Transaction();
@@ -678,74 +678,63 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
       }
 
       setSignStep('confirming');
-      console.log('Waiting for confirmation (90s timeout)...');
+      console.log('Waiting for confirmation (60s timeout)...');
       let confirmation;
       try {
+        // Try with confirmed commitment first
         confirmation = await connection.confirmTransaction(
           { signature: sig, blockhash, lastValidBlockHeight },
-          'confirmed'
+          'confirmed',
         );
         console.log('Transaction confirmation result:', confirmation);
+        
+        // If confirmation fails but transaction might have succeeded, check signature status
+        if (!confirmation.value?.err) {
+          console.log('✓ Transaction confirmed successfully');
+        }
       } catch (confirmError) {
-        console.error('[SolanaTransactionSigner] Confirmation error:', confirmError);
+        console.log('[SolanaTransactionSigner] Confirmation failed, checking if transaction succeeded...');
         
-        // Extract on-chain error code from various possible locations
-        let customCode = null;
-        
-        if (confirmError.InstructionError) {
-          customCode = confirmError.InstructionError[1]?.Custom;
-        }
-        
-        if (!customCode && confirmError.value?.InstructionError) {
-          customCode = confirmError.value.InstructionError[1]?.Custom;
-        }
-        
-        if (!customCode && confirmError.err?.InstructionError) {
-          customCode = confirmError.err.InstructionError[1]?.Custom;
-        }
-        
-        if (!customCode && confirmError.message) {
-          const match = confirmError.message.match(/Custom["\s:]*(\d+)/);
-          if (match) {
-            customCode = parseInt(match[1]);
+        // Check if the transaction actually succeeded on-chain
+        try {
+          const status = await connection.getSignatureStatus(sig, { searchTransactionHistory: true });
+          console.log('[SolanaTransactionSigner] Signature status:', status);
+          
+          if (status.value && status.value.confirmationStatus === 'confirmed') {
+            console.log('✓ Transaction confirmed (delayed status update)');
+            confirmation = { value: {} }; // Treat as success
+          } else if (status.value?.err) {
+            throw new Error('Transaction failed on-chain: ' + JSON.stringify(status.value.err));
+          } else {
+            throw confirmError; // Re-throw original error
           }
+        } catch (statusError) {
+          console.error('[SolanaTransactionSigner] Status check failed:', statusError);
+          throw confirmError; // Re-throw original error
         }
-
-        if (customCode !== null) {
-          const errorMessages = {
-            0: 'Betting window has closed',
-            1: 'Market already settled',
-            2: 'Market voided',
-            3: 'Stake must be > 0',
-            4: 'Invalid outcome',
-            5: 'Too early to settle',
-            6: 'Market paused',
-            7: 'Fee exceeds 5%',
-            8: 'Invalid timeline',
-            9: 'Nothing to claim',
-            10: 'Nothing to refund',
-            11: 'Market not voided',
-            12: 'Oracle already voted',
-            13: 'Insufficient consensus',
-            14: 'Invalid outcome count',
-            15: 'Market already initialized',
-            16: 'Arithmetic overflow',
-            17: 'Unauthorized',
-            101: 'Invalid instruction data or discriminator',
-            3002: 'Account not found - market may not be deployed on-chain yet',
-            3007: 'Platform not initialized',
-            3012: 'Unauthorized - your wallet is not registered as admin in platform config',
-            6005: 'Constraint violation - account constraints not satisfied',
-          };
-          const errorMsg = errorMessages[customCode] || `Program error ${customCode}`;
-          throw new Error(`On-chain error ${customCode}: ${errorMsg}`);
+      }
+      
+      // Retry with processed commitment if confirmed fails
+      if (!confirmation && sig) {
+        try {
+          console.log('[SolanaTransactionSigner] Retrying with processed commitment...');
+          confirmation = await connection.confirmTransaction(
+            { signature: sig, blockhash, lastValidBlockHeight },
+            'processed',
+          );
+          console.log('Transaction confirmed (processed):', confirmation);
+        } catch (retryError) {
+          console.error('[SolanaTransactionSigner] Retry confirmation failed:', retryError);
+          throw confirmError; // Use original error
         }
-        
-        throw new Error('Confirmation failed: ' + (confirmError.message || 'Unknown'));
+      }
+      
+      if (!confirmation) {
+        throw new Error('Transaction confirmation timeout - please check Solscan');
       }
 
       // Check for on-chain errors BEFORE setting signature
-      if (confirmation.value.err) {
+      if (confirmation.value?.err) {
         console.error('Transaction failed on-chain:', confirmation.value.err);
         console.error('[SolanaTransactionSigner] Full error object:', JSON.stringify(confirmation.value.err, null, 2));
         const onChainErr = confirmation.value.err;
