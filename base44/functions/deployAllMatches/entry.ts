@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
     // Apply batch window: batchOffset is an index into the undeployed list
     const betsToDeploy = undeployed.slice(batchOffset, batchOffset + batchSize);
 
-    console.log(`[deployAllMatches] Batch offset=${batchOffset} size=${batchSize}: ${betsToDeploy.length} bets (${undeployed.length} total undeployed)`);
+    console.log(`[deployAllMatches] Batch offset=${batchOffset} size=${batchSize}: ${betsToDeploy.length} bets (total undeployed: ${undeployed.length})`);
 
     if (betsToDeploy.length === 0) {
       return Response.json({
@@ -212,9 +212,17 @@ Deno.serve(async (req) => {
         continue;
       }
       
+      // Validate odds one more time before deployment
+      if ((bet.odds_a <= 0 || bet.odds_b <= 0 || bet.odds_draw <= 0) && !force) {
+        console.log(`[deployAllMatches] ☠️ Skipping bet ${bet.id} - DEAD ODDS: A=${bet.odds_a}, B=${bet.odds_b}, Draw=${bet.odds_draw}`);
+        remaining--;
+        continue;
+      }
+      
       // Found valid bet to deploy
       betToDeploy = bet;
       matchToDeploy = match;
+      console.log(`[deployAllMatches] ✓ Found valid bet to deploy: ${bet.title || bet.match_id}, odds: A=${bet.odds_a}, B=${bet.odds_b}, Draw=${bet.odds_draw}`);
       break;
     }
     
