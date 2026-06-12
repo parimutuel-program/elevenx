@@ -73,21 +73,48 @@ export default function Matches() {
     return true;
   });
 
-  const { data: allBets = [] } = useQuery({
+  const { data: allBets = [], isLoading: isLoadingBets } = useQuery({
     queryKey: ['bets'],
-    queryFn: () => base44.entities.Bet.filter({ solana_market_created: true }),
+    queryFn: async () => {
+      const bets = await base44.entities.Bet.filter({ solana_market_created: true });
+      console.log('[Matches] Loaded bets:', {
+        count: bets.length,
+        bets: bets.map(b => ({
+          id: b.id,
+          match_id: b.match_id,
+          status: b.status,
+          odds_a: b.odds_a,
+          odds_b: b.odds_b,
+          odds_draw: b.odds_draw
+        }))
+      });
+      return bets;
+    },
   });
 
   // Filter out dead markets (odds = 0)
-  const bets = allBets.filter(b => 
+  const bets = Array.isArray(allBets) ? allBets.filter(b => 
     b.status === 'open' && 
     b.odds_a > 0 && 
     b.odds_b > 0 && 
     b.odds_draw > 0
-  );
+  ) : [];
 
   const betByMatch = {};
-  bets.forEach(b => { betByMatch[b.match_id] = b; });
+  bets.forEach(b => { 
+    console.log('[Matches] Mapping bet to match:', {
+      bet_id: b.id,
+      match_id: b.match_id,
+      betByMatchKey: b.match_id
+    });
+    betByMatch[b.match_id] = b; 
+  });
+  
+  console.log('[Matches] betByMatch map:', {
+    totalBets: bets.length,
+    mappedMatches: Object.keys(betByMatch).length,
+    sample: Object.entries(betByMatch).slice(0, 3)
+  });
 
   // Get today's date in YYYY-MM-DD format (user's local timezone)
   const todayStr = format(new Date(), 'yyyy-MM-dd');
