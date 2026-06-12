@@ -255,7 +255,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
             amount: stakeNum,
             wallet_address: wallet
           });
-          console.log('[PlaceBetPanel] matchBet response:', res.data);
+          console.log('[PlaceBetPanel] matchBet response:', res);
         } else {
           // No DB offer found — fall back to parimutuel (bet directly into on-chain pool)
           console.log('[PlaceBetPanel] No DB offer found, using parimutuel placeBet for outcome:', selectedOutcome);
@@ -266,30 +266,29 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
             outcome: selectedOutcome,
             amount: stakeNum,
           });
-          console.log('[PlaceBetPanel] placeBet (parimutuel) response:', res.data);
+          console.log('[PlaceBetPanel] placeBet (parimutuel) response:', res);
         }
       }
-      // Check for errors in response
+      // Check for errors in response (callBackendFunction returns data directly, not wrapped in .data)
       console.log('[PlaceBetPanel] Full response:', res);
-      console.log('[PlaceBetPanel] Response data:', res.data);
       
-      if (!res.data) {
+      if (!res) {
         console.error('[PlaceBetPanel] No data in response');
         throw new Error('Backend function returned no data');
       }
-      if (res.data.error) {
-        console.error('[PlaceBetPanel] Error in response:', res.data.error);
-        throw new Error(res.data.error);
+      if (res.error) {
+        console.error('[PlaceBetPanel] Error in response:', res.error);
+        throw new Error(res.error);
       }
-      if (!res.data.solana_instruction) {
-        console.error('[PlaceBetPanel] Missing solana_instruction in response:', res.data);
+      if (!res.solana_instruction) {
+        console.error('[PlaceBetPanel] Missing solana_instruction in response:', res);
         throw new Error('Failed to generate transaction instruction - market may not be deployed');
       }
       // Include commit_data in instruction for post-tx commit
       // Store commit_data separately so handleTransactionSuccess can use it
       setInstruction({
-        ...res.data.solana_instruction,
-        _commit_data: res.data.commit_data,
+        ...res.solana_instruction,
+        _commit_data: res.commit_data,
       });
     } catch (err) {
       console.error('[PlaceBetPanel] Error in handleGetInstruction:', err);
@@ -318,10 +317,10 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
 
       const commitRes = await callBackendFunction(commitFunction, commitPayload);
 
-      if (commitRes.data.error) {
-        console.error('[PlaceBetPanel] Commit failed:', commitRes.data.error);
+      if (commitRes.error) {
+        console.error('[PlaceBetPanel] Commit failed:', commitRes.error);
       } else {
-        console.log('[PlaceBetPanel] Commit successful:', commitRes.data);
+        console.log('[PlaceBetPanel] Commit successful:', commitRes);
         // Invalidate queries to refresh LP liquidity data IMMEDIATELY
         await queryClient.invalidateQueries({ queryKey: ['allOffers', bet?.id] });
         await queryClient.invalidateQueries({ queryKey: ['offers', bet?.id] });
