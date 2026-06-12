@@ -109,35 +109,29 @@ export default function OddsPanel({ bet, match, onSelectOutcome, selectedOutcome
         </h3>
         <div className="flex items-center gap-1.5">
           {(() => {
-            const now = new Date().getTime();
-            const closeTime = bet?.open_until ? new Date(bet.open_until).getTime() : 0;
-            const isWindowClosed = closeTime > 0 && now > closeTime;
-            
-            // Match status takes precedence over betting window
-            const isMatchLive = match?.status === 'live';
-            const isMatchFinished = match?.status === 'finished';
-            
-            let displayStatus = 'open';
-            let badgeColor = 'accent'; // green for open/live
-            
-            if (isMatchFinished || bet?.status === 'settled') {
-              displayStatus = 'closed';
-              badgeColor = 'muted'; // gray for finished
-            } else if (isMatchLive) {
-              displayStatus = 'live';
-              badgeColor = 'destructive'; // red for live
-            } else if (isWindowClosed) {
-              displayStatus = 'closed';
-              badgeColor = 'destructive'; // red for closed
+            // Match status takes absolute precedence - if match is live, show "live" regardless of bet.status
+            if (match?.status === 'live') {
+              return (
+                <Badge className="text-[9px] px-1.5 py-0 bg-destructive/20 text-destructive">
+                  live
+                </Badge>
+              );
             }
             
+            // If match finished or bet settled, show closed (gray)
+            if (match?.status === 'finished' || bet?.status === 'settled') {
+              return (
+                <Badge className="text-[9px] px-1.5 py-0 bg-muted/20 text-muted-foreground">
+                  closed
+                </Badge>
+              );
+            }
+            
+            // Otherwise use bet.status (open/closed)
+            const isOpen = bet?.status === 'open';
             return (
-              <Badge className={`text-[9px] px-1.5 py-0 ${
-                badgeColor === 'accent' ? 'bg-accent/20 text-accent' :
-                badgeColor === 'destructive' ? 'bg-destructive/20 text-destructive' :
-                'bg-muted/20 text-muted-foreground'
-              }`}>
-                {displayStatus}
+              <Badge className={`text-[9px] px-1.5 py-0 ${isOpen ? 'bg-accent/20 text-accent' : 'bg-destructive/20 text-destructive'}`}>
+                {bet?.status || 'open'}
               </Badge>
             );
           })()}
