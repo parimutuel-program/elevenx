@@ -59,17 +59,24 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
   }, 0) :
   0;
 
-  // Check if betting is allowed (only when LP liquidity exists)
+  // Check if ANY LP liquidity exists for this bet (for UI display)
+  const hasAnyLiquidity = allOffers.some((o) => 
+    (o.status === 'open' || o.status === 'partially_matched') && (o.amount_unmatched || 0) > 0
+  );
+
+  // Check if betting is allowed for the selected outcome
   const hasLiquidityForOutcome = selectedOutcome ? totalLiquidityForOutcome > 0 : selectedOffer ? (selectedOffer.amount_unmatched || 0) > 0 : false;
   const bettingMode = hasLiquidityForOutcome ? 'fixed_lp' : 'no_liquidity';
   
   console.log('[PlaceBetPanel] Liquidity check:', {
     totalLiquidityForOutcome,
+    hasAnyLiquidity,
     hasLiquidityForOutcome,
     bettingMode,
     selectedOutcome,
     selectedOffer: selectedOffer?.id,
-    selectedOfferUnmatched: selectedOffer?.amount_unmatched
+    selectedOfferUnmatched: selectedOffer?.amount_unmatched,
+    allOffersCount: allOffers.length
   });
 
   console.log('[PlaceBetPanel] Liquidity calculation:', {
@@ -402,10 +409,12 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
           </div>
         }
 
-        {/* No liquidity - show Add Liquidity link */}
+        {/* No liquidity for selected outcome - show Add Liquidity link */}
         {bettingMode === 'no_liquidity' &&
         <div className="bg-secondary/30 border border-border/30 rounded-lg p-2.5 flex items-center justify-between">
-            <p className="text-[10px] text-muted-foreground">⏳ No LP liquidity yet</p>
+            <p className="text-[10px] text-muted-foreground">
+              {hasAnyLiquidity ? '⏳ No liquidity for this outcome' : '⏳ No LP liquidity yet'}
+            </p>
             <a href={`/lp?matchId=${matchId}`} className="bg-accent/10 hover:bg-accent/20 border border-accent/30 text-accent font-bold text-[10px] py-1 px-2.5 rounded-lg transition-colors">
               Add Liquidity
             </a>
@@ -557,7 +566,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
         disabled={stakeNum <= 0 || isPreparing || isBettingClosed || bettingMode === 'no_liquidity'}
         className="w-full h-12 font-heading font-bold text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
         {bettingMode === 'no_liquidity' ? (
-          <><Clock className="w-4 h-4 mr-2" />Waiting for LP</>
+          <><Clock className="w-4 h-4 mr-2" />{hasAnyLiquidity ? 'No Liquidity for This Outcome' : 'Waiting for LP'}</>
         ) : timeRemaining && timeRemaining.total <= 0 ? (
           <><Clock className="w-4 h-4 mr-2" />Betting Closed</>
         ) : isPreparing ? 'Preparing...' : (
