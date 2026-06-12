@@ -191,32 +191,56 @@ export default function AdminMatchesPanel({ walletAddress }) {
           </Badge>
         </div>
         
-        {/* Deploy All On-Chain Button */}
-        <Button
-          onClick={async () => {
-            try {
-              const res = await base44.functions.invoke('deployAllMatches');
-              if (res.data.needsSigning) {
-                const total = res.data.remaining + 1; // remaining + current one being deployed
-                setDeployAllDialog({
-                  instruction: res.data.solana_instruction,
-                  remaining: res.data.remaining,
-                  betId: res.data.bet_id,
-                  total,
-                });
-              } else {
-                alert(res.data.message || '✓ All matches deployed!');
-                queryClient.invalidateQueries({ queryKey: ['adminMatches'] });
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Deploy All On-Chain Button */}
+          <Button
+            onClick={async () => {
+              try {
+                const res = await base44.functions.invoke('deployAllMatches');
+                if (res.data.needsSigning) {
+                  const total = res.data.remaining + 1;
+                  setDeployAllDialog({
+                    instruction: res.data.solana_instruction,
+                    remaining: res.data.remaining,
+                    betId: res.data.bet_id,
+                    total,
+                  });
+                } else {
+                  alert(res.data.message || '✓ All matches deployed!');
+                  queryClient.invalidateQueries({ queryKey: ['adminMatches'] });
+                }
+              } catch (err) {
+                alert('Error: ' + err.message);
               }
-            } catch (err) {
-              alert('Error: ' + err.message);
-            }
-          }}
-          className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold h-12 rounded-xl gap-2 text-sm shadow-lg shadow-purple-900/30"
-        >
-          <Rocket className="w-5 h-5" />
-          Deploy All Matches On-Chain
-        </Button>
+            }}
+            className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold h-12 rounded-xl gap-2 text-sm shadow-lg shadow-purple-900/30"
+          >
+            <Rocket className="w-5 h-5" />
+            Deploy All Matches
+          </Button>
+          
+          {/* Sync Deployment Status Button */}
+          <Button
+            onClick={async () => {
+              try {
+                const res = await base44.functions.invoke('syncMarketDeployment');
+                if (res.data.success) {
+                  alert(`✓ Sync Complete!\n\nUpdated: ${res.data.updated}\nAlready Deployed: ${res.data.alreadyDeployed}\nNot Found: ${res.data.notFound}`);
+                  queryClient.invalidateQueries({ queryKey: ['adminMatches'] });
+                  queryClient.invalidateQueries({ queryKey: ['allBetsForMatches'] });
+                } else {
+                  alert('Error: ' + (res.data.error || 'Unknown error'));
+                }
+              } catch (err) {
+                alert('Error: ' + err.message);
+              }
+            }}
+            className="bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-600/30 text-white font-bold h-12 rounded-xl gap-2 text-sm"
+          >
+            <CheckCircle className="w-5 h-5" />
+            Sync Deployment Status
+          </Button>
+        </div>
       </Card>
 
       <div className="space-y-2 max-h-[600px] overflow-y-auto">
