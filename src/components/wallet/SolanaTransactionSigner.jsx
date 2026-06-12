@@ -725,7 +725,7 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
           console.log('Transaction confirmed (processed):', confirmation);
         } catch (retryError) {
           console.error('[SolanaTransactionSigner] Retry confirmation failed:', retryError);
-          throw confirmError; // Use original error
+          throw new Error('Transaction confirmation timeout - please check Solscan');
         }
       }
       
