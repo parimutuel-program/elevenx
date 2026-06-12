@@ -112,10 +112,31 @@ export default function OddsPanel({ bet, match, onSelectOutcome, selectedOutcome
             const now = new Date().getTime();
             const closeTime = bet?.open_until ? new Date(bet.open_until).getTime() : 0;
             const isWindowClosed = closeTime > 0 && now > closeTime;
-            const displayStatus = isWindowClosed ? 'closed' : (bet?.status || 'open');
-            const isActuallyOpen = !isWindowClosed && bet?.status === 'open';
+            
+            // Match status takes precedence over betting window
+            const isMatchLive = match?.status === 'live';
+            const isMatchFinished = match?.status === 'finished';
+            
+            let displayStatus = 'open';
+            let badgeColor = 'accent'; // green for open/live
+            
+            if (isMatchFinished || bet?.status === 'settled') {
+              displayStatus = 'closed';
+              badgeColor = 'muted'; // gray for finished
+            } else if (isMatchLive) {
+              displayStatus = 'live';
+              badgeColor = 'destructive'; // red for live
+            } else if (isWindowClosed) {
+              displayStatus = 'closed';
+              badgeColor = 'destructive'; // red for closed
+            }
+            
             return (
-              <Badge className={`text-[9px] px-1.5 py-0 ${isActuallyOpen ? 'bg-accent/20 text-accent' : 'bg-destructive/20 text-destructive'}`}>
+              <Badge className={`text-[9px] px-1.5 py-0 ${
+                badgeColor === 'accent' ? 'bg-accent/20 text-accent' :
+                badgeColor === 'destructive' ? 'bg-destructive/20 text-destructive' :
+                'bg-muted/20 text-muted-foreground'
+              }`}>
                 {displayStatus}
               </Badge>
             );
