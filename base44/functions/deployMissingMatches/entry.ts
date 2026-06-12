@@ -209,6 +209,15 @@ Deno.serve(async (req) => {
         continue;
       }
       
+      // Skip if betting window has already closed
+      const rawOpenUntil = bet.open_until
+        ? new Date(bet.open_until).getTime()
+        : new Date(match.match_time).getTime() - 5 * 60 * 1000;
+      if (rawOpenUntil < Date.now()) {
+        console.log(`[deployMissingMatches] ☠️ Skipping ${match.team_a} vs ${match.team_b} - BETTING CLOSED (${new Date(rawOpenUntil).toISOString()})`);
+        continue;
+      }
+      
       // Check PDA status
       const matchIdBytes = Buffer.alloc(32);
       Buffer.from(match.id, 'utf-8').copy(matchIdBytes, 0, 0, Math.min(match.id.length, 32));
