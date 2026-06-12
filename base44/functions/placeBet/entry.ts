@@ -47,14 +47,18 @@ Deno.serve(async (req) => {
       bet_id, match_id, outcome, status: { $in: ['open', 'partially_matched'] }
     });
     const validOffers = existingOffers.filter(o => (o.amount_unmatched || 0) > 0);
-    if (validOffers.length === 0) {
-      return Response.json({ error: 'No liquidity available for this outcome' }, { status: 400 });
-    }
-    const bestOffer = validOffers.reduce((best, cur) =>
-      (cur.amount_unmatched || 0) > (best.amount_unmatched || 0) ? cur : best, validOffers[0]);
+    const bestOffer = validOffers.length > 0
+      ? validOffers.reduce((best, cur) => (cur.amount_unmatched || 0) > (best.amount_unmatched || 0) ? cur : best, validOffers[0])
+      : null;
+
+    // Parimutuel mode: no DB offer found — bet goes straight into the on-chain pool
+    // The LP offer PDA is derived using the bettor's own wallet (self-backed position)
+    const isParimutuel = !bestOffer;
+    console.log('[placeBet] isParimutuel:', isParimutuel, '| DB offers found:', existingOffers.length);
 
     const bettorPubkey = new PublicKey(walletAddress);
-    const lpPubkey = new PublicKey(bestOffer.lp_wallet_address);
+    // For parimutuel, LP = bettor themselves; for fixed-odds, LP = offer creator
+    const lpPubkey = isParimutuel ? bettorPubkey : new PublicKey(bestOffer.lp_wallet_address);
     const matchIdBytes = Buffer.alloc(32);
     Buffer.from(match_id, 'utf-8').copy(matchIdBytes, 0, 0, Math.min(match_id.length, 32));
 
@@ -66,7 +70,7 @@ Deno.serve(async (req) => {
       [Buffer.from('position'), marketPda.toBuffer(), bettorPubkey.toBuffer(), Buffer.from([outcomeIndex])], programId
     );
 
-    const oddsDecimal = bestOffer.odds_at_creation || 2.0;
+    const oddsDecimal = bestOffer?.odds_at_creation || bet[outcome === 'a' ? 'odds_a' : outcome === 'b' ? 'odds_b' : 'odds_draw'] || 2.0;
     const potentialPayout = amount * oddsDecimal;
     const amountLamports = Math.round(amount * 1_000_000_000);
 
@@ -95,22 +99,23 @@ Deno.serve(async (req) => {
 
     const commit_data = {
       userBet: {
-        bet_id, match_id, offer_id: bestOffer.id, outcome, amount,
+        bet_id, match_id, offer_id: bestOffer?.id || null, outcome, amount,
         role: 'matcher', status: 'active', outcome_label: outcomeLabel,
         match_title: match ? `${match.team_a} vs ${match.team_b}` : '',
         potential_payout: potentialPayout, wallet_address: walletAddress,
+        _isParimutuel: isParimutuel,
       },
-      offerUpdate: {
+      offerUpdate: bestOffer ? {
         offer_id: bestOffer.id,
         amount_matched: (bestOffer.amount_matched || 0) + amount,
         amount_unmatched: (bestOffer.amount_unmatched || 0) - amount,
         status: ((bestOffer.amount_unmatched || 0) - amount) <= 0.0001 ? 'fully_matched' : 'partially_matched',
-      },
+      } : null,
     };
 
     return Response.json({
       success: true, amount, odds: oddsDecimal, potentialPayout,
-      lp_offer_id: bestOffer.id, commit_data,
+      lp_offer_id: bestOffer?.id || null, isParimutuel, commit_data,
       solana_instruction: {
         instruction_type: 'place_bet',
         programId: programIdStr,
