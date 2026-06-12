@@ -321,56 +321,29 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
         console.log('[provide_liquidity] Transaction built with priority fee');
         
       } else if (instruction.instruction_type === 'place_bet') {
-        // place_bet — call the actual program instruction
-        console.log('Creating place_bet program instruction:', instruction);
-        
-        // Validate market PDA is a real Solana address
-        try {
-          new PublicKey(instruction.marketPda);
-        } catch (err) {
-          console.error('[SolanaTransactionSigner] Invalid market PDA:', instruction.marketPda);
-          throw new Error('Invalid market configuration. Admin must deploy this market on-chain first.');
-        }
+        // place_bet — use backend-provided keys and instruction_data directly
+        console.log('=== PLACE_BET INSTRUCTION ===');
+        console.log('[place_bet] Full instruction:', instruction);
         
         const programId = new PublicKey(instruction.programId);
         
-        // Build keys - handle parimutuel mode (no LP offer PDA)
-        const keys = [];
-        keys.push({ pubkey: new PublicKey(instruction.marketPda), isSigner: false, isWritable: true });
+        if (!instruction.instruction_data) throw new Error('Missing instruction_data from backend');
+        if (!instruction.keys || instruction.keys.length === 0) throw new Error('Missing keys from backend');
         
-        // CRITICAL: Parimutuel mode MUST still include lp_offer account - use bettor's own address as placeholder
-        // The Solana program expects 6 accounts: market, lp_offer, bettor_position, bettor, system_program
-        if (instruction.lpOfferPda) {
-          // Fixed-odds mode: use real LP offer PDA
-          keys.push({ pubkey: new PublicKey(instruction.lpOfferPda), isSigner: false, isWritable: true });
-        } else {
-          // Parimutuel mode: use bettor's position PDA as lp_offer placeholder
-          // This tells the program to create a self-backed position (betting into the pool)
-          keys.push({ pubkey: new PublicKey(instruction.bettorPositionPda), isSigner: false, isWritable: true });
-        }
+        const data = Buffer.from(instruction.instruction_data, 'base64');
+        console.log('[place_bet] Instruction data (hex):', data.toString('hex'));
         
-        keys.push({ pubkey: new PublicKey(instruction.bettorPositionPda), isSigner: false, isWritable: true });
-        keys.push({ pubkey: provider.publicKey, isSigner: true, isWritable: true }); // bettor signer
-        keys.push({ pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false }); // system_program
+        const keys = instruction.keys.map(k => ({
+          pubkey: new PublicKey(k.pubkey === 'SIGNER_WALLET' ? provider.publicKey.toBase58() : k.pubkey),
+          isSigner: k.isSigner,
+          isWritable: k.isWritable,
+        }));
+        console.log('[place_bet] Keys:', keys.map(k => ({ pubkey: k.pubkey.toBase58(), isSigner: k.isSigner, isWritable: k.isWritable })));
         
-        // Anchor discriminator (8 bytes) + outcome (u8) + amount (u64 LE) = 17 bytes
-        const disc = await anchorDiscriminator('place_bet');
-        const data = Buffer.alloc(17);
-        disc.copy(data, 0);
-        data.writeUInt8(instruction.outcome, 8);
-        const _parsedLamports = parseFloat(String(instruction.amountLamports));
-        if (isNaN(_parsedLamports) || _parsedLamports <= 0) throw new Error('Invalid bet amount — please enter a valid SOL value');
-        data.writeBigUInt64LE(BigInt(Math.round(_parsedLamports)), 9);
-        console.log('[SolanaTransactionSigner] place_bet discriminator:', disc.toString('hex'));
-        console.log('[SolanaTransactionSigner] full data:', data.toString('hex'));
-        
-        const placeBetIx = new TransactionInstruction({
-          keys,
-          programId,
-          data,
-        });
-        
+        const placeBetIx = new TransactionInstruction({ keys, programId, data });
         transaction.add(placeBetIx);
+        
+        console.log('[place_bet] Transaction built successfully');
         
       } else if (instruction.instruction_type === 'match_bet') {
         // match_bet — transfer SOL to match existing offer
