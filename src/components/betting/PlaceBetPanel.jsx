@@ -269,7 +269,22 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
           console.log('[PlaceBetPanel] placeBet (parimutuel) response:', res.data);
         }
       }
-      if (res.data?.error) throw new Error(res.data.error);
+      // Check for errors in response
+      console.log('[PlaceBetPanel] Full response:', res);
+      console.log('[PlaceBetPanel] Response data:', res.data);
+      
+      if (!res.data) {
+        console.error('[PlaceBetPanel] No data in response');
+        throw new Error('Backend function returned no data');
+      }
+      if (res.data.error) {
+        console.error('[PlaceBetPanel] Error in response:', res.data.error);
+        throw new Error(res.data.error);
+      }
+      if (!res.data.solana_instruction) {
+        console.error('[PlaceBetPanel] Missing solana_instruction in response:', res.data);
+        throw new Error('Failed to generate transaction instruction - market may not be deployed');
+      }
       // Include commit_data in instruction for post-tx commit
       // Store commit_data separately so handleTransactionSuccess can use it
       setInstruction({
