@@ -149,17 +149,26 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
       // If this was a provide_liquidity transaction, commit to DB
       if (commitData) {
         console.log('[ProvideLiquidityPanel] Committing liquidity to DB...');
-        const commitRes = await base44.functions.invoke('commitLiquidity', {
-          signature,
-          commit_data: commitData,
-        });
-        if (commitRes.data.error) {
-          console.error('[ProvideLiquidityPanel] commitLiquidity error:', commitRes.data.error);
-          setError('On-chain succeeded but DB commit failed: ' + commitRes.data.error);
-        } else {
-          console.log('[ProvideLiquidityPanel] ✓ Liquidity committed to DB:', commitRes.data);
-          setCommitData(null);
-          setAmount('');
+        try {
+          const commitRes = await base44.functions.invoke('commitLiquidity', {
+            signature,
+            commit_data: commitData,
+          });
+          if (commitRes.data.error) {
+            console.error('[ProvideLiquidityPanel] commitLiquidity error:', commitRes.data.error);
+            setError('On-chain succeeded but DB commit failed: ' + commitRes.data.error);
+            setSuccessSignature(null);
+          } else {
+            console.log('[ProvideLiquidityPanel] ✓ Liquidity committed to DB:', commitRes.data);
+            setCommitData(null);
+            setAmount('');
+            // Keep success message visible
+            return;
+          }
+        } catch (commitErr) {
+          console.error('[ProvideLiquidityPanel] commitLiquidity exception:', commitErr);
+          setError('Commit failed: ' + commitErr.message);
+          setSuccessSignature(null);
         }
         await checkMarketStatus();
         return;
