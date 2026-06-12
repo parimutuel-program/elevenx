@@ -118,28 +118,40 @@ Deno.serve(async (req) => {
     const body = await req.clone().json().catch(() => ({}));
     const base44 = createClientFromRequest(req);
 
-    // Wallet-only auth for live site (no platform login required)
-    const authHeader = req.headers.get('Authorization') || '';
-    const token = authHeader.replace('Bearer ', '');
+    // Auth: Check platform user OR wallet JWT
+    let walletAddress = null;
     
-    if (!token) {
-      return Response.json({ error: 'Missing authorization token' }, { status: 403 });
+    // Try platform auth first
+    try {
+      const user = await base44.auth.me();
+      if (user && user.role === 'admin') {
+        // Platform admin - proceed
+      } else {
+        throw new Error('Not platform admin');
+      }
+    } catch (_) {
+      // No platform auth - try wallet JWT
+      const authHeader = req.headers.get('Authorization') || '';
+      const token = authHeader.replace('Bearer ', '');
+      
+      if (token && token.split('.').length === 3) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+          walletAddress = payload.walletAddress;
+        } catch (_) {}
+      }
+      
+      if (!walletAddress) {
+        return Response.json({ error: 'Authentication required' }, { status: 403 });
+      }
     }
     
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      return Response.json({ error: 'Invalid token format' }, { status: 403 });
-    }
-    
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-    if (!payload.walletAddress) {
-      return Response.json({ error: 'Token missing walletAddress' }, { status: 403 });
-    }
-    
-    // Check if wallet is admin using service role (works without platform auth)
-    const walletUsers = await base44.asServiceRole.entities.WalletUser.filter({ wallet_address: payload.walletAddress });
-    if (!walletUsers[0] || walletUsers[0].role !== 'admin') {
-      return Response.json({ error: 'Admin only' }, { status: 403 });
+    // Verify admin status using service role
+    if (walletAddress) {
+      const walletUsers = await base44.asServiceRole.entities.WalletUser.filter({ wallet_address: walletAddress });
+      if (!walletUsers[0] || walletUsers[0].role !== 'admin') {
+        return Response.json({ error: 'Admin only' }, { status: 403 });
+      }
     }
 
     const { rpcUrl, programIdStr, programId, connection } = getSolanaConfig();

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { base44 } from '@/api/base44Client';
+import { callBackendFunction } from '@/lib/directFunctionCall';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -268,23 +269,23 @@ export default function Admin() {
   const handleDeployMatchesSuccess = async (startIndex, endIndex, batchLabel, force = false) => {
     const batchSize = endIndex - startIndex + 1;
     try {
-      const res = await base44.functions.invoke('deployAllMatches', { batch_offset: startIndex, batch_size: batchSize, force });
-      if (res.data.needsSigning) {
+      const res = await callBackendFunction('deployAllMatches', { batch_offset: startIndex, batch_size: batchSize, force });
+      if (res.needsSigning) {
         setDeployMatchesDialog({
-          instruction: res.data.solana_instruction,
-          remaining: res.data.remaining,
-          betId: res.data.bet_id,
-          marketPda: res.data.market_pda,
-          matchIdToUpdate: res.data.match_id_to_update, // _v2 suffix if PDA collision
+          instruction: res.solana_instruction,
+          remaining: res.remaining,
+          betId: res.bet_id,
+          marketPda: res.market_pda,
+          matchIdToUpdate: res.match_id_to_update,
           batchLabel,
           batchSize,
           force,
         });
-      } else if (res.data.autoContinue) {
+      } else if (res.autoContinue) {
         setTimeout(() => handleDeployMatchesSuccess(startIndex, endIndex, batchLabel, force), 3000);
       } else {
         setDeployMatchesDialog(null);
-        toast.success(res.data.message || `✓ ${batchLabel || 'Batch'} deployed!`);
+        toast.success(res.message || `✓ ${batchLabel || 'Batch'} deployed!`);
         queryClient.invalidateQueries({ queryKey: ['allBets'] });
       }
     } catch (err) {
@@ -303,8 +304,6 @@ export default function Admin() {
       return;
     }
     
-    let effectiveWalletAddress = walletAddress;
-    
     // Connect if not already connected
     if (!phantom.isConnected) {
       try {
@@ -318,8 +317,7 @@ export default function Admin() {
       }
     }
     
-    // Get address directly from Phantom
-    effectiveWalletAddress = phantom.publicKey?.toString();
+    const effectiveWalletAddress = phantom.publicKey?.toString();
     
     if (!effectiveWalletAddress) {
       toast.error('Could not get wallet address from Phantom.');
@@ -332,8 +330,9 @@ export default function Admin() {
     const batchSize = endIndex - startIndex + 1;
     try {
       console.log('[Admin] Calling deployAllMatches with batch_offset:', startIndex, 'batch_size:', batchSize);
-      const res = await base44.functions.invoke('deployAllMatches', { batch_offset: startIndex, batch_size: batchSize, force });
-      console.log('[Admin] deployAllMatches response:', res.data);
+      // Use direct HTTP call with wallet JWT (bypasses platform auth)
+      const res = await callBackendFunction('deployAllMatches', { batch_offset: startIndex, batch_size: batchSize, force });
+      console.log('[Admin] deployAllMatches response:', res);
       
       if (res.data.needsSigning) {
         setDeployMatchesDialog({
@@ -759,22 +758,22 @@ export default function Admin() {
                       return;
                     }
                     try {
-                      const res = await base44.functions.invoke('deployMissingMatches');
-                      if (res.data.needsSigning) {
-                        toast.success(`Found ${res.data.totalMissing} missing matches. Deploying first...`);
-                        // Trigger deploy dialog
+                      // Use direct HTTP call with wallet JWT (bypasses platform auth)
+                      const res = await callBackendFunction('deployMissingMatches', {});
+                      if (res.needsSigning) {
+                        toast.success(`Found ${res.totalMissing} missing matches. Deploying first...`);
                         setDeployMatchesDialog({
-                          instruction: res.data.solana_instruction,
-                          remaining: res.data.remaining,
-                          betId: res.data.bet_id,
-                          marketPda: res.data.market_pda,
-                          matchIdToUpdate: res.data.match_id_to_update, // _v2 suffix if PDA collision
-                          batchLabel: `Missing (${res.data.pda_status})`,
-                          batchSize: res.data.totalMissing,
+                          instruction: res.solana_instruction,
+                          remaining: res.remaining,
+                          betId: res.bet_id,
+                          marketPda: res.market_pda,
+                          matchIdToUpdate: res.match_id_to_update,
+                          batchLabel: `Missing (${res.pda_status})`,
+                          batchSize: res.totalMissing,
                           isMissingDeploy: true,
                         });
                       } else {
-                        toast.success(res.data.message || '✓ All matches deployed!');
+                        toast.success(res.message || '✓ All matches deployed!');
                         queryClient.invalidateQueries({ queryKey: ['allBets'] });
                       }
                     } catch (err) {
@@ -826,20 +825,20 @@ export default function Admin() {
                       return;
                     }
                     try {
-                      const res = await base44.functions.invoke('deployMissingMatches');
-                      if (res.data.needsSigning) {
-                        toast.success(`Found ${res.data.totalMissing} missing matches. Deploying first...`);
-                        // Set up dialog for signing
+                      // Use direct HTTP call with wallet JWT (bypasses platform auth)
+                      const res = await callBackendFunction('deployMissingMatches', {});
+                      if (res.needsSigning) {
+                        toast.success(`Found ${res.totalMissing} missing matches. Deploying first...`);
                         setDeployMatchesDialog({
-                          instruction: res.data.solana_instruction,
-                          remaining: res.data.remaining,
-                          betId: res.data.bet_id,
-                          marketPda: res.data.market_pda,
-                          batchLabel: `Missing (${res.data.pda_status})`,
-                          batchSize: res.data.totalMissing,
+                          instruction: res.solana_instruction,
+                          remaining: res.remaining,
+                          betId: res.bet_id,
+                          marketPda: res.market_pda,
+                          batchLabel: `Missing (${res.pda_status})`,
+                          batchSize: res.totalMissing,
                         });
                       } else {
-                        toast.success(res.data.message || '✓ All matches deployed!');
+                        toast.success(res.message || '✓ All matches deployed!');
                         queryClient.invalidateQueries({ queryKey: ['allBets'] });
                       }
                     } catch (err) {
@@ -1264,10 +1263,11 @@ export default function Admin() {
                     // Commit DB update AFTER on-chain confirmation
                     if (deployMatchesDialog.betId && deployMatchesDialog.marketPda) {
                       try {
-                        await base44.functions.invoke('commitMarketDeployment', {
+                        // Use direct HTTP call with wallet JWT (bypasses platform auth)
+                        await callBackendFunction('commitMarketDeployment', {
                           bet_id: deployMatchesDialog.betId,
                           market_pda: deployMatchesDialog.marketPda,
-                          match_id: deployMatchesDialog.matchIdToUpdate, // Atomic _v2 update
+                          match_id: deployMatchesDialog.matchIdToUpdate,
                         });
                       } catch (e) {
                         console.error('[Admin] commitMarketDeployment failed:', e);
