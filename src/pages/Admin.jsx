@@ -583,6 +583,25 @@ export default function Admin() {
                 <Button
                   onClick={async () => {
                     try {
+                      const res = await base44.functions.invoke('syncScores', {});
+                      if (res.data.success) {
+                        toast.success(res.data.message || `✓ Synced ${res.data.updated?.length || 0} matches!`);
+                        queryClient.invalidateQueries({ queryKey: ['allMatches'] });
+                      } else {
+                        toast.error(res.data.error || 'Sync failed');
+                      }
+                    } catch (err) {
+                      toast.error('Error: ' + err.message);
+                    }
+                  }}
+                  className="h-24 flex flex-col gap-2 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-600/30 rounded-xl"
+                >
+                  <span className="font-bold text-lg text-white">🔄 Sync Scores</span>
+                  <span className="text-xs text-gray-400">Fetch live scores from API</span>
+                </Button>
+                <Button
+                  onClick={async () => {
+                    try {
                       const res = await base44.functions.invoke('exportMatches', {});
                       // Show in a copyable dialog
                       const lineCount = res.data ? res.data.split('\n').filter(l => l.includes('Match ID:')).length : 0;

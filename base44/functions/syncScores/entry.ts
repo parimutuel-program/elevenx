@@ -94,25 +94,33 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Extract scores
-      let scoreA = matchedGame.home_score ?? 0;
-      let scoreB = matchedGame.away_score ?? 0;
+      // Extract scores from scores array: [{name, score}]
+      let scoreA = 0;
+      let scoreB = 0;
       
-      // Determine match status
+      if (matchedGame.scores && Array.isArray(matchedGame.scores)) {
+        const homeScoreObj = matchedGame.scores.find(s => s.name === matchedGame.home_team);
+        const awayScoreObj = matchedGame.scores.find(s => s.name === matchedGame.away_team);
+        scoreA = homeScoreObj?.score ? parseInt(homeScoreObj.score) : 0;
+        scoreB = awayScoreObj?.score ? parseInt(awayScoreObj.score) : 0;
+      }
+      
+      // Determine match status based on completed flag and scores
       let status = dbMatch.status;
       let winner = dbMatch.winner || '';
       
-      if (matchedGame.completed) {
+      if (!matchedGame.scores || matchedGame.scores.length === 0) {
+        // No scores yet = upcoming
+        status = 'upcoming';
+      } else if (matchedGame.completed) {
+        // Completed = finished
         status = 'finished';
         if (scoreA > scoreB) winner = 'team_a';
         else if (scoreB > scoreA) winner = 'team_b';
         else winner = 'draw';
-      } else if (matchedGame.commence_time) {
-        const commenceTime = new Date(matchedGame.commence_time);
-        const now = new Date();
-        if (commenceTime <= now) {
-          status = 'live';
-        }
+      } else {
+        // Has scores but not completed = live
+        status = 'live';
       }
 
       updates.push({
