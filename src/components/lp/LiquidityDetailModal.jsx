@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { getTeamFlag } from '@/utils/flags';
-import { DollarSign, Wallet } from 'lucide-react';
+import { DollarSign, Wallet, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useWallet } from '@/lib/WalletContext';
 import { Button } from '@/components/ui/button';
@@ -97,13 +97,19 @@ export default function LiquidityDetailModal({
       >
         <div className="p-4 space-y-3">
           {/* Header + Match info inline */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-2">
             <h2 className="font-heading font-black text-base">Provide Liquidity</h2>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>{getTeamFlag(match.team_a, match.team_a_flag)} {match.team_a}</span>
-              <span className="text-primary font-bold">vs</span>
-              <span>{match.team_b} {getTeamFlag(match.team_b, match.team_b_flag)}</span>
-            </div>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg hover:bg-secondary/50 transition-colors"
+            >
+              <X className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+            <span>{getTeamFlag(match.team_a, match.team_a_flag)} {match.team_a}</span>
+            <span className="text-primary font-bold">vs</span>
+            <span>{match.team_b} {getTeamFlag(match.team_b, match.team_b_flag)}</span>
           </div>
 
           {/* Outcome selection - compact */}
