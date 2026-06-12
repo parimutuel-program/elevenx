@@ -22,13 +22,14 @@ Deno.serve(async (req) => {
     const serviceRole = base44.asServiceRole;
     const { programIdStr, programId } = getSolanaConfig();
 
-    const { walletAddress, bet_id, match_id, outcome, amount } = await req.json();
+    const { walletAddress, bet_id, match_id, outcome, amount: rawAmount } = await req.json();
+    const amount = parseFloat(rawAmount);
 
     if (!walletAddress) return Response.json({ error: 'Wallet not connected' }, { status: 401 });
-    if (!bet_id || !match_id || outcome === undefined || !amount) {
+    if (!bet_id || !match_id || outcome === undefined || rawAmount === undefined || rawAmount === null || rawAmount === '') {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
     }
-    if (amount <= 0) return Response.json({ error: 'Amount must be positive' }, { status: 400 });
+    if (isNaN(amount) || amount <= 0) return Response.json({ error: 'Amount must be a positive number' }, { status: 400 });
     if (outcome !== 'a' && outcome !== 'b' && outcome !== 'draw') {
       return Response.json({ error: 'Invalid outcome' }, { status: 400 });
     }
