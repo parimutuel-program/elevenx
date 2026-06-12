@@ -95,53 +95,22 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
-    // STRICT P2P MODE: Must have offer_id - no parimutuel fallback
-    if (!offer_id) {
-      return Response.json({
-        error: 'No liquidity available for this outcome',
-        hint: 'LP must seed this outcome first. Go to LP Dashboard to provide liquidity.',
-        received: { bet_id, match_id, outcome, amount }
-      }, { status: 400 });
-    }
-
     // FIXED-ODDS MODE: Load LP offer and match against it
-    const offers = await base44.entities.BetOffer.filter({ id: offer_id });
+    const offers = await serviceRole.entities.BetOffer.filter({ id: offer_id });
     const offer = offers[0];
     if (!offer) {
       console.error('[matchBet] Offer not found:', { offer_id });
       return Response.json({ error: 'Offer not found', offer_id }, { status: 404 });
     }
     
-    // CRITICAL: Check if market exists on-chain BEFORE preparing bet
-    try {
-      const marketStatus = await base44.functions.invoke('checkMarketStatus', { match_id: offer.match_id, bet_id: offer.bet_id });
-      console.log('[matchBet] Market status check (fixed-odds):', marketStatus.data);
-      
-      if (marketStatus.data.status === 'not_created' || marketStatus.data.status === 'not_initialized') {
-        return Response.json({
-          error: 'Market not deployed on-chain yet',
-          hint: 'Admin must create the market on Solana first via Admin panel → Create Market On-Chain',
-          status: marketStatus.data.status,
-          marketPda: marketStatus.data.marketPda,
-        }, { status: 400 });
-      }
-      
-      if (marketStatus.data.settled) {
-        return Response.json({ error: 'Market already settled' }, { status: 400 });
-      }
-      
-      if (marketStatus.data.voided) {
-        return Response.json({ error: 'Market has been voided' }, { status: 400 });
-      }
-      
-      if (marketStatus.data.paused) {
-        return Response.json({ error: 'Market is paused' }, { status: 400 });
-      }
-      
-      console.log('[matchBet] ✓ Market verified on-chain (fixed-odds):', marketStatus.data.status);
-    } catch (checkErr) {
-      console.error('[matchBet] Failed to check market status (fixed-odds):', checkErr.message);
-      // Don't block betting if check fails - allow with warning
+    // Verify the bet record says market was deployed
+    const betsCheck = await serviceRole.entities.Bet.filter({ id: offer.bet_id });
+    const betCheck = betsCheck[0];
+    if (betCheck && betCheck.solana_market_created === false) {
+      return Response.json({
+        error: 'Market not deployed on-chain yet',
+        hint: 'Admin must deploy this market first',
+      }, { status: 400 });
     }
     
     console.log('[matchBet] Loaded offer:', {
@@ -180,7 +149,7 @@ Deno.serve(async (req) => {
     }
 
     // Load bet/market
-    const bets = await base44.entities.Bet.filter({ id: offer.bet_id });
+    const bets = await serviceRole.entities.Bet.filter({ id: offer.bet_id });
     const bet = bets[0];
     if (!bet || bet.status !== 'open') return Response.json({ error: 'Market not open' }, { status: 400 });
 
