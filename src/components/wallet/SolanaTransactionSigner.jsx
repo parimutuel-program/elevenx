@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Wallet, Loader, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Buffer } from 'buffer';
 import { Connection, PublicKey, SystemProgram, Transaction, TransactionInstruction } from '@solana/web3.js';
+import { base44 } from '@/api/base44Client';
 
 // Compute Anchor discriminator: SHA256("global:<name>").slice(0, 8)
 // Anchor uses "global:<instruction_name>" format by default
@@ -19,6 +20,23 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
   const [signStep, setSignStep] = useState(''); // 'connecting' | 'signing' | 'confirming'
   const [signature, setSignature] = useState(null);
   const [error, setError] = useState(null);
+  
+  // Load Solana config from backend on mount (mainnet RPC)
+  useEffect(() => {
+    if (!window.SOLANA_RPC_URL) {
+      base44.functions.invoke('solanaConfig', {}).then(res => {
+        if (res.data.rpcUrl) {
+          window.SOLANA_RPC_URL = res.data.rpcUrl;
+          window.SOLANA_PROGRAM_ID = res.data.programId;
+          console.log('[SolanaTransactionSigner] Loaded Solana config:', {
+            rpcUrl: res.data.rpcUrl,
+            programId: res.data.programId,
+            network: res.data.network,
+          });
+        }
+      }).catch(err => console.error('[SolanaTransactionSigner] Failed to load Solana config:', err));
+    }
+  }, []);
 
   const handleSignTransaction = async () => {
     setIsSigning(true);
@@ -72,12 +90,18 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
 
       // CRITICAL: Read RPC URL from instruction or use environment-based default
       // Backend functions should provide rpcUrl in instruction if non-standard
-      const rpcUrl = instruction.rpcUrl || window.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
+      // Default to mainnet - devnet is only for testing
+      const rpcUrl = instruction.rpcUrl || window.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
       const connection = new Connection(rpcUrl, {
         commitment: 'confirmed',
         confirmTransactionInitialTimeout: 60000,
       });
       console.log('[SolanaTransactionSigner] Using RPC URL:', rpcUrl);
+      console.log('[SolanaTransactionSigner] Network config:', {
+        windowSolanaRpcUrl: window.SOLANA_RPC_URL,
+        instructionRpcUrl: instruction.rpcUrl,
+        fallbackUsed: !instruction.rpcUrl && !window.SOLANA_RPC_URL,
+      });
       const transaction = new Transaction();
       
       // Check instruction type and build appropriate transaction
