@@ -193,6 +193,12 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
 
     if (!wallet) {setPrepareError('Wallet not connected');return;}
 
+    const parsedAmount = parseFloat(amount);
+    if (!amount || isNaN(parsedAmount) || parsedAmount <= 0) {
+      setPrepareError('Please enter a valid SOL amount');
+      return;
+    }
+
     if (!validateWalletAddress(wallet)) {
       console.error('[PlaceBetPanel] Invalid wallet address:', wallet);
       setPrepareError('Invalid wallet address — please reconnect your wallet');

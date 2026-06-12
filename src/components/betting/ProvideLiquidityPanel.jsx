@@ -101,6 +101,12 @@ export default function ProvideLiquidityPanel({ bet, match, match_id }) {
       return;
     }
 
+    const parsedAmount = parseFloat(amount);
+    if (!amount || isNaN(parsedAmount) || parsedAmount <= 0) {
+      setError('Please enter a valid SOL amount');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     setSuccessSignature(null);
