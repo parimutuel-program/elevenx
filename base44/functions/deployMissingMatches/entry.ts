@@ -161,56 +161,53 @@ Deno.serve(async (req) => {
     const allMatches = await base44.asServiceRole.entities.Match.filter({});
     const matchMap = new Map(allMatches.map(m => [m.id, m]));
     
-    // CRITICAL FIX: Check on-chain PDA existence for ALL bets, not just those with solana_market_created=true
-    // This prevents duplicates when commitMarketDeployment wasn't called
+    // CRITICAL FIX: Scan ALL on-chain markets to find deployed teams (not just DB-derived PDAs)
+    // This catches duplicates created with _v2 suffixes that have different PDA addresses
     const deployedTeams = new Set();
-    const pdaCache = new Map(); // Cache PDA checks to avoid redundant RPC calls
+    const pdaCache = new Map();
+    const onChainMarkets = []; // Store all valid on-chain markets
     
+    console.log('[deployMissingMatches] Scanning ALL on-chain markets...');
+    const allProgramAccounts = await connection.getProgramAccounts(programId, {
+      filters: [{ dataSize: 312 }], // BetMarket account size
+    });
+    console.log(`[deployMissingMatches] Found ${allProgramAccounts.length} on-chain market accounts`);
+    
+    // Parse all on-chain markets to extract team names
+    for (const account of allProgramAccounts) {
+      const data = account.account.data;
+      const chainTeamA = new TextDecoder().decode(data.slice(40, 72)).replace(/\0/g, '').trim();
+      const chainTeamB = new TextDecoder().decode(data.slice(72, 103)).replace(/\0/g, '').trim();
+      const oracleOddsA = Number(data.readBigUInt64LE(156));
+      const oracleOddsB = Number(data.readBigUInt64LE(164));
+      const oracleOddsDraw = Number(data.readBigUInt64LE(172));
+      
+      // Valid market: non-zero odds
+      const isValid = oracleOddsA > 0 || oracleOddsB > 0 || oracleOddsDraw > 0;
+      
+      if (isValid && chainTeamA && chainTeamB) {
+        const key = `${chainTeamA.toLowerCase().trim()}|${chainTeamB.toLowerCase().trim()}`;
+        deployedTeams.add(key);
+        onChainMarkets.push({
+          pubkey: account.pubkey.toBase58(),
+          teamA: chainTeamA,
+          teamB: chainTeamB,
+          key,
+        });
+        console.log(`[deployMissingMatches] ✓ On-chain: ${chainTeamA} vs ${chainTeamB} (${account.pubkey.toBase58().slice(0, 8)}...)`);
+      }
+    }
+    
+    // Also check DB-deployed flags (for matches not yet on-chain but marked in DB)
     for (const bet of allBets) {
       if (!matchMap.has(bet.match_id)) continue;
       
       const match = matchMap.get(bet.match_id);
       const key = `${match.team_a.toLowerCase().trim()}|${match.team_b.toLowerCase().trim()}`;
       
-      // Skip if already marked as deployed in this run
-      if (deployedTeams.has(key)) continue;
-      
-      // Check if DB says deployed (fast path)
-      if (bet.solana_market_created && bet.solana_market_pda) {
+      if (bet.solana_market_created && bet.solana_market_pda && !deployedTeams.has(key)) {
         deployedTeams.add(key);
-        continue;
-      }
-      
-      // Otherwise, check on-chain PDA existence
-      const matchIdBytes = Buffer.alloc(32);
-      Buffer.from(match.id, 'utf-8').copy(matchIdBytes, 0, 0, Math.min(match.id.length, 32));
-      const [marketPda] = PublicKey.findProgramAddressSync([Buffer.from('market'), matchIdBytes], programId);
-      
-      // Use cached result if available
-      let marketInfo = pdaCache.get(marketPda.toBase58());
-      if (marketInfo === undefined) {
-        marketInfo = await connection.getAccountInfo(marketPda);
-        pdaCache.set(marketPda.toBase58(), marketInfo);
-      }
-      
-      if (marketInfo) {
-        // PDA exists - verify it's a valid market (not dead/fake)
-        const data = marketInfo.data;
-        const oracleOddsA = Number(data.readBigUInt64LE(156));
-        const oracleOddsB = Number(data.readBigUInt64LE(164));
-        const oracleOddsDraw = Number(data.readBigUInt64LE(172));
-        
-        const chainTeamA = new TextDecoder().decode(data.slice(40, 72)).replace(/\0/g, '').trim();
-        const chainTeamB = new TextDecoder().decode(data.slice(72, 103)).replace(/\0/g, '').trim();
-        
-        // Valid market: non-zero odds AND matching team names
-        const isValid = (oracleOddsA > 0 || oracleOddsB > 0 || oracleOddsDraw > 0) &&
-                        (chainTeamA === match.team_a && chainTeamB === match.team_b);
-        
-        if (isValid) {
-          deployedTeams.add(key);
-          console.log(`[deployMissingMatches] ✓ ${match.team_a} vs ${match.team_b} already deployed (on-chain check)`);
-        }
+        console.log(`[deployMissingMatches] ✓ DB-deployed: ${match.team_a} vs ${match.team_b}`);
       }
     }
     
