@@ -5,7 +5,7 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-d
 import ScrollToTop from '@/components/ScrollToTop';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
-import { WalletProvider } from '@/lib/WalletContext';
+import { WalletProvider, useWallet } from '@/lib/WalletContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { Outlet } from 'react-router-dom';
@@ -41,11 +41,19 @@ import Docs from '@/pages/Docs';
 import Privacy from '@/pages/Privacy';
 import Terms from '@/pages/Terms';
 
-// AdminRoute: Protects admin and debug routes - redirects non-admin users to home
+// AdminRoute: Protects admin and debug routes - allows platform admin OR admin wallet
 const AdminRoute = () => {
   const { user } = useAuth();
+  const { walletAddress } = useWallet();
   
-  if (!user || user.role !== 'admin') {
+  // Platform admin check
+  const isPlatformAdmin = user && user.role === 'admin';
+  
+  // Wallet admin check (for live site access)
+  const ADMIN_WALLET = '4xfwNAkxNbgZuR5LsjTh91z9Sw3d9AVvHvbPpTaiipZZ';
+  const isWalletAdmin = walletAddress && walletAddress === ADMIN_WALLET;
+  
+  if (!isPlatformAdmin && !isWalletAdmin) {
     return <Navigate to="/" replace />;
   }
   
