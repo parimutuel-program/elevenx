@@ -39,26 +39,35 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
       // CRITICAL: Check on-chain liquidity for each offer to catch partial withdrawals
       const offersWithOnChain = await Promise.all(
         activeOffers.map(async (o) => {
+          const dbAmount = Number(o.amount_unmatched) || 0;
           if (!o.solana_position_pda) {
-            console.log('[PlaceBetPanel] Offer missing PDA, using DB value:', o.id);
-            return o;
+            console.log('[PlaceBetPanel] Offer missing PDA, using DB value:', o.id, dbAmount);
+            return { ...o, _onChainVerified: false };
           }
           try {
             const onChain = await base44.functions.invoke('fetchLpOfferOnChain', { pda: o.solana_position_pda });
             console.log('[PlaceBetPanel] On-chain data for offer', o.id, ':', onChain.data);
             if (onChain.data?.exists && onChain.data?.available !== undefined) {
-              const onChainUnmatched = onChain.data.available / 1e9;
+              const onChainUnmatched = Number(onChain.data.available) / 1e9;
+              console.log('[PlaceBetPanel] Using on-chain amount:', o.id, onChainUnmatched, '(DB was:', dbAmount, ')');
               return { ...o, amount_unmatched: onChainUnmatched, _onChainVerified: true };
+            } else {
+              console.log('[PlaceBetPanel] On-chain returned no data, using DB value:', o.id, dbAmount);
+              return { ...o, amount_unmatched: dbAmount, _onChainVerified: false };
             }
           } catch (err) {
-            console.warn('[PlaceBetPanel] Failed to fetch on-chain for offer:', o.id, err.message);
+            console.warn('[PlaceBetPanel] Failed to fetch on-chain for offer:', o.id, err.message, '- using DB value:', dbAmount);
+            return { ...o, amount_unmatched: dbAmount, _onChainVerified: false };
           }
-          return o;
         })
       );
       
-      // Filter out offers with zero on-chain liquidity
-      const finalOffers = offersWithOnChain.filter(o => (o.amount_unmatched || 0) > 0);
+      // Filter out offers with zero liquidity (after on-chain check)
+      const finalOffers = offersWithOnChain.filter(o => {
+        const unmatched = Number(o.amount_unmatched) || 0;
+        return unmatched > 0;
+      });
+      console.log('[PlaceBetPanel] Final offers after filtering:', finalOffers.map(o => ({ id: o.id, outcome: o.outcome, unmatched: Number(o.amount_unmatched) })));
       console.log('[PlaceBetPanel] Final offers with liquidity:', finalOffers.length, finalOffers.map(o => ({ id: o.id, outcome: o.outcome, unmatched: o.amount_unmatched, onChain: o._onChainVerified })));
       
       // EXTRA DEBUG: Log Haiti/Scotland offers specifically
