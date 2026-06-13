@@ -55,6 +55,24 @@ export default function Home() {
     refetchInterval: 5000, // Refresh every 5 seconds
   });
 
+  const { data: lpPositions = [] } = useQuery({
+    queryKey: ['lp-positions'],
+    queryFn: () => base44.entities.LpPosition.list(),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000, // Refresh every 5 seconds
+  });
+
+  const { data: betOffers = [] } = useQuery({
+    queryKey: ['bet-offers'],
+    queryFn: () => base44.entities.BetOffer.filter({ status: 'open' }),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000, // Refresh every 5 seconds
+  });
+
   const { data: futuresMarkets = [] } = useQuery({
     queryKey: ['futures-markets'],
     queryFn: () => base44.entities.FuturesMarket.list(),
@@ -72,11 +90,22 @@ export default function Home() {
   const betByMatch = {};
   bets.forEach((b) => {betByMatch[b.match_id] = b;});
 
-  // Calculate match pools from Bet entities
+  // Calculate match pools from Bet entities (total matched + unmatched liquidity)
   const matchPools = bets.reduce((s, b) => s + (b.total_pool || 0), 0);
   
   // Calculate futures pools from FuturesMarket entities
   const futuresPools = futuresMarkets.reduce((s, m) => s + (m.total_volume || 0), 0);
+  
+  // Calculate LP pools - unmatched liquidity available for betting
+  const matchLpPools = lpPositions
+    .filter((lp) => !lp._isFutures && (lp.status === 'open' || lp.status === 'partially_matched'))
+    .reduce((s, lp) => s + (lp.liquidity_unmatched || 0), 0);
+  
+  const futuresLpPools = lpPositions
+    .filter((lp) => lp._isFutures && (lp.status === 'open' || lp.status === 'partially_matched'))
+    .reduce((s, lp) => s + (lp.liquidity_unmatched || 0), 0);
+  
+  const totalLpPools = matchLpPools + futuresLpPools;
   
   // Total volume = matches + futures
   const totalVolume = matchPools + futuresPools;
@@ -229,10 +258,10 @@ export default function Home() {
         className="relative overflow-hidden rounded-2xl p-4 sm:p-5 mb-3"
         style={{ background: 'linear-gradient(135deg, rgba(153,69,255,0.08) 0%, rgba(20,241,149,0.05) 100%)', border: '1px solid rgba(153,69,255,0.15)' }}>
         
-        {totalVolume === 0 && activeBettors === 0 ? (
+        {totalVolume === 0 && totalLpPools === 0 && activeBettors === 0 ? (
           <p className="text-center text-sm text-white/60 py-1">🚀 Platform launching for World Cup 2026 — Be the first to place a bet</p>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 relative z-10">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 relative z-10">
             {/* Protocol Vault Label */}
             <div className="col-span-2 md:col-span-1 flex flex-col justify-center">
               <div className="flex items-center gap-1.5 mb-1">
@@ -248,7 +277,19 @@ export default function Home() {
               <p className="text-sm font-heading font-bold text-emerald-400">◎0.0000</p>
             </div>
 
-            {/* Unresolved Stakes - Match Pools */}
+            {/* Match LP Pools */}
+            <div className="flex flex-col justify-center border-l border-white/5 pl-4">
+              <p className="text-[9px] text-white/40 uppercase tracking-wider mb-0.5">Match LP</p>
+              <p className="text-sm font-heading font-bold text-accent">◎{matchLpPools.toFixed(4)}</p>
+            </div>
+
+            {/* Futures LP Pools */}
+            <div className="flex flex-col justify-center border-l border-white/5 pl-4">
+              <p className="text-[9px] text-white/40 uppercase tracking-wider mb-0.5">Futures LP</p>
+              <p className="text-sm font-heading font-bold text-primary">◎{futuresLpPools.toFixed(4)}</p>
+            </div>
+
+            {/* Match Pools */}
             <div className="flex flex-col justify-center border-l border-white/5 pl-4">
               <p className="text-[9px] text-white/40 uppercase tracking-wider mb-0.5">Match Pools</p>
               <p className="text-sm font-heading font-bold text-yellow-400">◎{matchPools.toFixed(4)}</p>
