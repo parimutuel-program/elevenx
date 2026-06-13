@@ -34,7 +34,13 @@ export default function Futures() {
     setIsDeploying(true);
     try {
       console.log('[Futures] Calling bulkDeployFutures...');
-      const res = await base44.functions.invoke('bulkDeployFutures', {});
+      // Get wallet address from session
+      const walletSession = localStorage.getItem('elevenx_wallet_session');
+      const walletAddress = walletSession ? JSON.parse(walletSession).address : null;
+      
+      const res = await base44.functions.invoke('bulkDeployFutures', {
+        walletAddress,
+      });
       console.log('[Futures] Deploy response:', res.data);
       
       if (res.data.error) {

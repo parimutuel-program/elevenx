@@ -17,12 +17,50 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const serviceRole = base44.asServiceRole;
     
-    // Auth check via base44.auth.me() - base44.functions.invoke passes auth automatically
-    const user = await base44.auth.me();
-    console.log('[bulkDeployFutures] Authenticated user:', user?.email, 'role:', user?.role);
+    // Check auth: either platform admin OR admin wallet address
+    const ADMIN_WALLET = '4xfwNAkxNbgZuR5LsjTh91z9Sw3d9AVvHvbPpTaiipZZ';
+    let isAdmin = false;
     
-    if (!user || user.role !== 'admin') {
-      console.error('[bulkDeployFutures] Access denied - user role:', user?.role);
+    // Try 1: Platform admin via base44.auth.me()
+    try {
+      const user = await base44.auth.me();
+      if (user && user.role === 'admin') {
+        isAdmin = true;
+        console.log('[bulkDeployFutures] Authenticated as platform admin:', user.email);
+      }
+    } catch (_) {}
+    
+    // Try 2: Check wallet address from request payload (passed from frontend)
+    if (!isAdmin) {
+      try {
+        const body = await req.clone().json().catch(() => ({}));
+        if (body.walletAddress && body.walletAddress === ADMIN_WALLET) {
+          isAdmin = true;
+          console.log('[bulkDeployFutures] Authenticated as admin wallet:', body.walletAddress);
+        }
+      } catch (_) {}
+    }
+    
+    // Try 3: Check JWT token for wallet address
+    if (!isAdmin) {
+      try {
+        const authHeader = req.headers.get('Authorization') || '';
+        const token = authHeader.replace('Bearer ', '');
+        if (token) {
+          const parts = token.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+            if (payload.walletAddress === ADMIN_WALLET || payload.role === 'admin') {
+              isAdmin = true;
+              console.log('[bulkDeployFutures] Authenticated via JWT:', payload.walletAddress || payload.role);
+            }
+          }
+        }
+      } catch (_) {}
+    }
+    
+    if (!isAdmin) {
+      console.error('[bulkDeployFutures] Access denied - not admin');
       return Response.json({ error: 'Admin only' }, { status: 403 });
     }
 
