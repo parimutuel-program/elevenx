@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
       const keys = [
         { pubkey: marketPdaPubkey.toBase58(), isSigner: false, isWritable: true },
         { pubkey: lpOfferPdaPubkey.toBase58(), isSigner: false, isWritable: true },
-        { pubkey: walletAddress, isSigner: true, isWritable: true },
+        { pubkey: walletAddress, isSigner: false, isWritable: true },
         { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false },
       ];
       return Response.json({
@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
     const keys = [
       { pubkey: marketPda.toBase58(), isSigner: false, isWritable: true },
       { pubkey: lpOfferPda.toBase58(), isSigner: false, isWritable: true },
-      { pubkey: walletAddress, isSigner: true, isWritable: true },
+      { pubkey: walletAddress, isSigner: false, isWritable: true },
       { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false },
     ];
     console.log('[withdrawLiquidity] Accounts:', keys.map((k, i) => `[${i}] ${k.pubkey}`));
