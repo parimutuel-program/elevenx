@@ -11,15 +11,18 @@
  */
 export async function callBackendFunction(functionName, payload) {
   const authToken = localStorage.getItem('elevenx_auth_token');
+  const walletSession = localStorage.getItem('elevenx_wallet_session');
+  const walletAddress = walletSession ? JSON.parse(walletSession).address : null;
   
   if (!authToken) {
     throw new Error('Wallet not connected. Please connect your Phantom wallet first.');
   }
   
-  console.log('[callBackendFunction] Calling:', functionName, 'with payload:', payload);
-  console.log('[callBackendFunction] Auth token exists:', !!authToken, 'length:', authToken?.length);
-  console.log('[callBackendFunction] Full URL:', `/api/functions/${functionName}`);
+  console.log('[callBackendFunction] Calling:', functionName);
+  console.log('[callBackendFunction] Token length:', authToken?.length);
+  console.log('[callBackendFunction] Wallet address:', walletAddress?.slice(0, 8));
   
+  // Send token in BOTH header and body (fallback if platform strips headers)
   let response;
   try {
     response = await fetch(`/api/functions/${functionName}`, {
@@ -27,32 +30,32 @@ export async function callBackendFunction(functionName, payload) {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${authToken}`,
+        'X-Wallet-Token': authToken, // Fallback header
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        ...payload,
+        _auth_token: authToken, // Fallback in body
+      }),
     });
   } catch (networkErr) {
     console.error('[callBackendFunction] Network error:', networkErr);
     throw new Error('Network error - cannot reach backend. Please check your connection.');
   }
   
-  console.log('[callBackendFunction] Response status:', response.status, response.ok);
-  console.log('[callBackendFunction] Response headers:', Object.fromEntries(response.headers.entries()));
+  console.log('[callBackendFunction] Response status:', response.status);
   
-  // Try to read response body
   const responseText = await response.text();
-  console.log('[callBackendFunction] Raw response text:', responseText);
+  console.log('[callBackendFunction] Raw response:', responseText.slice(0, 500));
   
   if (!responseText) {
-    throw new Error(`Empty response from server (HTTP ${response.status})`);
+    throw new Error(`Empty response (HTTP ${response.status})`);
   }
   
   let responseData;
   try {
     responseData = JSON.parse(responseText);
-    console.log('[callBackendFunction] Parsed response data:', responseData);
   } catch (parseErr) {
-    console.error('[callBackendFunction] Failed to parse JSON:', parseErr);
-    throw new Error(`Invalid JSON from server: ${responseText.slice(0, 200)}`);
+    throw new Error(`Invalid JSON: ${responseText.slice(0, 200)}`);
   }
   
   if (!response.ok) {

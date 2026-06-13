@@ -20,32 +20,58 @@ Deno.serve(async (req) => {
     // Admin wallet check ONLY - no platform auth dependency
     const ADMIN_WALLET = '4xfwNAkxNbgZuR5LsjTh91z9Sw3d9AVvHvbPpTaiipZZ';
     
-    // Get JWT from Authorization header
+    console.log('[bulkDeployFutures] ALL HEADERS:', Array.from(req.headers.entries()).map(([k, v]) => `${k}: ${v.slice?.(0, 50) || v}`).join(', '));
+    
+    // Try multiple auth sources (platform might strip Authorization header)
     const authHeader = req.headers.get('Authorization') || '';
-    const token = authHeader.replace('Bearer ', '');
+    const xWalletToken = req.headers.get('X-Wallet-Token') || '';
+    
+    // Extract token from header (Bearer format)
+    let token = '';
+    if (authHeader.startsWith('Bearer ')) {
+      token = authHeader.replace('Bearer ', '');
+    } else if (xWalletToken) {
+      token = xWalletToken;
+    }
+    
+    // Also try body fallback
+    let bodyToken = null;
+    try {
+      const body = await req.json();
+      bodyToken = body._auth_token;
+      console.log('[bulkDeployFutures] Token from body:', bodyToken ? 'found (' + bodyToken.length + ' chars)' : 'none');
+    } catch (e) {
+      console.log('[bulkDeployFutures] Could not read body:', e.message);
+    }
+    
+    // Use header token first, fall back to body token
+    if (!token && bodyToken) {
+      token = bodyToken;
+      console.log('[bulkDeployFutures] Using token from body');
+    }
     
     if (!token || token.split('.').length !== 3) {
-      console.error('[bulkDeployFutures] No valid JWT token');
-      return Response.json({ error: 'Admin only - no auth token' }, { status: 403 });
+      console.error('[bulkDeployFutures] No valid JWT token. Header:', !!authHeader, 'X-Wallet-Token:', !!xWalletToken, 'Body:', !!bodyToken);
+      return Response.json({ error: 'Admin only - no auth token', debug: { hasAuthHeader: !!authHeader, hasXWalletToken: !!xWalletToken, hasBodyToken: !!bodyToken } }, { status: 403 });
     }
     
     // Decode JWT payload
-    let payload;
+    let jwtPayload;
     try {
-      payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      jwtPayload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
     } catch (e) {
       console.error('[bulkDeployFutures] Failed to decode JWT:', e.message);
       return Response.json({ error: 'Invalid token' }, { status: 403 });
     }
     
     console.log('[bulkDeployFutures] JWT payload:', {
-      walletAddress: payload.walletAddress?.slice(0, 8),
-      role: payload.role,
+      walletAddress: jwtPayload.walletAddress?.slice(0, 8),
+      role: jwtPayload.role,
     });
     
     // Check if admin wallet OR admin role
-    if (payload.walletAddress !== ADMIN_WALLET && payload.role !== 'admin') {
-      console.error('[bulkDeployFutures] Access denied - wallet:', payload.walletAddress?.slice(0, 8), 'role:', payload.role);
+    if (jwtPayload.walletAddress !== ADMIN_WALLET && jwtPayload.role !== 'admin') {
+      console.error('[bulkDeployFutures] Access denied - wallet:', jwtPayload.walletAddress?.slice(0, 8), 'role:', jwtPayload.role);
       return Response.json({ error: 'Admin only' }, { status: 403 });
     }
     
