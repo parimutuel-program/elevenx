@@ -25,21 +25,30 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
   const { data: allOffers = [], refetch: refetchOffers, isLoading: isLoadingOffers } = useQuery({
     queryKey: ['allOffers', bet?.id],
     queryFn: async () => {
+      console.log('[PlaceBetPanel] Fetching LP offers for bet:', bet?.id);
       const offers = await base44.entities.BetOffer.filter({ bet_id: bet?.id });
+      console.log('[PlaceBetPanel] Raw offers from DB:', offers.length, offers.map(o => ({ id: o.id, outcome: o.outcome, status: o.status, unmatched: o.amount_unmatched, has_pda: !!o.solana_position_pda })));
+      
       // Filter to active offers
       const activeOffers = offers.filter(o =>
         (o.status === 'open' || o.status === 'partially_matched') &&
         (o.amount_unmatched || 0) > 0
       );
+      console.log('[PlaceBetPanel] Active offers after status filter:', activeOffers.length);
       
       // CRITICAL: Check on-chain liquidity for each offer to catch partial withdrawals
       const offersWithOnChain = await Promise.all(
         activeOffers.map(async (o) => {
-          if (!o.solana_position_pda) return o;
+          if (!o.solana_position_pda) {
+            console.log('[PlaceBetPanel] Offer missing PDA, using DB value:', o.id);
+            return o;
+          }
           try {
             const onChain = await base44.functions.invoke('fetchLpOfferOnChain', { pda: o.solana_position_pda });
+            console.log('[PlaceBetPanel] On-chain data for offer', o.id, ':', onChain.data);
             if (onChain.data?.exists && onChain.data?.available !== undefined) {
-              return { ...o, amount_unmatched: onChain.data.available / 1e9, _onChainVerified: true };
+              const onChainUnmatched = onChain.data.available / 1e9;
+              return { ...o, amount_unmatched: onChainUnmatched, _onChainVerified: true };
             }
           } catch (err) {
             console.warn('[PlaceBetPanel] Failed to fetch on-chain for offer:', o.id, err.message);
@@ -49,13 +58,16 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
       );
       
       // Filter out offers with zero on-chain liquidity
-      return offersWithOnChain.filter(o => (o.amount_unmatched || 0) > 0);
+      const finalOffers = offersWithOnChain.filter(o => (o.amount_unmatched || 0) > 0);
+      console.log('[PlaceBetPanel] Final offers with liquidity:', finalOffers.length, finalOffers.map(o => ({ id: o.id, outcome: o.outcome, unmatched: o.amount_unmatched, onChain: o._onChainVerified })));
+      return finalOffers;
     },
     enabled: !!bet?.id,
-    staleTime: 2000,
-    refetchInterval: 3000,
+    staleTime: 1000,
+    refetchInterval: 2000,
     refetchOnWindowFocus: true,
-    refetchOnMount: true
+    refetchOnMount: true,
+    refetchOnReconnect: true
   });
   
   console.log('[PlaceBetPanel] Query state:', {

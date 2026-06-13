@@ -37,23 +37,34 @@ Deno.serve(async (req) => {
       // Update existing offer - recalculate status based on new unmatched amount
       const existingOffer = existingOffers[0];
       const newAmountUnmatched = (existingOffer.amount_unmatched || 0) + offer.amount_unmatched;
-      const newStatus = newAmountUnmatched <= 0.0001 ? 'fully_matched' : 'open'; // Use 'open' for new liquidity
+      const newStatus = newAmountUnmatched <= 0.0001 ? 'fully_matched' : 'open';
       
-      await serviceRole.entities.BetOffer.update(existingOffer.id, {
+      // CRITICAL: Always update PDAs to ensure on-chain verification works
+      const updateData = {
         amount_offered: (existingOffer.amount_offered || 0) + offer.amount_offered,
         amount_unmatched: newAmountUnmatched,
         status: newStatus,
-      });
+      };
+      
+      // Update PDAs if provided (for backwards compatibility with old offers)
+      if (offer.solana_bet_pool_pda) {
+        updateData.solana_bet_pool_pda = offer.solana_bet_pool_pda;
+      }
+      if (offer.solana_position_pda) {
+        updateData.solana_position_pda = offer.solana_position_pda;
+      }
+      
+      await serviceRole.entities.BetOffer.update(existingOffer.id, updateData);
       offerId = existingOffer.id;
-      console.log('[commitLiquidity] Updated existing BetOffer:', offerId, 'status:', newStatus, 'unmatched:', newAmountUnmatched);
+      console.log('[commitLiquidity] Updated existing BetOffer:', offerId, 'status:', newStatus, 'unmatched:', newAmountUnmatched, 'pda_updated:', !!offer.solana_position_pda);
     } else {
       // Create new offer with status 'open'
       const newOffer = await serviceRole.entities.BetOffer.create({
         ...offer,
-        status: 'open', // Explicitly set status to 'open' for new offers
+        status: 'open',
       });
       offerId = newOffer.id;
-      console.log('[commitLiquidity] Created new BetOffer:', offerId, 'status: open');
+      console.log('[commitLiquidity] Created new BetOffer:', offerId, 'status: open, has PDA:', !!offer.solana_position_pda);
     }
     
     // Commit UserBet for LP position (fixed odds betting)
