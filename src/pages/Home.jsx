@@ -40,16 +40,28 @@ export default function Home() {
   const { data: bets = [] } = useQuery({
     queryKey: ['bets'],
     queryFn: () => base44.entities.Bet.filter({ solana_market_created: true }),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000, // Refresh every 5 seconds
   });
 
   const { data: userBets = [] } = useQuery({
     queryKey: ['allUserBets'],
-    queryFn: () => base44.entities.UserBet.list('-created_date', 100)
+    queryFn: () => base44.entities.UserBet.list('-created_date', 100),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000, // Refresh every 5 seconds
   });
 
   const { data: futuresMarkets = [] } = useQuery({
     queryKey: ['futures-markets'],
-    queryFn: () => base44.entities.FuturesMarket.list()
+    queryFn: () => base44.entities.FuturesMarket.list(),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000, // Refresh every 5 seconds
   });
 
   const openBets = bets.filter((b) => b.status === 'open');
