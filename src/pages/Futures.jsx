@@ -371,9 +371,25 @@ export default function Futures() {
                 <button
                   onClick={async () => {
                     try {
+                      // Get token from localStorage
+                      const token = localStorage.getItem('elevenx_auth_token');
+                      console.log('[Debug Auth] Token exists:', !!token, 'Length:', token?.length);
+                      if (token) {
+                        try {
+                          const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+                          console.log('[Debug Auth] Token payload:', {
+                            wallet: payload.walletAddress?.slice(0, 8),
+                            role: payload.role,
+                            userId: payload.userId,
+                          });
+                        } catch (e) {
+                          console.error('[Debug Auth] Failed to decode token:', e);
+                        }
+                      }
+                      
                       const res = await base44.functions.invoke('debugAuth', {});
                       console.log('DEBUG AUTH:', res.data);
-                      alert('Check console - wallet: ' + (res.data.wallet_address || 'N/A') + ', role: ' + (res.data.role || 'N/A'));
+                      alert('Check console:\n- Token in localStorage: ' + (token ? 'YES (' + token.length + ' chars)' : 'NO') + '\n- Has Authorization header: ' + (res.data.has_authorization ? 'YES' : 'NO') + '\n- Token payload wallet: ' + (res.data.token_payload?.wallet || 'N/A') + '\n- Token payload role: ' + (res.data.token_payload?.role || 'N/A'));
                     } catch (err) {
                       console.error('Debug failed:', err);
                       alert('Debug failed: ' + err.message);
