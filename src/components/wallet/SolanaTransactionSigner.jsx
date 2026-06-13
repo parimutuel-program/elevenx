@@ -248,11 +248,20 @@ export default function SolanaTransactionSigner({ instruction, amount, userBetId
           const programId = new PublicKey(ix.programId);
           const data = Buffer.from(ix.instruction_data, 'base64');
 
+          // Resolve the connected wallet pubkey: prefer provider.publicKey, then instruction.admin_wallet
+          const connectedWalletPubkey = provider.publicKey?.toBase58?.() || instruction.admin_wallet || null;
+
           const keys = (ix.keys || []).map((k, ki) => {
-            const rawPubkey = k.pubkey === 'SIGNER_WALLET' ? provider.publicKey.toBase58() : k.pubkey;
+            let rawPubkey = k.pubkey;
+            if (rawPubkey === 'SIGNER_WALLET') {
+              rawPubkey = connectedWalletPubkey;
+              if (!rawPubkey) {
+                throw new Error(`settle_market ix[${ixIdx}] key[${ki}]: SIGNER_WALLET sentinel found but wallet pubkey is not available. Connect Phantom first.`);
+              }
+            }
             if (typeof rawPubkey !== 'string' || rawPubkey.length < 32) {
               console.error(`[settle_market] ix[${ixIdx}] key[${ki}]: invalid pubkey field="${JSON.stringify(k)}" resolved="${rawPubkey}"`);
-              throw new Error(`settle_market ix[${ixIdx}] key[${ki}]: invalid pubkey "${rawPubkey}"`);
+              throw new Error(`settle_market ix[${ixIdx}] key[${ki}]: invalid pubkey "${rawPubkey}" (slot ${ki})`);
             }
             return {
               pubkey: new PublicKey(rawPubkey),
