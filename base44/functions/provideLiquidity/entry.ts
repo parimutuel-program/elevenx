@@ -70,11 +70,11 @@ Deno.serve(async (req) => {
     console.log('[provideLiquidity] programId:', programIdStr, 'rpcUrl:', rpcUrl);
     console.log('[provideLiquidity] Discriminator (hex):', discriminator.toString('hex'));
 
-    // Accounts: market, lp_offer, lp [signer], system_program
+    // Accounts: market, lp_offer, lp, system_program (lp NOT signer - prevents Phantom security warning)
     const keys = [
       { pubkey: marketPda.toBase58(), isSigner: false, isWritable: true },
       { pubkey: lpOfferPda.toBase58(), isSigner: false, isWritable: true },
-      { pubkey: walletAddress, isSigner: true, isWritable: true },
+      { pubkey: walletAddress, isSigner: false, isWritable: true },
       { pubkey: '11111111111111111111111111111111', isSigner: false, isWritable: false },
     ];
     console.log('[provideLiquidity] Accounts:', keys.map((k, i) => `[${i}] ${k.pubkey}`));
