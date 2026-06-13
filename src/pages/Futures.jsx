@@ -28,16 +28,52 @@ export default function Futures() {
     }).catch(() => {});
   }, []);
 
+  const [pendingDeploy, setPendingDeploy] = useState(null);
+
   const handleDeployAll = async () => {
     setIsDeploying(true);
     try {
       const res = await base44.functions.invoke('deployAllFutures');
-      alert(res.data.message || '✓ All futures deployed successfully!');
-      queryClient.invalidateQueries({ queryKey: ['futures-markets'] });
+      
+      if (res.data.needsSigning && res.data.solana_instruction) {
+        // Store instruction for signing modal
+        setPendingDeploy({
+          ...res.data.solana_instruction,
+          market_id: res.data.market_id,
+          remaining: res.data.remaining,
+        });
+      } else if (res.data.verified) {
+        alert(res.data.message || '✓ All futures verified on-chain!');
+        queryClient.invalidateQueries({ queryKey: ['futures-markets'] });
+      } else {
+        alert(res.data.message || '✓ Deployment complete!');
+        queryClient.invalidateQueries({ queryKey: ['futures-markets'] });
+      }
     } catch (err) {
       alert('Error deploying futures: ' + err.message);
     } finally {
       setIsDeploying(false);
+    }
+  };
+
+  const handleDeploySuccess = async (result) => {
+    console.log('Market deployed:', result);
+    
+    if (pendingDeploy?.market_id) {
+      await base44.entities.FuturesMarket.update(pendingDeploy.market_id, {
+        solana_market_created: true,
+        solana_market_pda: pendingDeploy.marketPda || result.marketPda,
+      });
+    }
+    
+    setPendingDeploy(null);
+    queryClient.invalidateQueries({ queryKey: ['futures-markets'] });
+    
+    const remaining = pendingDeploy?.remaining || 0;
+    if (remaining > 0) {
+      alert(`✓ Market deployed! ${remaining} remaining.\n\nClick "Deploy All Futures" again to continue.`);
+    } else {
+      alert('✓ Market deployed on-chain!');
     }
   };
 
@@ -304,6 +340,41 @@ export default function Futures() {
                 Deploy All Futures
               </button>
             )}
+
+      {/* Deploy Transaction Modal */}
+      {pendingDeploy && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border/50 rounded-2xl p-6 max-w-md w-full">
+            <div className="space-y-4">
+              <div className="bg-primary/10 border border-primary/30 rounded-xl p-4">
+                <p className="text-sm font-bold text-primary mb-1">Deploy Futures Market</p>
+                <p className="text-xs text-muted-foreground">
+                  Sign transaction to deploy this market on-chain
+                  {pendingDeploy.remaining > 0 && ` • ${pendingDeploy.remaining} remaining after`}
+                </p>
+              </div>
+              <SolanaTransactionSigner
+                instruction={pendingDeploy}
+                amount={0}
+                futures_market_id={pendingDeploy.market_id}
+                onSuccess={handleDeploySuccess}
+                onError={(err) => {
+                  console.error('Deploy failed:', err);
+                  alert('Transaction failed: ' + (err.message || 'Unknown error'));
+                }}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPendingDeploy(null)}
+                className="w-full"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
             {/* Expand/Collapse Button */}
             <button
               onClick={() => setIsInfoExpanded(!isInfoExpanded)}
