@@ -35,13 +35,14 @@ Deno.serve(async (req) => {
 
     console.log(`[bulkDeployFutures] Deploying ${marketsToDeploy.length} markets to Solana`);
 
-    // Get program ID
-    const PROGRAM_ID = Deno.env.get('SOLANA_PROGRAM_ID');
+    // Get program ID - use ELEVENX_PROGRAM_ID which is the deployed program
+    const PROGRAM_ID = Deno.env.get('ELEVENX_PROGRAM_ID');
     if (!PROGRAM_ID) {
-      return Response.json({ error: 'SOLANA__PROGRAM_ID not configured' }, { status: 500 });
+      return Response.json({ error: 'ELEVENX_PROGRAM_ID not configured' }, { status: 500 });
     }
 
     const programId = new PublicKey(PROGRAM_ID);
+    console.log('[bulkDeployFutures] Using program ID:', PROGRAM_ID);
 
     // Derive platform config PDA (seed must match createFuturesMarketOnChain: 'platform')
     const [platformConfigPda] = PublicKey.findProgramAddressSync(

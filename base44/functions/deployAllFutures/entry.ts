@@ -7,8 +7,10 @@ function getSolanaConfig() {
   let rawUrl = Deno.env.get('SOLANA_RPC_URL') || '';
   if (rawUrl.includes('RPC_URL=')) rawUrl = rawUrl.split('RPC_URL=')[1].trim();
   if (!rawUrl.startsWith('http') || rawUrl.includes('uuid')) rawUrl = 'https://api.mainnet-beta.solana.com';
+  // Use ELEVENX_PROGRAM_ID - this is the actual deployed program
   const programIdStr = Deno.env.get('ELEVENX_PROGRAM_ID');
   if (!programIdStr) throw new Error('ELEVENX_PROGRAM_ID secret not set');
+  console.log('[getSolanaConfig] Using program ID:', programIdStr);
   return { rpcUrl: rawUrl, programIdStr, programId: new PublicKey(programIdStr), connection: new Connection(rawUrl, 'confirmed') };
 }
 
