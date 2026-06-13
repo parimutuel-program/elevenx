@@ -267,50 +267,60 @@ Deno.serve(async (req) => {
         }, { status: 400 });
       }
 
-      if (accountInfo.data.length >= 98) {
-        const data = accountInfo.data;
-        const closed = data[97] === 1;
-        const committed = Number(data.readBigUInt64LE(81));
-        const matched = Number(data.readBigUInt64LE(89));
-        const onChainUnmatched = Math.max(0, committed - matched);
-        console.log('[matchBet] On-chain LP offer state:', {
-          closed,
-          committed: committed / 1e9,
-          matched: matched / 1e9,
-          unmatched: onChainUnmatched / 1e9,
-          requested: amountLamports,
+      // CRITICAL: Convert Uint8Array to Buffer for proper readBigUInt64LE support
+      const data = Buffer.from(accountInfo.data);
+      console.log('[matchBet] On-chain account data length:', data.length);
+      
+      if (data.length < 98) {
+        console.error('[matchBet] Account data too short:', data.length);
+        return Response.json({
+          error: 'Invalid on-chain account data',
+          offer_stale: true,
+          force_refresh: true,
+        }, { status: 400 });
+      }
+
+      const closed = data[97] === 1;
+      const committed = Number(data.readBigUInt64LE(81));
+      const matched = Number(data.readBigUInt64LE(89));
+      const onChainUnmatched = Math.max(0, committed - matched);
+      console.log('[matchBet] On-chain LP offer state:', {
+        closed,
+        committed: committed / 1e9,
+        matched: matched / 1e9,
+        unmatched: onChainUnmatched / 1e9,
+        requested: amountLamports,
+      });
+      
+      // If account is closed, mark as withdrawn
+      if (closed) {
+        await serviceRole.entities.BetOffer.update(offer.id, { status: 'withdrawn', amount_unmatched: 0 });
+        return Response.json({
+          error: 'This LP offer has been closed on-chain',
+          offer_stale: true,
+          available: 0,
+          force_refresh: true,
+        }, { status: 400 });
+      }
+      
+      // If on-chain unmatched is less than DB value, update DB
+      const dbUnmatched = offer.amount_unmatched || 0;
+      if (onChainUnmatched / 1e9 < dbUnmatched) {
+        console.log('[matchBet] DB stale detected, updating:', {
+          dbUnmatched,
+          onChainUnmatched: onChainUnmatched / 1e9,
         });
-        
-        // If account is closed, mark as withdrawn
-        if (closed) {
-          await serviceRole.entities.BetOffer.update(offer.id, { status: 'withdrawn', amount_unmatched: 0 });
-          return Response.json({
-            error: 'This LP offer has been closed on-chain',
-            offer_stale: true,
-            available: 0,
-            force_refresh: true,
-          }, { status: 400 });
-        }
-        
-        // If on-chain unmatched is less than DB value, update DB
-        const dbUnmatched = offer.amount_unmatched || 0;
-        if (onChainUnmatched / 1e9 < dbUnmatched) {
-          console.log('[matchBet] DB stale detected, updating:', {
-            dbUnmatched,
-            onChainUnmatched: onChainUnmatched / 1e9,
-          });
-          await serviceRole.entities.BetOffer.update(offer.id, { amount_unmatched: onChainUnmatched / 1e9 });
-        }
-        
-        // Check if requested amount exceeds on-chain liquidity
-        if (amountLamports > onChainUnmatched) {
-          return Response.json({
-            error: `Insufficient on-chain liquidity (available: ◎${(onChainUnmatched / 1e9).toFixed(4)}, requested: ◎${amount})`,
-            offer_stale: false,
-            available: onChainUnmatched / 1e9,
-            force_refresh: false,
-          }, { status: 400 });
-        }
+        await serviceRole.entities.BetOffer.update(offer.id, { amount_unmatched: onChainUnmatched / 1e9 });
+      }
+      
+      // Check if requested amount exceeds on-chain liquidity
+      if (amountLamports > onChainUnmatched) {
+        return Response.json({
+          error: `Insufficient on-chain liquidity (available: ◎${(onChainUnmatched / 1e9).toFixed(4)}, requested: ◎${amount})`,
+          offer_stale: false,
+          available: onChainUnmatched / 1e9,
+          force_refresh: false,
+        }, { status: 400 });
       }
     } catch (preflightErr) {
       console.warn('[matchBet] On-chain pre-flight check failed (non-fatal):', preflightErr.message);
