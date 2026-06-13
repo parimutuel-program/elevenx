@@ -4,12 +4,15 @@ import { appParams } from '@/lib/app-params';
 
 const { appId, token, functionsVersion, appBaseUrl } = appParams;
 
-// CRITICAL: Expose Solana environment variables to window for client-side PDA derivation
-// These are set by backend functions when they return instructions
+// Expose Solana program ID to window for client-side PDA derivation.
+// RPC URL is NOT hardcoded here — it is fetched from the backend (solanaConfig)
+// so the Helius API key is never exposed to the client.
 if (typeof window !== 'undefined') {
-  // Default to devnet if not set - backend functions should override these
-  window.SOLANA_RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=f0184d45-f52a-44d3-9314-2365f64ea024';
   window.ELEVENX_PROGRAM_ID = '3ecFdHPbcU88UQ37iStPcGaz7Bg16RdSDDYqW5FzPabu';
+  // Safe public fallback — overwritten by SolanaTransactionSigner once solanaConfig loads
+  if (!window.SOLANA_RPC_URL) {
+    window.SOLANA_RPC_URL = 'https://api.mainnet-beta.solana.com';
+  }
 }
 
 // Get wallet auth token from localStorage if available
