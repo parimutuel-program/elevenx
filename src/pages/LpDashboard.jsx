@@ -692,13 +692,38 @@ export default function LpDashboard() {
           </div>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h1 className="font-heading font-black text-xl sm:text-2xl md:text-3xl leading-tight mb-2">
-                LP Dashboard
-              </h1>
-              <p className="text-muted-foreground text-xs sm:text-sm mb-4">
-                Provide liquidity for matches & futures. Earn fees and back your team.
-                {walletAddress && <span className="ml-2 text-[10px] font-mono text-muted-foreground/50">({walletAddress.slice(0, 6)}...{walletAddress.slice(-4)})</span>}
-              </p>
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <h1 className="font-heading font-black text-xl sm:text-2xl md:text-3xl leading-tight mb-2">
+                    LP Dashboard
+                  </h1>
+                  <p className="text-muted-foreground text-xs sm:text-sm mb-4">
+                    Provide liquidity for matches & futures. Earn fees and back your team.
+                    {walletAddress && <span className="ml-2 text-[10px] font-mono text-muted-foreground/50">({walletAddress.slice(0, 6)}...{walletAddress.slice(-4)})</span>}
+                  </p>
+                </div>
+                <Button
+                  onClick={async () => {
+                    try {
+                      const res = await base44.functions.invoke('cleanupWithdrawnLp', {});
+                      if (res.data.error) {
+                        alert('Cleanup failed: ' + res.data.error);
+                      } else {
+                        alert('✅ Cleanup Complete!\n\n' + res.data.message);
+                        // Refresh the LP positions list
+                        await refetchOffers();
+                        await queryClient.invalidateQueries({ queryKey: ['myOffers', walletAddress] });
+                      }
+                    } catch (err) {
+                      alert('Cleanup error: ' + err.message);
+                    }
+                  }}
+                  variant="outline"
+                  className="h-9 text-xs rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 font-heading font-bold"
+                >
+                  🗑️ Clear Old LP
+                </Button>
+              </div>
             </div>
             
 
