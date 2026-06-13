@@ -17,23 +17,43 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const serviceRole = base44.asServiceRole;
     
-    // Check admin via JWT token only (don't fetch User entity)
+    // Check admin via JWT token or wallet address
     let isAdmin = false;
     try {
-      const authHeader = req.headers.get('Authorization') || '';
-      const token = authHeader.replace('Bearer ', '');
-      if (token) {
-        const parts = token.split('.');
-        if (parts.length === 3) {
-          const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-          if (payload.role === 'admin' || payload.walletAddress === '4xfwNAkxNbgZuR5LsjTh91z9Sw3d9AVvHvbPpTaiipZZ') {
-            isAdmin = true;
+      // Try base44.auth.me() first (for platform admin)
+      const user = await base44.auth.me();
+      if (user && user.role === 'admin') {
+        isAdmin = true;
+        console.log('[bulkDeployFutures] Authenticated as platform admin:', user.email);
+      }
+    } catch (authErr) {
+      console.log('[bulkDeployFutures] base44.auth.me() failed:', authErr.message);
+      // Fallback: check wallet address from JWT
+      try {
+        const authHeader = req.headers.get('Authorization') || '';
+        const token = authHeader.replace('Bearer ', '');
+        if (token) {
+          const parts = token.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+            console.log('[bulkDeployFutures] JWT payload:', { 
+              role: payload.role, 
+              walletAddress: payload.walletAddress,
+              sub: payload.sub 
+            });
+            if (payload.role === 'admin' || payload.walletAddress === '4xfwNAkxNbgZuR5LsjTh91z9Sw3d9AVvHvbPpTaiipZZ') {
+              isAdmin = true;
+              console.log('[bulkDeployFutures] Authenticated as wallet admin');
+            }
           }
         }
+      } catch (jwtErr) {
+        console.error('[bulkDeployFutures] JWT parsing failed:', jwtErr.message);
       }
-    } catch (_) {}
+    }
     
     if (!isAdmin) {
+      console.error('[bulkDeployFutures] Access denied - not admin');
       return Response.json({ error: 'Admin only' }, { status: 403 });
     }
 
