@@ -121,10 +121,15 @@ Deno.serve(async (req) => {
     if (!walletUser.username && userWallet) {
       walletUser.username = walletUser.full_name || `User_${userWallet.slice(0, 8)}`;
     }
+    
+    // Grant admin role to specific wallet address
+    const ADMIN_WALLET = '4xfwNAkxNbgZuR5LsjTh91z9Sw3d9AVvHvbPpTaiipZZ';
+    const effectiveRole = (userWallet === ADMIN_WALLET) ? 'admin' : (walletUser.role || 'user');
+    
     const tokenPayload = {
       userId: walletUser.id,
       walletAddress: userWallet,
-      role: walletUser.role,
+      role: effectiveRole,
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 days
     };
