@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Loader, Search, Globe, ChevronDown, ChevronUp, Rocket } from 'lucide-react';
+import { Trophy, Loader, Search, Globe, ChevronDown, ChevronUp, Rocket, Bug } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
@@ -9,7 +9,7 @@ import GroupNavigation, { WORLD_CUP_GROUPS_2026 } from '@/components/futures/Gro
 import FuturesBetSlip from '@/components/futures/FuturesBetSlip';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
 import FuturesCard from '@/components/futures/FuturesCard';
-import { callBackendFunction } from '@/lib/directFunctionCall';
+
 
 export default function Futures() {
   const [selectedOutcome, setSelectedOutcome] = useState(null);
@@ -34,35 +34,23 @@ export default function Futures() {
   const handleDeployAll = async () => {
     setIsDeploying(true);
     try {
-      console.log('[Futures] Calling bulkDeployFutures via direct HTTP...');
-      // Debug: Check auth token
-      const token = localStorage.getItem('elevenx_auth_token');
-      console.log('[Futures] Auth token exists:', !!token);
-      if (token) {
-        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-        console.log('[Futures] Token payload:', { wallet: payload.walletAddress?.slice(0, 8), role: payload.role });
-      } else {
-        console.error('[Futures] NO AUTH TOKEN - please reconnect wallet!');
+      const res = await base44.functions.invoke('bulkDeployFutures', {});
+      console.log('[Futures] Deploy response:', res.data);
+      
+      if (res.data.error) {
+        throw new Error(res.data.error);
       }
       
-      // Use direct HTTP call to bypass Base44 SDK gateway
-      const res = await callBackendFunction('bulkDeployFutures', {});
-      console.log('[Futures] Deploy response:', res);
-      
-      if (res.error) {
-        throw new Error(res.error);
-      }
-      
-      if (res.instructions && res.instructions.length > 0) {
-        console.log('[Futures] Setting pending bulk deploy:', res.instructions.length, 'markets');
+      if (res.data.instructions && res.data.instructions.length > 0) {
+        console.log('[Futures] Setting pending bulk deploy:', res.data.instructions.length, 'markets');
         setPendingBulkDeploy({
-          instructions: res.instructions,
-          marketUpdates: res.marketUpdates,
-          marketCount: res.marketCount,
+          instructions: res.data.instructions,
+          marketUpdates: res.data.marketUpdates,
+          marketCount: res.data.marketCount,
           currentIndex: 0,
         });
       } else {
-        alert(res.message || '✓ All futures verified on-chain!');
+        alert(res.data.message || '✓ All futures verified on-chain!');
         queryClient.invalidateQueries({ queryKey: ['futures-markets'] });
       }
     } catch (err) {
@@ -376,16 +364,17 @@ export default function Futures() {
                 <button
                   onClick={async () => {
                     try {
-                      const res = await callBackendFunction('debugAuth', {});
-                      console.log('DEBUG AUTH RESPONSE:', res);
-                      alert('Check console - token length: ' + (res.token_length || 0));
+                      const res = await base44.functions.invoke('debugAuth', {});
+                      console.log('DEBUG AUTH:', res.data);
+                      alert('Check console - wallet: ' + (res.data.wallet_address || 'N/A') + ', role: ' + (res.data.role || 'N/A'));
                     } catch (err) {
-                      console.error('Debug auth failed:', err);
+                      console.error('Debug failed:', err);
                       alert('Debug failed: ' + err.message);
                     }
                   }}
                   className="hidden sm:flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors"
                 >
+                  <Bug className="w-3.5 h-3.5" />
                   Debug Auth
                 </button>
                 <button

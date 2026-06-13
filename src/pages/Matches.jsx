@@ -8,7 +8,7 @@ import { format } from 'date-fns';
 import MatchCard from '@/components/betting/MatchCard';
 import { motion } from 'framer-motion';
 import GroupNavigation, { WORLD_CUP_GROUPS_2026 } from '@/components/futures/GroupNavigation';
-import { callBackendFunction } from '@/lib/directFunctionCall';
+
 
 export default function Matches() {
   const [activeGroup, setActiveGroup] = useState('ALL');
@@ -44,9 +44,9 @@ export default function Matches() {
 
   const handleDebugAuth = async () => {
     try {
-      const res = await callBackendFunction('debugAuth', {});
-      console.log('DEBUG AUTH RESPONSE:', res);
-      alert('Check console - token length: ' + (res.token_length || 0) + '\n\nWallet: ' + (res.wallet_address || 'N/A') + '\nRole: ' + (res.role || 'N/A'));
+      const res = await base44.functions.invoke('debugAuth', {});
+      console.log('DEBUG AUTH:', res.data);
+      alert('Check console - wallet: ' + (res.data.wallet_address || 'N/A') + ', role: ' + (res.data.role || 'N/A'));
     } catch (err) {
       console.error('Debug auth failed:', err);
       alert('Debug failed: ' + err.message);
