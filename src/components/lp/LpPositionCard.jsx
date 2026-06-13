@@ -415,9 +415,9 @@ export default function LpPositionCard({ position, match, bet, walletAddress, on
           userBetId,
           walletAddress
         });
-      } else if (isFutures && positionPda && !userBetId) {
-        // FUTURES on-chain position with no DB record — build instruction directly
-        console.log('[LpPositionCard] Futures on-chain withdraw (no DB record) - using PDA:', positionPda);
+      } else if (positionPda && marketPda && !userBetId) {
+        // On-chain position with no DB record (futures or match) — use PDAs directly
+        console.log('[LpPositionCard] On-chain withdraw (no DB record) - using PDA:', positionPda);
         res = await base44.functions.invoke('withdrawLiquidity', {
           walletAddress,
           solana_position_pda: positionPda,
