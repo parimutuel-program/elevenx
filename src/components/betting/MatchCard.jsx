@@ -26,6 +26,9 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
   const matchTime = match.match_time ? new Date(match.match_time) : null;
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [liveMatch, setLiveMatch] = useState(match);
+  
+  // Use match image_url if available
+  const matchImage = match.image_url || null;
 
   // Use database scores directly (no API calls to avoid rate limiting)
   useEffect(() => {
@@ -80,9 +83,22 @@ export default function MatchCard({ match, bet, index = 0, onOddsRefresh }) {
       transition={{ delay: index * 0.05, duration: 0.4 }}>
       
       <Link to={`/match/${match.id}`} className="group block">
-        <div className="relative rounded-2xl p-4 transition-all duration-300 border border-primary/20 h-full bg-[#1c1c1c]">
+        <div className="relative rounded-2xl overflow-hidden transition-all duration-300 border border-primary/20 h-full bg-[#1c1c1c]">
+          {/* Match Image Header */}
+          {matchImage && (
+            <div className="relative h-40 -mx-4 -mt-4 mb-3 overflow-hidden">
+              <img
+                src={matchImage}
+                alt={`${match.team_a} vs ${match.team_b}`}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              {/* Gradient overlay */}
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(28,28,28,1) 0%, rgba(28,28,28,0.8) 50%, transparent 100%)' }} />
+            </div>
+          )}
+          
           {/* Header */}
-          <div className="flex items-center justify-between mb-3">
+          <div className={`flex items-center justify-between ${matchImage ? 'mb-2' : 'mb-3'}`}>
             <span className="text-[10px] text-muted-foreground font-semibold truncate">
               {match.group_stage || 'World Cup 2026'}
             </span>
