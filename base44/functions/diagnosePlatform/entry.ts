@@ -39,11 +39,15 @@ Deno.serve(async (req) => {
 
     if (platformExists && platformInfo.owner.equals(programId)) {
       const data = platformInfo.data;
+      // Read as signed i64 (the on-chain type), then clamp negatives to 0
+      const rawFeesBig = data.readBigInt64LE(44);
+      const totalFeesLamports = rawFeesBig < 0n ? 0 : Number(rawFeesBig);
       platformDetails = {
         admin: new PublicKey(data.slice(8, 40)).toBase58(),
         fee_percent: data.readUInt16LE(40),
         consensus_threshold: data.readUInt16LE(42),
-        total_fees_lamports: Number(data.readBigUInt64LE(44)),
+        total_fees_lamports: totalFeesLamports,
+        total_fees_sol: (totalFeesLamports / 1e9).toFixed(6),
         discriminator: data.slice(0, 8).toString('hex'),
       };
     }
