@@ -55,23 +55,7 @@ export default function Home() {
     refetchInterval: 5000, // Refresh every 5 seconds
   });
 
-  const { data: lpPositions = [] } = useQuery({
-    queryKey: ['lp-positions'],
-    queryFn: () => base44.entities.LpPosition.list(),
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
-    refetchInterval: 5000, // Refresh every 5 seconds
-  });
 
-  const { data: betOffers = [] } = useQuery({
-    queryKey: ['bet-offers'],
-    queryFn: () => base44.entities.BetOffer.filter({ status: 'open' }),
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
-    refetchInterval: 5000, // Refresh every 5 seconds
-  });
 
   const { data: futuresMarkets = [] } = useQuery({
     queryKey: ['futures-markets'],
@@ -96,13 +80,13 @@ export default function Home() {
   // Calculate futures pools from FuturesMarket entities
   const futuresPools = futuresMarkets.reduce((s, m) => s + (m.total_volume || 0), 0);
   
-  // Calculate LP pools - unmatched liquidity available for betting
-  const matchLpPools = lpPositions
-    .filter((lp) => !lp._isFutures && (lp.status === 'open' || lp.status === 'partially_matched'))
+  // Calculate LP pools from UserBet with role='lp' (use liquidity_unmatched directly)
+  const matchLpPools = userBets
+    .filter((ub) => ub.role === 'lp' && !ub.futures_market_id && (ub.liquidity_unmatched || 0) > 0)
     .reduce((s, lp) => s + (lp.liquidity_unmatched || 0), 0);
   
-  const futuresLpPools = lpPositions
-    .filter((lp) => lp._isFutures && (lp.status === 'open' || lp.status === 'partially_matched'))
+  const futuresLpPools = userBets
+    .filter((ub) => ub.role === 'lp' && ub.futures_market_id && (ub.liquidity_unmatched || 0) > 0)
     .reduce((s, lp) => s + (lp.liquidity_unmatched || 0), 0);
   
   const totalLpPools = matchLpPools + futuresLpPools;
