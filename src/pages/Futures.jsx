@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useWallet } from '@/lib/WalletContext';
 import GroupNavigation, { WORLD_CUP_GROUPS_2026 } from '@/components/futures/GroupNavigation';
 import FuturesBetSlip from '@/components/futures/FuturesBetSlip';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
@@ -12,6 +13,7 @@ import FuturesCard from '@/components/futures/FuturesCard';
 
 
 export default function Futures() {
+  const { walletAddress } = useWallet();
   const [selectedOutcome, setSelectedOutcome] = useState(null);
   const [selectedMarket, setSelectedMarket] = useState(null);
   const [showBetSlip, setShowBetSlip] = useState(false);
@@ -22,12 +24,17 @@ export default function Futures() {
   const [isDeploying, setIsDeploying] = useState(false);
   const queryClient = useQueryClient();
 
-  // Check if user is admin
+  // Check if user is admin (platform role OR admin wallet)
+  const ADMIN_WALLET = '4xfwNAkxNbgZuR5LsjTh91z9Sw3d9AVvHvbPpTaiipZZ';
   useEffect(() => {
-    base44.auth.me().then(user => {
-      if (user?.role === 'admin') setIsAdmin(true);
-    }).catch(() => {});
-  }, []);
+    Promise.all([
+      base44.auth.me().catch(() => null),
+    ]).then(([user]) => {
+      const isPlatformAdmin = user?.role === 'admin';
+      const isWalletAdmin = walletAddress === ADMIN_WALLET;
+      if (isPlatformAdmin || isWalletAdmin) setIsAdmin(true);
+    });
+  }, [walletAddress]);
 
   const [pendingDeploy, setPendingDeploy] = useState(null);
 
