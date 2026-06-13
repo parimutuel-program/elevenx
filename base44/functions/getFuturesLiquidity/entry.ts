@@ -41,10 +41,17 @@ Deno.serve(async (req) => {
     const offers = await base44.entities.BetOffer.filter({
       bet_id: market_id,
       match_id: market_id,
-      status: { $in: ['open', 'partially_matched'] }
     });
     
-    console.log('[getFuturesLiquidity] Found', offers.length, 'LP offers in DB');
+    console.log('[getFuturesLiquidity] Found', offers.length, 'LP offers in DB (all statuses)');
+    console.log('[getFuturesLiquidity] Offers details:', offers.map(o => ({ id: o.id, outcome: o.outcome, outcome_label: o.outcome_label, status: o.status, unmatched: o.amount_unmatched, has_pda: !!o.solana_position_pda })));
+    
+    // Filter to active offers only
+    const activeOffers = offers.filter(o => 
+      (o.status === 'open' || o.status === 'partially_matched') &&
+      (o.amount_unmatched || 0) > 0
+    );
+    console.log('[getFuturesLiquidity] Active offers after filter:', activeOffers.length);
     
     // For each outcome (0=1st, 1=2nd, 2=3rd), calculate real on-chain liquidity
     const outcomeLiquidity = {
@@ -54,7 +61,7 @@ Deno.serve(async (req) => {
     };
     
     // Fetch on-chain data for each LP offer
-    for (const offer of offers) {
+    for (const offer of activeOffers) {
       const outcomeIndex = offer.outcome === 'a' ? 0 : offer.outcome === 'b' ? 1 : 2;
       const lpPubkey = new PublicKey(offer.lp_wallet_address);
       
