@@ -168,6 +168,17 @@ export default function LpPositionCard({ position, match, bet, walletAddress, on
     ? onChainOffer.unmatched 
     : (offer.liquidity_unmatched !== undefined ? offer.liquidity_unmatched : Math.max(0, liquidityDeposited - liquidityMatched));
   
+  console.log('[LpPositionCard] PARTIAL WITHDRAWAL CHECK:', {
+    onChainOffer_exists: !!onChainOffer,
+    onChainOffer,
+    liquidityDeposited,
+    liquidityMatched,
+    liquidityUnmatched,
+    dbStatus,
+    isWithdrawn,
+    isRefunded,
+  });
+  
   console.log('[LpPositionCard] === FINAL DISPLAY VALUES ===');
   console.log('[LpPositionCard] position.id:', position.id);
   console.log('[LpPositionCard] onChainOffer:', onChainOffer);
@@ -260,9 +271,10 @@ export default function LpPositionCard({ position, match, bet, walletAddress, on
   console.log('RAW dbStatus:', dbStatus);
   console.log('==================================');
   // Withdrawn = unmatched liquidity already withdrawn (no bets were matched, so nothing left)
-  const isWithdrawn = dbStatus === 'withdrawn' || offer.status === 'withdrawn' ||
-  dbStatus === 'refunded' ||
-  liquidityUnmatched === 0 && liquidityDeposited > 0 && liquidityMatched === 0 && (dbStatus === 'active' || dbStatus === 'pending') && offer.status === 'withdrawn';
+  // CRITICAL: Only consider withdrawn if on-chain closed OR truly zero unmatched on-chain
+  const onChainClosed = onChainOffer?.closed === true;
+  const onChainUnmatchedRaw = onChainOffer ? onChainOffer.unmatched : liquidityUnmatched;
+  const isWithdrawn = (dbStatus === 'withdrawn' || offer.status === 'withdrawn') && (onChainUnmatchedRaw <= 0 || onChainClosed);
 
   console.log('[LpPositionCard] Win/Loss Check:', {
     position_id: position.id,
@@ -698,12 +710,17 @@ export default function LpPositionCard({ position, match, bet, walletAddress, on
             // Priority 0: Refunded/Withdrawn - but STILL allow unmatched withdrawal
             // Only show "Withdrawn" badge if there's NO unmatched liquidity left on-chain
             const onChainClosed = onChainOffer?.closed === true;
-            const hasUnmatchedOnChain = onChainOffer ? onChainOffer.unmatched > 0 : liquidityUnmatched > 0;
+            const onChainUnmatchedForCheck = onChainOffer ? onChainOffer.unmatched : liquidityUnmatched;
+            
+            // CRITICAL: Only show "Withdrawn" badge if on-chain closed OR truly zero unmatched
+            // This fixes partial withdrawal bug - don't block withdrawal if there's still unmatched liquidity
             if (liquidityMatched === 0 && (isRefunded || isWithdrawn || userBetStatus === 'refunded' || userBetStatus === 'withdrawn')) {
-              // If there's still unmatched on-chain, show withdraw button instead
-              if (hasUnmatchedOnChain && onWithdrawRequest && !onChainClosed) {
+              // If there's still unmatched on-chain AND not closed, show withdraw button instead
+              if (onChainUnmatchedForCheck > 0 && onWithdrawRequest && !onChainClosed) {
                 // Fall through to unmatched withdrawal logic below
-              } else {
+                console.log('[LpPositionCard] Partial withdrawal detected - showing withdraw button for remaining:', onChainUnmatchedForCheck);
+              } else if (onChainUnmatchedForCheck <= 0 || onChainClosed) {
+                // Truly withdrawn - no liquidity left or on-chain closed
                 return (
                   <div className="flex-1 flex flex-col gap-1">
                     <Button
@@ -712,7 +729,7 @@ export default function LpPositionCard({ position, match, bet, walletAddress, on
                       className="w-full h-8 text-[10px] sm:text-xs border-white/10 text-white/40 bg-white/5 rounded-xl font-heading font-bold">
                       
                       <CheckCircle2 className="w-3 h-3 mr-1" />
-                      Withdrawn ◎{liquidityDeposited.toFixed(4)}
+                      Withdrawn ◎{((offer.liquidity_deposited || 0) - (onChainUnmatchedForCheck || 0)).toFixed(4)}
                     </Button>
                   </div>);
               }
