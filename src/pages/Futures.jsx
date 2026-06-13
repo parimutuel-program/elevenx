@@ -9,6 +9,7 @@ import GroupNavigation, { WORLD_CUP_GROUPS_2026 } from '@/components/futures/Gro
 import FuturesBetSlip from '@/components/futures/FuturesBetSlip';
 import SolanaTransactionSigner from '@/components/wallet/SolanaTransactionSigner';
 import FuturesCard from '@/components/futures/FuturesCard';
+import { callBackendFunction } from '@/lib/directFunctionCall';
 
 export default function Futures() {
   const [selectedOutcome, setSelectedOutcome] = useState(null);
@@ -33,7 +34,7 @@ export default function Futures() {
   const handleDeployAll = async () => {
     setIsDeploying(true);
     try {
-      console.log('[Futures] Calling bulkDeployFutures...');
+      console.log('[Futures] Calling bulkDeployFutures via direct HTTP...');
       // Debug: Check auth token
       const token = localStorage.getItem('elevenx_auth_token');
       console.log('[Futures] Auth token exists:', !!token);
@@ -44,23 +45,24 @@ export default function Futures() {
         console.error('[Futures] NO AUTH TOKEN - please reconnect wallet!');
       }
       
-      const res = await base44.functions.invoke('bulkDeployFutures', {});
-      console.log('[Futures] Deploy response:', res.data);
+      // Use direct HTTP call to bypass Base44 SDK gateway
+      const res = await callBackendFunction('bulkDeployFutures', {});
+      console.log('[Futures] Deploy response:', res);
       
-      if (res.data.error) {
-        throw new Error(res.data.error);
+      if (res.error) {
+        throw new Error(res.error);
       }
       
-      if (res.data.instructions && res.data.instructions.length > 0) {
-        console.log('[Futures] Setting pending bulk deploy:', res.data.instructions.length, 'markets');
+      if (res.instructions && res.instructions.length > 0) {
+        console.log('[Futures] Setting pending bulk deploy:', res.instructions.length, 'markets');
         setPendingBulkDeploy({
-          instructions: res.data.instructions,
-          marketUpdates: res.data.marketUpdates,
-          marketCount: res.data.marketCount,
+          instructions: res.instructions,
+          marketUpdates: res.marketUpdates,
+          marketCount: res.marketCount,
           currentIndex: 0,
         });
       } else {
-        alert(res.data.message || '✓ All futures verified on-chain!');
+        alert(res.message || '✓ All futures verified on-chain!');
         queryClient.invalidateQueries({ queryKey: ['futures-markets'] });
       }
     } catch (err) {
@@ -373,9 +375,14 @@ export default function Futures() {
               <div className="flex gap-2">
                 <button
                   onClick={async () => {
-                    const res = await base44.functions.invoke('debugAuth', {});
-                    console.log('DEBUG AUTH RESPONSE:', res.data);
-                    alert('Check console for debug auth info');
+                    try {
+                      const res = await callBackendFunction('debugAuth', {});
+                      console.log('DEBUG AUTH RESPONSE:', res);
+                      alert('Check console - token length: ' + (res.token_length || 0));
+                    } catch (err) {
+                      console.error('Debug auth failed:', err);
+                      alert('Debug failed: ' + err.message);
+                    }
                   }}
                   className="hidden sm:flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors"
                 >

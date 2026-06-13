@@ -21,23 +21,36 @@ Deno.serve(async (req) => {
     console.log('[debugAuth] Token extracted:', token ? token.slice(0, 20) + '...' : 'NONE');
     
     // Decode token if present
+    let tokenPayload = null;
     if (token && token.split('.').length === 3) {
       try {
-        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        tokenPayload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
         console.log('[debugAuth] Token payload:', {
-          walletAddress: payload.walletAddress?.slice(0, 8),
-          role: payload.role,
-          userId: payload.userId,
+          walletAddress: tokenPayload.walletAddress?.slice(0, 8),
+          role: tokenPayload.role,
+          userId: tokenPayload.userId,
         });
       } catch (e) {
         console.log('[debugAuth] Could not decode token:', e.message);
       }
     }
     
+    // Check admin status
+    const ADMIN_WALLET = '4xfwNAkxNbgZuR5LsjTh91z9Sw3d9AVvHvbPpTaiipZZ';
+    const isAdminWallet = tokenPayload?.walletAddress === ADMIN_WALLET;
+    const isAdminRole = tokenPayload?.role === 'admin';
+    
     return Response.json({
       headers_received: Object.keys(allHeaders),
       has_authorization: !!authHeader,
       token_length: token?.length || 0,
+      token_payload: tokenPayload ? {
+        wallet: tokenPayload.walletAddress?.slice(0, 8),
+        role: tokenPayload.role,
+      } : null,
+      is_admin_wallet: isAdminWallet,
+      is_admin_role: isAdminRole,
+      can_access: isAdminWallet || isAdminRole,
     });
     
   } catch (error) {
