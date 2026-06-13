@@ -22,10 +22,10 @@ export async function callBackendFunction(functionName, payload) {
   console.log('[callBackendFunction] Token length:', authToken?.length);
   console.log('[callBackendFunction] Wallet address:', walletAddress?.slice(0, 8));
   
-  // Send token in BOTH header and body (fallback if platform strips headers)
+  // Use Base44's internal function invoke endpoint
   let response;
   try {
-    response = await fetch(`/api/functions/${functionName}`, {
+    response = await fetch(`/.base44/functions/${functionName}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
