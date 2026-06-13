@@ -280,20 +280,35 @@ Deno.serve(async (req) => {
           unmatched: onChainUnmatched / 1e9,
           requested: amountLamports,
         });
-        if (closed || onChainUnmatched < amountLamports) {
-          // DB is stale — sync it
-          if (closed || onChainUnmatched === 0) {
-            await serviceRole.entities.BetOffer.update(offer.id, { status: 'withdrawn', amount_unmatched: 0 });
-          } else {
-            await serviceRole.entities.BetOffer.update(offer.id, { amount_unmatched: onChainUnmatched / 1e9 });
-          }
+        
+        // If account is closed, mark as withdrawn
+        if (closed) {
+          await serviceRole.entities.BetOffer.update(offer.id, { status: 'withdrawn', amount_unmatched: 0 });
           return Response.json({
-            error: closed
-              ? 'This LP offer has been withdrawn on-chain. Refreshing...'
-              : `Insufficient on-chain liquidity (available: ◎${(onChainUnmatched / 1e9).toFixed(4)})`,
+            error: 'This LP offer has been closed on-chain',
             offer_stale: true,
+            available: 0,
+            force_refresh: true,
+          }, { status: 400 });
+        }
+        
+        // If on-chain unmatched is less than DB value, update DB
+        const dbUnmatched = offer.amount_unmatched || 0;
+        if (onChainUnmatched / 1e9 < dbUnmatched) {
+          console.log('[matchBet] DB stale detected, updating:', {
+            dbUnmatched,
+            onChainUnmatched: onChainUnmatched / 1e9,
+          });
+          await serviceRole.entities.BetOffer.update(offer.id, { amount_unmatched: onChainUnmatched / 1e9 });
+        }
+        
+        // Check if requested amount exceeds on-chain liquidity
+        if (amountLamports > onChainUnmatched) {
+          return Response.json({
+            error: `Insufficient on-chain liquidity (available: ◎${(onChainUnmatched / 1e9).toFixed(4)}, requested: ◎${amount})`,
+            offer_stale: false,
             available: onChainUnmatched / 1e9,
-            force_refresh: closed,
+            force_refresh: false,
           }, { status: 400 });
         }
       }
