@@ -21,21 +21,41 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
   const { isConnected, connect, isConnecting, walletAddress } = useWallet();
   const queryClient = useQueryClient();
 
-  // Fetch all LP offers for this bet — only active offers with real liquidity
+  // Fetch all LP offers for this bet — check on-chain for accurate liquidity after withdrawals
   const { data: allOffers = [], refetch: refetchOffers, isLoading: isLoadingOffers } = useQuery({
     queryKey: ['allOffers', bet?.id],
     queryFn: async () => {
       const offers = await base44.entities.BetOffer.filter({ bet_id: bet?.id });
-      // Filter to only offers that have real available liquidity
-      return offers.filter(o =>
+      // Filter to active offers
+      const activeOffers = offers.filter(o =>
         (o.status === 'open' || o.status === 'partially_matched') &&
         (o.amount_unmatched || 0) > 0
       );
+      
+      // CRITICAL: Check on-chain liquidity for each offer to catch partial withdrawals
+      const offersWithOnChain = await Promise.all(
+        activeOffers.map(async (o) => {
+          if (!o.solana_position_pda) return o;
+          try {
+            const onChain = await base44.functions.invoke('fetchLpOfferOnChain', { pda: o.solana_position_pda });
+            if (onChain.data?.exists && onChain.data?.available !== undefined) {
+              return { ...o, amount_unmatched: onChain.data.available / 1e9, _onChainVerified: true };
+            }
+          } catch (err) {
+            console.warn('[PlaceBetPanel] Failed to fetch on-chain for offer:', o.id, err.message);
+          }
+          return o;
+        })
+      );
+      
+      // Filter out offers with zero on-chain liquidity
+      return offersWithOnChain.filter(o => (o.amount_unmatched || 0) > 0);
     },
     enabled: !!bet?.id,
-    staleTime: 3000,
-    refetchInterval: 5000,
-    refetchOnWindowFocus: true
+    staleTime: 2000,
+    refetchInterval: 3000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true
   });
   
   console.log('[PlaceBetPanel] Query state:', {
