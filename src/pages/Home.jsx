@@ -203,11 +203,11 @@ export default function Home() {
               Deposit SOL, provide liquidity, and earn fees on EVERY bet. Dynamic odds. Instant matching. Pure on-chain P2P betting.
             </p>
             <button
-              onClick={() => navigator.clipboard.writeText('3ecFdHPbcU88UQ37iStPcGaz7Bg16RdSDDYqW5FzPabu')}
+              onClick={() => navigator.clipboard.writeText('5ZABLpi2nyckcsjftHG4nLjxWohfu2THfEUNhz7ig62z')}
               className="hidden sm:flex items-center gap-1.5 backdrop-blur-sm border border-white/10 px-3 py-1.5 rounded-full hover:border-primary/30 transition-all group mt-3"
               title="Copy Solana Program ID">
               
-              <span className="text-[10px] sm:text-[11px] font-bold text-white/60 tracking-wide">Solana Program ID: 3ecFdHPbcU88UQ37iStPcGaz7Bg16RdSDDYqW5FzPabu</span>
+              <span className="text-[10px] sm:text-[11px] font-bold text-white/60 tracking-wide">Solana Program ID: 5ZABLpi2nyckcsjftHG4nLjxWohfu2THfEUNhz7ig62z</span>
               <svg className="w-3 h-3 text-white/60 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
