@@ -1,4 +1,3 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { PublicKey } from 'npm:@solana/web3.js@1.98.4';
 import { Buffer } from 'npm:buffer@6.0.3';
 
@@ -8,10 +7,6 @@ import { Buffer } from 'npm:buffer@6.0.3';
  */
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-
     const { market_pda, lp_wallet, outcome } = await req.json();
 
     if (!market_pda || !lp_wallet || outcome === undefined) {

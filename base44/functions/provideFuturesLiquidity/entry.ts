@@ -9,10 +9,6 @@ import { Buffer } from 'npm:buffer@6.0.3';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const { walletAddress, market_id, outcome_label, odds, amount } = await req.json();
 
@@ -27,8 +23,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'SOLANA_PROGRAM_ID not configured' }, { status: 500 });
     }
 
-    // Fetch futures market
-    const market = await base44.entities.FuturesMarket.get(market_id);
+    // Fetch futures market (use service role — wallet JWT has no platform session)
+    const market = await base44.asServiceRole.entities.FuturesMarket.get(market_id);
     if (!market) {
       return Response.json({ error: 'Futures market not found' }, { status: 404 });
     }
@@ -87,7 +83,7 @@ Deno.serve(async (req) => {
     });
 
     // Create UserBet record for LP using standard hex id (auto-generated)
-    const userBet = await base44.entities.UserBet.create({
+    const userBet = await base44.asServiceRole.entities.UserBet.create({
       bet_id: market_id,
       match_id: market_id,
       futures_market_id: market_id,  // CRITICAL: Identify as futures bet
