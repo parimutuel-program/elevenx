@@ -63,19 +63,22 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
       return finalOffers;
     },
     enabled: !!bet?.id,
-    staleTime: 1000,
-    refetchInterval: 2000,
+    staleTime: 0, // CRITICAL: Always refetch - no cache
+    refetchInterval: 1500, // Check every 1.5 seconds
     refetchOnWindowFocus: true,
-    refetchOnMount: true,
-    refetchOnReconnect: true
+    refetchOnMount: 'always',
+    refetchOnReconnect: true,
+    retry: 2
   });
   
-  console.log('[PlaceBetPanel] Query state:', {
-    allOffersLength: allOffers?.length,
-    isLoadingOffers,
-    hasData: !!allOffers,
-    betId: bet?.id
-  });
+  // CRITICAL DEBUG INFO
+  console.log('========== [PlaceBetPanel] RENDER DEBUG ==========');
+  console.log('[PlaceBetPanel] bet.id:', bet?.id);
+  console.log('[PlaceBetPanel] allOffers:', allOffers);
+  console.log('[PlaceBetPanel] validOffers:', validOffers);
+  console.log('[PlaceBetPanel] bettingMode:', bettingMode);
+  console.log('[PlaceBetPanel] totalLiquidityForOutcome:', totalLiquidityForOutcome);
+  console.log('===================================================');
 
   // allOffers already filtered to open/partially_matched with amount_unmatched > 0 in queryFn
   const validOffers = Array.isArray(allOffers) ? allOffers : [];
@@ -511,7 +514,7 @@ export default function PlaceBetPanel({ bet, matchId, mode = 'match', selectedOu
               <span className="font-heading font-bold text-sm text-primary">◎{maxMatcherStake.toFixed(4)}</span>
               <Badge className="bg-primary/15 text-primary text-[8px] font-bold px-1 py-0">FIXED {odds.toFixed(2)}x</Badge>
             </div>
-            <button onClick={() => refetchOffers()} className="text-[9px] text-primary/70 hover:text-primary font-medium">↻ refresh</button>
+            <button onClick={async () => { console.log('Manual refresh triggered'); await refetchOffers(); }} className="text-[9px] text-primary/70 hover:text-primary font-medium">↻ refresh</button>
           </div>
         }
 
