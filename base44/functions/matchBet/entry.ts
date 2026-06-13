@@ -198,8 +198,8 @@ Deno.serve(async (req) => {
     const bettor_outcome_label = offer.outcome_label;
     const potential_payout = amount * lp_odds;
 
-    // Get Solana program ID and derive PDAs
-    const SOLANA_PROGRAM_ID = Deno.env.get('SOLANA_PROGRAM_ID');
+    // Get Solana program ID and derive PDAs — use ELEVENX_PROGRAM_ID (canonical deployed address)
+    const SOLANA_PROGRAM_ID = Deno.env.get('ELEVENX_PROGRAM_ID') || Deno.env.get('SOLANA_PROGRAM_ID');
     if (!SOLANA_PROGRAM_ID) {
       return Response.json({ error: 'Solana program ID not configured' }, { status: 500 });
     }
@@ -252,9 +252,9 @@ Deno.serve(async (req) => {
     // LpOffer layout: discriminator(8) + market(32) + lp(32) + outcome(1) + odds_bps(8)
     //   + amount_committed(u64 LE @81) + amount_matched(u64 LE @89) + closed(bool @97)
     try {
-      const { Connection: _Conn } = await import('npm:@solana/web3.js@1.98.4');
+      const { Connection } = await import('npm:@solana/web3.js@1.98.4');
       const rpcUrl = Deno.env.get('SOLANA_RPC_URL') || 'https://api.mainnet-beta.solana.com';
-      const connection = new (await import('npm:@solana/web3.js@1.98.4')).Connection(rpcUrl, 'confirmed');
+      const connection = new Connection(rpcUrl, 'confirmed');
       const accountInfo = await connection.getAccountInfo(lpOfferPda);
       if (!accountInfo || accountInfo.data.length < 98) {
         return Response.json({
@@ -364,9 +364,6 @@ Deno.serve(async (req) => {
     console.error('[matchBet] Unexpected error:', {
       message: error.message,
       stack: error.stack,
-      offer_id,
-      amount,
-      wallet_address: wallet_address?.slice(0, 8) + '...',
     });
     return Response.json({ 
       error: error.message || 'Failed to match bet',

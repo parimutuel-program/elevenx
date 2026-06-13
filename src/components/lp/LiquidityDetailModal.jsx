@@ -65,19 +65,6 @@ export default function LiquidityDetailModal({
     
     console.log('[LiquidityDetailModal] handleCommit called with:', { bet_id: bet.id, outcome: selectedOutcome, amount });
     
-    // Check market status first
-    try {
-      const statusRes = await base44.functions.invoke('checkMarketStatus', { match_id: bet.match_id });
-      console.log('[LiquidityDetailModal] Market status:', statusRes.data);
-      
-      if (statusRes.data.status === 'not_created') {
-        alert('Market not initialized on-chain. Please go to Admin panel and initialize the market first.');
-        return;
-      }
-    } catch (err) {
-      console.error('[LiquidityDetailModal] Failed to check market status:', err);
-    }
-    
     console.log('[LiquidityDetailModal] Calling onCommit...');
     onCommit({
       bet,
