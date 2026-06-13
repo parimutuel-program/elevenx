@@ -42,9 +42,10 @@ Deno.serve(async (req) => {
     const programId = new PublicKey(Deno.env.get('ELEVENX_PROGRAM_ID'));
 
     // Fetch all program accounts and filter for lp_offer PDAs
+    // Note: lp_offer is 116 bytes (not 98 - that was old layout)
     const allAccounts = await connection.getProgramAccounts(programId, {
       filters: [{
-        dataSize: 98 // lp_offer account size
+        dataSize: 116 // lp_offer account size
       }]
     });
 
@@ -57,19 +58,28 @@ Deno.serve(async (req) => {
         const data = account.account.data;
         if (data.length < 98) continue;
 
-        // Parse lp_offer account
-        const marketPdaOnChain = new PublicKey(data.slice(1, 33)).toBase58();
+        // Parse lp_offer account (layout matches fetchLpOfferOnChain)
+        // discriminator: 8 bytes (0-7)
+        // market: Pubkey (32) → 8-39
+        // lp: Pubkey (32) → 40-71
+        // outcome: u8 (1) → 72
+        // odds_bps: u64 (8) → 73-80
+        // amount_committed: u64 (8) → 81-88
+        // amount_matched: u64 (8) → 89-96
+        // closed: bool (1) → 97
+        
+        const marketPdaOnChain = new PublicKey(data.slice(8, 40)).toBase58();
         
         // Only show offers for this market
         if (marketPdaOnChain !== targetMarketPda) continue;
 
-        const lpWallet = new PublicKey(data.slice(33, 65)).toBase58();
-        const committed = Number(data.readBigUInt64LE(65));
-        const matched = Number(data.readBigUInt64LE(73));
+        const lpWallet = new PublicKey(data.slice(40, 72)).toBase58();
+        const committed = Number(data.readBigUInt64LE(81));
+        const matched = Number(data.readBigUInt64LE(89));
         const closed = data[97] === 1;
         
-        // Outcome is at byte 81 (u8)
-        const outcomeNum = data[81];
+        // Outcome is at byte 72 (u8)
+        const outcomeNum = data[72];
         const outcome = outcomeNum === 0 ? 'a' : outcomeNum === 1 ? 'b' : 'draw';
 
         marketOffers.push({
