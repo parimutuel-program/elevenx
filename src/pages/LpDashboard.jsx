@@ -566,32 +566,26 @@ export default function LpDashboard() {
       return;
     }
 
-    // Check if user is logged into the platform (base44.auth.me() will fail if not)
-    try {
-      const currentUser = await base44.auth.me();
-      if (!currentUser) {
-        throw new Error('Not logged in');
-      }
-    } catch (authErr) {
-      const confirmLogin = confirm(
-        '⚠️ You need to log in first!\n\n' +
-        'Your wallet is connected, but you need a platform account to provide liquidity.\n\n' +
-        'Click OK to go to the login/register page, or Cancel to continue browsing.'
-      );
-      if (confirmLogin) {
-        window.location.href = '/login';
-      }
+    // Extract only plain primitive values to avoid circular JSON serialization
+    const market_id = String(outcome.market_id || '');
+    const outcome_label = String(outcome.label || '');
+    const outcome_flag = String(outcome.flag || '');
+    const odds = Number(outcome.odds || 0);
+    const amountNum = parseFloat(amount);
+
+    if (!market_id || !outcome_label || !odds || !amountNum || amountNum <= 0) {
+      alert('Invalid LP parameters. Please enter a valid amount.');
       return;
     }
 
     try {
       const res = await base44.functions.invoke('provideFuturesLiquidity', {
         walletAddress,
-        market_id: outcome.market_id,
-        outcome_label: outcome.label,
-        outcome_flag: outcome.flag,
-        odds: outcome.odds,
-        amount
+        market_id,
+        outcome_label,
+        outcome_flag,
+        odds,
+        amount: amountNum,
       });
 
       if (res.data.error) {
